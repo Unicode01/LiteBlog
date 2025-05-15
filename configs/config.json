@@ -1,0 +1,18 @@
+{
+    "server_config" : {
+        "host" : "0.0.0.0",
+        "port" : 880,
+        "tls_config": {
+            "enabled": false
+        }
+    },
+    "access_config" : {
+        "backend_path": "yourbackendPath",
+        "access_token": "yourAccessToken"
+    },
+    "cache_config": {
+        "max_cache_size": 2147483648,
+        "max_cache_items": 1000000,
+        "expire_time": 3600
+    }
+}

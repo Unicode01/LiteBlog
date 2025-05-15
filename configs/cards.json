@@ -1,0 +1,28 @@
+{
+    "cards": [
+        {
+            "template": "card_template_classical",
+            "order": "1",
+            "tags": "go tag1 tag2",
+            "card_title": "Card 1",
+            "card_description": "This is the first card with classical template",
+            "card_link": "https://www.google.com"
+        },
+        {
+            "template": "card_template_modern",
+            "order": "2",
+            "tags": "go tag1 tag2",
+            "card_title": "Card 2",
+            "card_description": "This is the second card with modern template",
+            "card_link": "https://www.google.com"
+        },
+        {
+            "template": "card_template_classical",
+            "order": "-1",
+            "tags": "go tag1 tag2",
+            "card_title": "Card 3",
+            "card_description": "This is the third card",
+            "card_link": "https://www.google.com"
+        }
+    ]
+}

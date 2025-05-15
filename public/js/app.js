@@ -1,0 +1,41 @@
+// render variables from server
+var Card_max_width = {{global:card_max_width}}; //w
+var Card_max_height = {{global:card_max_height}};
+var Card_min_width = {{global:card_min_width}}; //w
+var Card_min_height = {{global:card_min_height}};
+// end render
+
+function init() {
+    ResizeCard();
+    AddEventListener();
+}
+
+function ResizeCard() {
+    var avalia_width = window.screen.availWidth;
+    var avalia_height = window.screen.availHeight - 120;
+    var root = document.documentElement;
+    card_width = Card_min_width;
+    if (Card_min_width < avalia_width && avalia_width <= Card_max_width) {
+        card_width = avalia_width;
+    } else if (avalia_width > Card_max_width) {
+        card_width = Card_max_width;
+    }
+    console.log(card_width);
+    card_height = Card_min_height;
+    if (Card_min_height < avalia_height && avalia_height <= Card_max_height) {
+        card_height = avalia_height;
+    } else if (avalia_height > Card_max_height) {
+       card_height = Card_max_height;
+    }
+    root.style.setProperty('--card-width', card_width + 'px');
+    root.style.setProperty('--card-height', card_height + 'px');
+}
+
+function AddEventListener() {
+    // add resize event listener to window
+    window.addEventListener('resize', function() {
+        ResizeCard();
+    });
+}
+
+init();

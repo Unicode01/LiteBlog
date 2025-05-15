@@ -1,0 +1,82 @@
+h%ì5<!DOCTYPE html>
+<html>
+    <head>
+        <title></title>
+        <link rel="stylesheet" type="text/css" href="/css/style.css"></link>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <div id="app">
+            <div id="top-bar" class="top-bar display-flex justify-content-space-between align-items-center height-50px width-100">
+                <div id="logo" class="logo display-flex align-items-center justify-content-center height-50px">
+                    <a href="/" class="link width-30px height-30px padding-10px"><img src="/img/logo.webp" class="logo img width-30px height-30px" alt="logo"></a>
+                    <span class="logo text padding-10px">LiteBlog</span>
+                </div>
+                
+                <div id="tag-bar" class="tagbar display-flex align-items-center justify-content-center height-30px padding-10px">
+                    <!-- Tag list here -->
+                     <div class ="tag padding-10px font-size-14px">
+    <a href="/tag/Go" class="link">Go</a>
+</div>
+                </div>
+
+                <div id="function-bar" class="function-bar display-flex align-items-center justify-content-center height-30px padding-10px">
+                    <a href="/feed/rss.xml" class="rss-button button padding-10px width-30px height-30px">
+                        <img src="/img/rss.webp" class="rss-icon img width-30px height-30px" alt="rss feed">
+                    </a>
+
+                    <a href="#history" class="history-button button padding-10px width-30px height-30px">
+                        <img src="/img/history.webp" class="history-icon img width-30px height-30px" alt="hisotry">
+                    </a>
+                    
+                    <a href="#editmode" class="edit-button button padding-10px width-30px height-30px">
+                        <img src="/img/editmode.webp" class="edit-icon img width-30px height-30px" alt="editmode">
+                    </a>
+                    
+                </div>
+            </div>
+
+            <div id="content-container" class="content-container width-100 height-100 display-flex justify-content-center flex-wrap">
+
+              <div id="card-container" class="card-container card-classical display-flex flex-wrap flex-direction-column justify-content-space-between align-items-flex-start boarder-1px padding-10px radius-5px margin-20px" style="order:1">
+    <a class="link" href="https://www.google.com">
+        <div class="post-card radius-5px padding-10px">
+           <div class="post-card-header display-flex justify-content-space-between align-items-center height-50px">Card 1</div>
+           <div class="card-description ">This is the first card with classical template</div>
+        </div>
+    </a>
+    <div class="card-tags display-flex padding-10px margin-left-auto">go tag1 tag2</div>
+    <link rel="stylesheet" href="/css/card_classical.css"/>
+    <script src="/js/card_classical.js"></script>
+</div><div id="card-container" class="card-container card-modern display-flex flex-wrap flex-direction-column justify-content-space-between align-items-flex-start boarder-1px padding-10px radius-5px margin-20px" style="order:2">
+    <a class="link" href="https://www.google.com">
+        <div class="post-card radius-5px padding-10px">
+           <div class="post-card-header display-flex justify-content-space-between align-items-center height-50px">Card 2</div>
+           <div class="card-description ">This is the second card with modern template</div>
+        </div>
+    </a>
+    <div class="card-tags display-flex padding-10px margin-left-auto">go tag1 tag2</div>
+    <link rel="stylesheet" href="/css/card_modern.css"/>
+    <script src="/js/card_modern.js"></script>
+</div><div id="card-container" class="card-container card-classical display-flex flex-wrap flex-direction-column justify-content-space-between align-items-flex-start boarder-1px padding-10px radius-5px margin-20px" style="order:-1">
+    <a class="link" href="https://www.google.com">
+        <div class="post-card radius-5px padding-10px">
+           <div class="post-card-header display-flex justify-content-space-between align-items-center height-50px">Card 3</div>
+           <div class="card-description ">This is the third card</div>
+        </div>
+    </a>
+    <div class="card-tags display-flex padding-10px margin-left-auto">go tag1 tag2</div>
+    <link rel="stylesheet" href="/css/card_classical.css"/>
+    <script src="/js/card_classical.js"></script>
+</div>
+
+            </div>
+            <div id="button-bar" class="button-bar display-flex justify-content-center align-items-center height-50px width-100">
+
+            </div>
+        </div>
+
+        <script src="/js/app.js"></script>
+        <script src="/js/inject.js"></script>
+    </body>
+</html>
