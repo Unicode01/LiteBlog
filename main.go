@@ -6,6 +6,7 @@ var (
 
 func main() {
 	Config = ReadConfig()
+	AutoAddListener()
 	err := InitNetManager(&Config.ServerCfg)
 	if err != nil {
 		panic(err)
