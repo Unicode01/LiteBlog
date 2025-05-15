@@ -1,0 +1,8 @@
+.card-modern {
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(255, 25, 25, 0.1);
+  padding: 20px;
+  margin-bottom: 20px;
+  background-image: linear-gradient(to bottom, #f2f2f2, #e6e6e6);
+}
