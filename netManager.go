@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mime"
@@ -22,6 +23,7 @@ var (
 	httpServer         *http.Server
 	fireWall           *firewall.Firewall
 	cacheManager       *CacheManager
+	deliverManager     *DeliverManager
 	pathTraversalRegex = regexp.MustCompile(`(?i)(\.\./|\.\.\\)|(/etc/passwd|/bin/sh|/bin/bash)`)
 )
 
@@ -32,6 +34,8 @@ func InitNetManager(config *ServerConfig) error {
 	fireWall = firewall.NewFirewall()
 	// build cache manager
 	cacheManager = NewCacheManager(Config.CacheCfg.MaxCacheSize, Config.CacheCfg.MaxCacheItems) // 2GB cache, 1 million cache item
+	// build deliver manager
+	deliverManager = NewDeliverManager(Config.DeliverCfg.Buffer, Config.DeliverCfg.Threads, context.Background())
 	// init http server
 	if config.TlsConfig.Enabled {
 		// enable tls
@@ -96,7 +100,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		response_end_time := time.Now()
 		response_time := response_end_time.Sub(response_start_time)
-		Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, method: %s %s, %s, cached=%t", IP, traceID, r.Method, r.URL.Path, response_time, cached))
+		Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, method: %s %s, %s, disk_cached=%t", IP, traceID, r.Method, r.URL.Path, response_time, cached))
 	}()
 
 	if fireWall.MatchRule(IP) == 1 { // block ip
@@ -138,7 +142,40 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	// render file
 	file_ext := path.Ext(r.URL.Path)
 	renderList := []string{".js", ".css", ".html"}
+	// check if file is renderable
+	if file_ext == "" || !strings.Contains(strings.Join(renderList, "|"), file_ext) { // not render file
+		file, err := os.OpenFile("public"+r.URL.Path, os.O_RDONLY, 0) // check file exist
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			f, err := os.Open("public/404.html")
+			if err != nil {
+				w.Write([]byte("404 Not Found"))
+				return
+			}
+			io.Copy(w, f)
+			f.Close()
+			return
+		}
+		defer file.Close()
+		io.Copy(w, file) // directly serve file
+		return
+	}
 
+	if Config.CacheCfg.UseDisk {
+		// check cache
+		f, err := cacheManager.GetCacheItem(r.URL.Path)
+		if f != nil && err == nil { // hit cache
+			cached = true
+			w.Header().Set("X-LiteBlog-Disk-Cache", "hit")
+			content_type := GetContentType(r.URL.Path)
+			w.Header().Set("Content-Type", content_type)
+			io.Copy(w, f)
+			f.Close()
+			return
+		}
+	}
+
+	// open file to render
 	file, err := os.OpenFile("public"+r.URL.Path, os.O_RDONLY, 0) // check file exist
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -152,20 +189,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer file.Close()
-	if file_ext == "" || !strings.Contains(strings.Join(renderList, "|"), file_ext) { // not render file
-		io.Copy(w, file) // directly serve file
-		return
-	}
-	// check cache
-	f, err := cacheManager.GetCacheItem(r.URL.Path)
-	if f != nil && err == nil { // hit cache
-		cached = true
-		w.Header().Set("X-LiteBlog-Cache", "hit")
-		content_type := GetContentType(r.URL.Path)
-		w.Header().Set("Content-Type", content_type)
-		io.Copy(w, f)
-		return
-	}
+
 	// render template
 	fileBin, err := io.ReadAll(file)
 	if err != nil {
@@ -177,42 +201,101 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	content_type := GetContentType(r.URL.Path)
 	w.Header().Set("Content-Type", content_type)
 	w.Write(fileBin)
-	// add to cache
-	reader := bytes.NewReader(fileBin)
-	err = cacheManager.AddCacheItem(r.URL.Path, reader, Config.CacheCfg.ExpireTime)
-	if err != nil {
-		Log(1, fmt.Sprintf("Failed to add cache item for %s, %s", r.URL.Path, err))
+	// add to cache(using deliverManager to avoid extra delay)
+	if Config.CacheCfg.UseDisk {
+		deliverManager.AddTask(func() {
+			err = cacheManager.AddCacheItem(r.URL.Path, bytes.NewReader(fileBin), Config.CacheCfg.ExpireTime)
+			if err != nil {
+				Log(1, fmt.Sprintf("Failed to add cache item for %s, %s", r.URL.Path, err))
+			}
+		})
 	}
+
 }
 
 func serveBackend(w http.ResponseWriter, r *http.Request) {
 	backendPrefix := "/" + Config.AccessCfg.BackendPath + "/"
 	// enter backend
 	backendUrl := "/" + r.URL.Path[len(backendPrefix):]
-	fmt.Printf("Enter backend url: %s\n", backendUrl)
-	backendPath := "backend" + backendUrl
-	backendFile, err := os.OpenFile(backendPath, os.O_RDONLY, 0)
-	if err != nil {
+	// fmt.Printf("Enter backend url: %s\n", backendUrl)
+	switch backendUrl {
+	case "/edit_order":
+		backendHandler_edit_order(w, r)
+		return
+	default:
 		w.WriteHeader(http.StatusNotFound)
-		f, err := os.Open("public/404.html")
+		w.Write([]byte("404 Not Found"))
+		return
+	}
+}
+
+func backendHandler_edit_order(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	bodyBin, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	type orderrequest struct {
+		Token   string `json:"token"`
+		Changes []struct {
+			ID    string `json:"cardID"`
+			Order int    `json:"order"`
+		} `json:"changes"`
+	}
+	var req orderrequest
+	err = json.Unmarshal(bodyBin, &req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Printf("Failed to parse request body, %s\n", err)
+		return
+	}
+	// check token
+	if req.Token != Config.AccessCfg.AccessToken {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	// update order
+	for _, change := range req.Changes {
+		// update order
+		type cards struct {
+			Cards []map[string]string `json:"cards"`
+		}
+		var cardsData cards
+		cardsDataBin, err := os.ReadFile("configs/cards.json")
 		if err != nil {
-			w.Write([]byte("404 Not Found"))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		io.Copy(w, f)
-		f.Close()
-		return
+		err = json.Unmarshal(cardsDataBin, &cardsData)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		for i, card := range cardsData.Cards {
+			if card["id"] == change.ID {
+				cardsData.Cards[i]["order"] = fmt.Sprint(change.Order)
+				// fmt.Printf("Update card %s order to %d\n", change.ID, change.Order)
+				break
+			}
+		}
+		cardsDataBin, err = json.MarshalIndent(cardsData, "", "    ")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		err = os.WriteFile("configs/cards.json", cardsDataBin, 0644)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
-	defer backendFile.Close()
-	backendBin, err := io.ReadAll(backendFile)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal Server Error"))
-		return
-	}
-	backendBin = RenderTemplate(backendBin, nil)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(backendBin)
+	// response
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
 }
 
 func GetContentType(filename string) string {

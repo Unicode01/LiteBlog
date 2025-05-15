@@ -30,6 +30,7 @@ func NewCacheManager(maxCacheSize int64, maxCacheItems int) *CacheManager {
 			return nil
 		}
 	}
+	cm.ClearAllCache()
 
 	go cm.autoCleanCache(maxCacheSize, maxCacheItems)
 	return cm
@@ -197,6 +198,27 @@ func (cm *CacheManager) CleanCache(maxCacheSize int64, maxCacheItems int) error 
 		if err := os.Remove(file.path); err == nil {
 			totalSize -= file.size
 			totalItems--
+		}
+	}
+
+	return nil
+}
+
+func (cm *CacheManager) ClearAllCache() error {
+	cacheDir := cm.cacheDirectory
+	files, err := os.ReadDir(cacheDir)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		filePath := filepath.Join(cacheDir, file.Name())
+		if err := os.Remove(filePath); err != nil {
+			return err
 		}
 	}
 

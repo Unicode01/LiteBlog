@@ -50,6 +50,7 @@ body {
 .card-container {
     width: var(--card-width);
     height: var(--card-height);
+    /* transition: all 0.3s ease-in-out; */
 }
 
 .height-30px {
@@ -191,4 +192,17 @@ body {
 
 .margin-left-auto {
     margin-left: auto;
+}
+
+.edit-mode-border {
+    border: 2px dashed var(--base-gray-700);
+}
+
+.draggable {
+    cursor: move;
+}
+
+.dragging {
+    opacity: .5;
+    transform: scale(0.9);
 }

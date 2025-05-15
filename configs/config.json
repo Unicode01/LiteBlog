@@ -11,8 +11,14 @@
         "access_token": "yourAccessToken"
     },
     "cache_config": {
+        "//": "this used to cache the rendered pages, default is in memory,if use_disk is true, it will cache in disk and using ",
+        "use_disk": false,
         "max_cache_size": 2147483648,
         "max_cache_items": 1000000,
         "expire_time": 3600
+    },
+    "deliver_config": {
+        "buffer": 1024,
+        "threads": 2
     }
 }
