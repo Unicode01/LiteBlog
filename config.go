@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"time"
@@ -8,11 +9,16 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+var (
+	BackupThreadCancel context.CancelFunc
+)
+
 type AllConfig struct {
 	ServerCfg  ServerConfig  `json:"server_config"`
 	AccessCfg  AccessConfig  `json:"access_config"`
 	CacheCfg   CacheConfig   `json:"cache_config"`
 	DeliverCfg DeliverConfig `json:"deliver_config"`
+	BackupCfg  BackupsConfig `json:"backup_config"`
 }
 
 type ServerConfig struct {
@@ -42,6 +48,14 @@ type CacheConfig struct {
 type DeliverConfig struct {
 	Buffer  int `json:"buffer"`
 	Threads int `json:"threads"`
+}
+
+type BackupsConfig struct {
+	Enabled                bool   `json:"enabled"`
+	BackupDir              string `json:"backup_dir"`
+	BackupInterval         int    `json:"backup_interval"`
+	MaxBackups             int    `json:"max_backups"`
+	MaxBackupsSurvivalTime int    `json:"max_backups_survival_time"`
 }
 
 func ReadConfig() AllConfig {
@@ -76,6 +90,7 @@ func AutoAddListener() {
 	err := AddConfigListener("configs/config.json", func() {
 		Log(1, "Config file(configs/config.json) changed, reloading...")
 		Config = ReadConfig()
+		BackupConfigures()
 	})
 	if err != nil {
 		Log(3, "Config watcher error:"+err.Error())
@@ -129,4 +144,20 @@ func AddConfigListener(filePath string, function func()) error {
 		}
 	}()
 	return nil
+}
+
+func BackupConfigures() {
+	if !Config.BackupCfg.Enabled {
+		if BackupThreadCancel != nil {
+			BackupThreadCancel()
+			BackupThreadCancel = nil
+		}
+		return
+	} else {
+		if BackupThreadCancel == nil {
+			ctx, cancle := context.WithCancel(context.Background())
+			EnableBackupThread(ctx)
+			BackupThreadCancel = cancle
+		}
+	}
 }

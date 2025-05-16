@@ -18,7 +18,16 @@
         "expire_time": 3600
     },
     "deliver_config": {
+        "//":"this used to using deliver to avoid cache caused delay",
         "buffer": 1024,
         "threads": 2
+    },
+    "backup_config": {
+        "//": "this used to backup the blog data, default is disabled, if enabled is true, it will backup the blog data every backup_interval minutes, and keep max_backups backups, and delete the backups that are older than max_backups_suvival_time miniutes",
+        "enabled": false,
+        "backup_dir": "backups",
+        "backup_interval": 3600,
+        "max_backups": 10,
+        "max_backups_survival_time": 86400
     }
 }

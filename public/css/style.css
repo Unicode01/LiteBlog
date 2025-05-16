@@ -53,6 +53,206 @@ body {
     /* transition: all 0.3s ease-in-out; */
 }
 
+.context-menu {
+  display: none;
+  box-sizing: border-box;
+  position: absolute;
+  background: var(--base-white);
+  border: 1px solid var(--base-gray-200);
+  /* min-width: auto; */
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.menu-item {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    background-color: var(--base-white);
+    padding: 6px 12px;
+    border: none;
+    text-align: left;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.menu-item-line {
+    display: block;
+    width: 100%;
+    height: 1px;
+    background: var(--base-gray-200);
+}
+
+.menu-item:hover {
+    background-color: var(--base-gray-200);
+}
+
+.edit-mode-border {
+    border: 2px dashed var(--base-gray-700) !important;
+}
+
+.draggable {
+    cursor: move;
+}
+
+.dragging {
+    opacity: .5;
+    transform: scale(0.9);
+}
+
+.custom-field-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: var(--base-white);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.custom-field-group:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.field-name,
+.field-value {
+    flex: 1;
+    padding: 10px 12px;
+    border: 2px solid var(--base-gray-200);
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.field-name:focus,
+.field-value:focus {
+    border-color: var(--primary-blue);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(77, 171, 247, 0.1);
+}
+
+.custom-field-group button {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    background: var(--base-black);
+    color: var(--base-white);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.custom-field-group button:hover {
+    transform: scale(1.05);
+}
+
+.custom-field-group button:active {
+    transform: scale(0.95);
+}
+
+.card-input-box {
+    transform: translate(-50%, -50%);
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    border: 1px solid var(--base-gray-200);
+    background-color: var(--base-white);
+
+    max-height: 70vh;
+    overflow-y: auto;
+    margin: 20px auto;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    
+    z-index: 1000;
+}
+
+.input-group {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-group label {
+    font-weight: 600;
+    color: #2d3436;
+    font-size: 14px;
+}
+
+.input-group input,
+.input-group textarea,
+.custom-field-group input,
+.custom-field-group textarea {
+    padding: 12px;
+    border: 2px solid var(--base-gray-200);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    background: var(--base-white);
+}
+
+.input-group input:focus,
+.input-group textarea:focus,
+.custom-field-group input:focus,
+.custom-field-group textarea:focus {
+    border-color: var(--primary-blue);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.1);
+}
+
+.button-group {
+    display: flex;
+    gap: 12px;
+    margin-top: 25px;
+}
+
+.add-card-button,
+.cancel-button {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.custom-fields {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid var(--base-gray-200);
+}
+
+.custom-fields button {
+    padding: 8px 16px;
+    background: var(--base-gray-200);
+    color: var(--base-black);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+}
+
+#custom-fields-container {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* 辅助类 */
+
 .height-30px {
     height: 30px;
 }
@@ -95,6 +295,10 @@ body {
 
 .display-flex {
     display: flex;
+}
+
+.display-none {
+    display: none;
 }
 
 .flex-wrap {
@@ -194,15 +398,6 @@ body {
     margin-left: auto;
 }
 
-.edit-mode-border {
-    border: 2px dashed var(--base-gray-700);
-}
-
-.draggable {
-    cursor: move;
-}
-
-.dragging {
-    opacity: .5;
-    transform: scale(0.9);
+.position-fixed {
+    position: fixed;
 }

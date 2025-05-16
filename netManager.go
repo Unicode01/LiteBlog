@@ -222,6 +222,12 @@ func serveBackend(w http.ResponseWriter, r *http.Request) {
 	case "/edit_order":
 		backendHandler_edit_order(w, r)
 		return
+	case "/delete_card":
+		backendHandler_delete_card(w, r)
+		return
+	case "/add_card":
+		backendHandler_add_card(w, r)
+		return
 	default:
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("404 Not Found"))
@@ -292,6 +298,128 @@ func backendHandler_edit_order(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+	}
+	// response
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+}
+
+func backendHandler_delete_card(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	bodyBin, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	type cardrequest struct {
+		Token string `json:"token"`
+		ID    string `json:"cardID"`
+	}
+	var req cardrequest
+	err = json.Unmarshal(bodyBin, &req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Printf("Failed to parse request body, %s\n", err)
+		return
+	}
+	// check token
+	if req.Token != Config.AccessCfg.AccessToken {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	// delete card
+	type cards struct {
+		Cards []map[string]string `json:"cards"`
+	}
+	var cardsData cards
+	cardsDataBin, err := os.ReadFile("configs/cards.json")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = json.Unmarshal(cardsDataBin, &cardsData)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	newCards := make([]map[string]string, 0)
+	for _, card := range cardsData.Cards {
+		if card["id"] != req.ID {
+			newCards = append(newCards, card)
+		}
+	}
+	cardsData.Cards = newCards
+	cardsDataBin, err = json.MarshalIndent(cardsData, "", "    ")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = os.WriteFile("configs/cards.json", cardsDataBin, 0644)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// response
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+}
+
+func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	bodyBin, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	type cardrequest struct {
+		Token    string            `json:"token"`
+		CardJson map[string]string `json:"card"`
+	}
+	var req cardrequest
+	err = json.Unmarshal(bodyBin, &req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Printf("Failed to parse request body, %s\n", err)
+		return
+	}
+	// check token
+	if req.Token != Config.AccessCfg.AccessToken {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	// add card
+	type cards struct {
+		Cards []map[string]string `json:"cards"`
+	}
+	var cardsData cards
+	cardsDataBin, err := os.ReadFile("configs/cards.json")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = json.Unmarshal(cardsDataBin, &cardsData)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	newCard := req.CardJson
+	newCard["id"] = generateTraceID()
+	cardsData.Cards = append(cardsData.Cards, newCard)
+	cardsDataBin, err = json.MarshalIndent(cardsData, "", "    ")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = os.WriteFile("configs/cards.json", cardsDataBin, 0644)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	// response
 	w.WriteHeader(http.StatusOK)

@@ -6,10 +6,14 @@ var (
 
 func main() {
 	Config = ReadConfig()
+	BackupConfigures()
 	AutoAddListener()
 	err := InitNetManager(&Config.ServerCfg)
 	if err != nil {
 		panic(err)
+	}
+	if Config.BackupCfg.Enabled {
+		BackupNow()
 	}
 	select {}
 }

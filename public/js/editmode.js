@@ -44,6 +44,8 @@ function EnterEditMode() {
                 // remove edit-mode-border class
                 cards.forEach((card) => {
                     card.classList.remove('edit-mode-border');
+                    card.classList.remove('draggable');
+                    card.draggable = false;
                 });
             } else {
                 console.log("Save changes failed");
@@ -155,6 +157,205 @@ function EnterEditMode() {
             dragging_card.style.order = afterOrder;
         }
     }
+}
+
+function DeleteCard(cardID) {
+    const result = GetAccessPathAndToken();
+    if (!result) {
+        console.log("Access path and token are required.");
+        return false;
+    }
+    const { path, token } = result;
+    console.log("Access path: " + path);
+    console.log("Access token: " + token);
+    const api_dic = window.location.origin+"/" + path;
+    const api_delete_card = api_dic + "/delete_card";
+    const data = {
+        token: token,
+        cardID: cardID
+    }
+    fetch(api_delete_card, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+            },
+        body: JSON.stringify(data)
+        },
+    )
+    .then(response => {
+        if (response.ok) {
+            console.log("Delete card successfully");
+            const card = document.querySelector(`[card-id="${cardID}"]`);
+            card.remove();
+            return true;
+        } else {
+            console.log("Delete card failed");
+            return false;
+        }
+    })
+   .catch(error => {
+        console.log("Delete card failed: " + error);
+        return false;
+   });
+    return true;
+}
+
+function AddCard() {
+    if (window._addingCard) {
+        return;
+    } else {
+        window._addingCard = true;
+    }
+    // this func is called to generate the card json and add it to the backend
+    const add_card_input_box_html = `
+<div class="card-input-box">
+    <div class="input-group">
+        <label for="add-card-title">Title</label>
+        <input type="text" id="add-card-title" required>
+    </div>
+
+    <div class="input-group">
+        <label for="add-card-description">Description</label>
+        <textarea id="add-card-description" rows="3" required></textarea>
+    </div>
+
+    <div class="input-group">
+        <label for="add-card-link">Link</label>
+        <textarea id="add-card-link" rows="2" required></textarea>
+    </div>
+
+    <div class="input-group">
+        <label for="add-card-template">Template</label>
+        <input type="text" id="add-card-template" value="card_template_classical" required>
+    </div>
+
+    <div class="input-group">
+        <label for="add-card-tags">Tags</label>
+        <input type="text" id="add-card-tags" value="mytag1 mytag2" required>
+    </div>
+
+    <div class="custom-fields">
+        <button type="button" onclick="OncreateCustomFieldButtonClick()">
+            <span>+</span>
+            <span>Add Custom Field</span>
+        </button>
+        <div id="custom-fields-container"></div>
+    </div>
+
+    <div class="button-group">
+        <button type="button" class="add-card-button" onclick="OnAddCardButtonClick()">Add Card</button>
+        <button type="button" class="cancel-button" onclick="CancleInputBox()">Cancel</button>
+    </div>
+</div>
+    `;
+    domP = new DOMParser();
+    const add_card_box_doc = domP.parseFromString(add_card_input_box_html, "text/html").body.firstChild;
+    document.body.appendChild(add_card_box_doc);
+}
+
+function OnAddCardButtonClick() {
+    function GetCardJson() {
+        const customFields = {};
+        
+        // 获取所有自定义字段
+        document.querySelectorAll('.custom-field-group').forEach(group => {
+            const name = group.querySelector('.field-name').value;
+            const value = group.querySelector('.field-value').value;
+            if (name && value) {
+                customFields[name] = value;
+            }
+        });
+        json =  {
+            card_title: document.getElementById('add-card-title').value.toString(),
+            card_description: document.getElementById('add-card-description').value.toString(),
+            card_link: document.getElementById('add-card-link').value.toString(),
+            template: document.getElementById('add-card-template').value.toString(),
+            tags: document.getElementById('add-card-tags').value.toString(),
+            order: document.querySelectorAll('.card-container').length.toString()
+        };
+        for (const key in customFields) {
+            json[key] = customFields[key].toString();
+        }
+        return json;
+    }
+    AddCardAPI(GetCardJson())
+    CancleInputBox();
+}
+
+function OncreateCustomFieldButtonClick() {
+    const container = document.getElementById('custom-fields-container');
+    
+    const fieldGroup = document.createElement('div');
+    fieldGroup.className = 'custom-field-group';
+    
+    // 字段名称输入框
+    const nameInput = document.createElement('input');
+    nameInput.type = "text";
+    nameInput.placeholder = "Field Name (e.g.: link)";
+    nameInput.className = "field-name";
+    
+    // 字段值输入框
+    const valueInput = document.createElement('input');
+    valueInput.type = "text";
+    valueInput.placeholder = "field value";
+    valueInput.className = "field-value";
+    
+    // 删除按钮
+    const removeBtn = document.createElement('button');
+    removeBtn.type = "button";
+    removeBtn.textContent = "×";
+    removeBtn.onclick = () => fieldGroup.remove();
+    
+    fieldGroup.appendChild(nameInput);
+    fieldGroup.appendChild(valueInput);
+    fieldGroup.appendChild(removeBtn);
+    container.appendChild(fieldGroup);
+}
+
+function CancleInputBox() {
+    const add_card_box = document.querySelector(".card-input-box");
+    add_card_box.remove();
+    window._addingCard = false;
+}
+
+function AddCardAPI(cardJson) {
+    const result = GetAccessPathAndToken();
+    if (!result) {
+        console.log("Access path and token are required.");
+        return false;
+    }
+    const { path, token } = result;
+    console.log("Access path: " + path);
+    console.log("Access token: " + token);
+    const api_dic = window.location.origin+"/" + path;
+    const api_add_card = api_dic + "/add_card";
+    const data = {
+        token: token,
+        card: cardJson
+    }
+    console.log(JSON.stringify(data));
+    fetch(api_add_card, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+            },
+        body: JSON.stringify(data)
+        },
+    )
+    .then(response => {
+        if (response.ok) {
+            console.log("Add card successfully");
+            return true;
+        } else {
+            console.log("Add card failed");
+            return false;
+        }
+    })
+   .catch(error => {
+        console.log("Add card failed: " + error);
+        return false;
+   });
+    return true;
 }
 
 function GetAccessPathAndToken() {
