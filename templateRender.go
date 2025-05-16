@@ -75,12 +75,18 @@ func autoRender(ctx context.Context) {
 			return
 		default:
 			render_start_time := time.Now()
+			// render cards
 			cards_bytes := renderCards()
 			RenderedMap["cards"] = cards_bytes
 
+			// render top tag
 			RenderedMap["top_tag"] = RenderPageTemplate("top_tag", map[string][]byte{
 				"tag_name": []byte("Go"),
 			})
+
+			// render context menu
+			RenderedMap["context_menu_html"] = RenderPageTemplate("context_menu", map[string][]byte{})
+
 			// fmt.Printf("card rendered\n")
 			render_end_time := time.Now()
 			render_time := render_end_time.Sub(render_start_time)
