@@ -77,12 +77,15 @@ func ReadGolbalConfig() {
 	if err != nil {
 		panic(err)
 	}
-	var globMap map[string]string
+	var globMap map[string]interface{}
 	json.Unmarshal(configFile, &globMap)
 	for k, v := range globMap {
-		GlobalMapLocker.Lock()
-		GlobalMap[k] = []byte(v)
-		GlobalMapLocker.Unlock()
+		vString, ok := v.(string)
+		if ok {
+			GlobalMapLocker.Lock()
+			GlobalMap[k] = []byte(vString)
+			GlobalMapLocker.Unlock()
+		}
 	}
 }
 

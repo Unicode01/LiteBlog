@@ -47,6 +47,9 @@ function EnterEditMode() {
                     card.classList.remove('draggable');
                     card.draggable = false;
                 });
+                // check to remove add card input box
+                const card_input_box = document.querySelector('.card-input-box');
+                card_input_box?.remove();
             } else {
                 console.log("Save changes failed");
             }

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>{{global:IndexPageTitle}}</title>
-        <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+        <title>{{article_title}}</title>
         <link rel="stylesheet" type="text/css" href="/css/style.css"></link>
+        <link rel="stylesheet" type="text/css" href="/css/article.css"></link>
         <link rel="stylesheet" type="text/css" href="/css/customizestyle.css"></link>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
@@ -15,10 +15,6 @@
                     <span class="logo text padding-10px">{{global:TopBarTitle}}</span>
                 </div>
                 
-                <div id="tag-bar" class="tag-bar display-flex overflow-hidden min-width-0px align-items-center justify-content-flex-start height-30px padding-10px">
-                    <!-- Tag list here -->
-                     {{rendered:top_tag}}
-                </div>
 
                 <div id="function-bar" class="function-bar display-flex align-items-center justify-content-center height-30px padding-10px">
                     <a href="/feed/rss.xml" id="rss-button" class="rss-button button padding-10px width-30px height-30px">
@@ -29,17 +25,27 @@
                         <img src="/img/history.webp" class="history-icon img width-30px height-30px" alt="hisotry">
                     </a>
                     
-                    <a href="#editmode" id="edit-button" class="edit-button button padding-10px width-30px height-30px">
-                        <img src="/img/editmode.webp" class="edit-icon img width-30px height-30px" alt="editmode">
-                    </a>
                     
                 </div>
             </div>
 
-            <div id="content-container" class="content-container width-100 height-100 display-flex justify-content-center flex-wrap">
-
-                {{rendered:cards}}
-
+            <div id="content-container" class="content-container display-flex justify-content-center width-100 height-100">
+                <div id="article-container" class="article-container">
+                <div id="article-header">
+                    <div id="article-title" class="article-title">{{article_title}}</div>
+                    <div id="article-info" class="article-info">
+                        <div id="article-author" class="article-author">{{article_author}}</div>
+                        <div id="article-date" class="article-date">{{article_date}}</div>
+                    </div>
+                </div>
+                <div id="article-content" class="article-content">
+                    {{article_content}}
+                </div>
+                <div id="article-comments" class="article-comments">
+                    <!-- Comments here -->
+                     {{comments}}
+                </div>
+                </div>
             </div>
             <div id="bottom-bar" class="bottom-bar display-flex flex-wrap justify-content-center height-50px width-100">
                 {{rendered:bottom_bar}}
@@ -48,6 +54,7 @@
 
         <script src="/js/app.js"></script>
         <script src="/js/inject.js"></script>
+        <script src="/js/article.js"></script>
         <script src="/js/editmode.js"></script>
         <script src="/js/tags.js"></script>
     </body>

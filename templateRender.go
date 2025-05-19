@@ -5,8 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"sort"
 	"sync"
 	"time"
+
+	"github.com/gomarkdown/markdown"
+	"github.com/microcosm-cc/bluemonday"
 )
 
 var (
@@ -62,7 +66,8 @@ func RenderPageTemplate(fileRender string, mapRender map[string][]byte) []byte {
 	file := dir + "/" + fileRender + ".html"
 	template, err := os.ReadFile(file)
 	if err != nil {
-		panic(err)
+		Log(3, "error reading template file: "+err.Error())
+		return []byte("")
 	}
 	newTemplate := RenderTemplate(template, mapRender)
 	return newTemplate
@@ -80,12 +85,16 @@ func autoRender(ctx context.Context) {
 			RenderedMap["cards"] = cards_bytes
 
 			// render top tag
-			RenderedMap["top_tag"] = RenderPageTemplate("top_tag", map[string][]byte{
-				"tag_name": []byte("Go"),
-			})
+			RenderedMap["top_tag"] = renderTopBarTags()
 
 			// render context menu
 			RenderedMap["context_menu_html"] = RenderPageTemplate("context_menu", map[string][]byte{})
+
+			// render bottom bar
+			RenderedMap["bottom_bar"] = RenderPageTemplate("bottom_bar", map[string][]byte{})
+
+			// render RSS
+			RenderedMap["rss_feed"] = renderRSSFeed()
 
 			// fmt.Printf("card rendered\n")
 			render_end_time := time.Now()
@@ -125,4 +134,126 @@ func renderCards() []byte {
 	}
 
 	return cards_bytes
+}
+
+func renderRSSFeed() []byte {
+	type Card_Config struct {
+		Cards []map[string]string `json:"cards"`
+	}
+	var cardcfg Card_Config
+	card_config_filepath := "configs/cards.json"
+	card_file, err := os.ReadFile(card_config_filepath)
+	if err != nil {
+		Log(3, "error reading card config file: "+err.Error())
+		return []byte("")
+	}
+	err = json.Unmarshal(card_file, &cardcfg)
+	if err != nil {
+		Log(3, "error parsing card config file: "+err.Error())
+		return []byte("")
+	}
+	rss_posts := []byte("")
+	// sort cards by order
+	sort.Slice(cardcfg.Cards, func(i, j int) bool {
+		return cardcfg.Cards[i]["order"] < cardcfg.Cards[j]["order"]
+	})
+	for _, card := range cardcfg.Cards {
+		card_title := card["card_title"]
+		card_description := card["card_description"]
+		card_link := card["card_link"]
+		rss_post := RenderPageTemplate("rss_post", map[string][]byte{
+			"RSS_TITLE":       []byte(card_title),
+			"RSS_LINK":        []byte(card_link),
+			"RSS_DESCRIPTION": []byte(card_description),
+		})
+		rss_posts = append(rss_posts, rss_post...)
+	}
+	// RenderedMap["RSSPosts"] = rss_posts
+	rss_feed := RenderPageTemplate("rss", map[string][]byte{
+		"RSSPosts": rss_posts,
+	})
+	return rss_feed
+}
+
+func renderTopBarTags() []byte {
+	// read tags config
+	type GlobalCfg struct {
+		Tagcfg []string `json:"TopBarTags"`
+	}
+	var tagcfg GlobalCfg
+	tag_config_filepath := "configs/global.json"
+	tag_file, err := os.ReadFile(tag_config_filepath)
+	if err != nil {
+		Log(3, "error reading tag config file: "+err.Error())
+		return []byte("")
+	}
+	err = json.Unmarshal(tag_file, &tagcfg)
+	if err != nil {
+		Log(3, "error parsing tag config file: "+err.Error())
+		return []byte("")
+	}
+	tags := []byte("")
+	for _, tag := range tagcfg.Tagcfg {
+		tag_html := RenderPageTemplate("top_tag", map[string][]byte{
+			"tag_name": []byte(tag),
+		})
+		tags = append(tags, tag_html...)
+	}
+	return tags
+}
+
+func renderarticle(articleID string) []byte {
+	articleSavePath := "configs/articles/"
+	articleSaveFile := articleSavePath + articleID + ".json"
+	// open article file
+	article_file, err := os.Open(articleSaveFile)
+	if err != nil {
+		Log(3, "error reading article file: "+err.Error())
+		return []byte("")
+	}
+	jsonParser := json.NewDecoder(article_file)
+	type ArticleCfg struct {
+		Title       string `json:"title"`
+		ArticleType string `json:"article_type"`
+		Author      string `json:"author"`
+		Content     string `json:"content"`
+		PubDate     string `json:"pub_date"`
+		Comments    []struct {
+			Author  string `json:"author"`
+			Content string `json:"content"`
+			PubDate string `json:"pub_date"`
+		} `json:"comments"`
+	}
+	var articlecfg ArticleCfg
+	err = jsonParser.Decode(&articlecfg)
+	if err != nil {
+		Log(3, "error parsing article file: "+err.Error())
+		return []byte("")
+	}
+	// render article comments
+	comments_html := []byte("")
+	for _, comment := range articlecfg.Comments {
+		comment_html := RenderPageTemplate("comment", map[string][]byte{
+			"comment_author":  []byte(comment.Author),
+			"comment_content": []byte(comment.Content),
+			"comment_date":    []byte(comment.PubDate),
+		})
+		comments_html = append(comments_html, comment_html...)
+	}
+	if articlecfg.ArticleType == "markdown" {
+		article_html_unsafe := markdown.ToHTML([]byte(articlecfg.Content), nil, nil)
+		bl := bluemonday.UGCPolicy()
+		article_html := bl.SanitizeBytes(article_html_unsafe)
+		articlecfg.Content = string(article_html)
+	}
+	// render article
+	article_html := RenderPageTemplate("article", map[string][]byte{
+		"article_title":   []byte(articlecfg.Title),
+		"article_type":    []byte(articlecfg.ArticleType),
+		"article_author":  []byte(articlecfg.Author),
+		"article_content": []byte(articlecfg.Content),
+		"article_date":    []byte(articlecfg.PubDate),
+		"comments":        comments_html,
+	})
+	return article_html
 }

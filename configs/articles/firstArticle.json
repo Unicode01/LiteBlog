@@ -1,0 +1,20 @@
+{
+    "title": "My First article",
+    "content": "# This is unicode's first article.\n## edited again\n### edited third",
+    "article_type": "markdown",
+    "author": "Unicode",
+    "edit_date": "2025-05-19 23:41:42",
+    "pub_date": "2021-01-01 00:00:00",
+    "comments": [
+        {
+            "author": "John Doe",
+            "content": "This is unicode's first article.",
+            "pub_date": "2021-01-01 00:00:00"
+        },
+        {
+            "author": "Unicode Admin",
+            "content": "This is a test comment.",
+            "pub_date": "2021-01-02 00:00:00"
+        }
+    ]
+}

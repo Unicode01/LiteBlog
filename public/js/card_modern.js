@@ -25,9 +25,9 @@ function init_card_tags(dom_card) {
     for (var i = 0; i < tags.length; i++) {
         tag_name = tags[i];
         taghtml = `
-        <div class ="tag padding-10px font-size-14px">
-            <a href="/tag/${tag_name}" class="link">${tag_name}</a>
-        </div>
+<div class="tag padding-10px font-size-14px">
+    <a href="#tag-${tag_name}" class="link">${tag_name}</a>
+</div>
         `
         newTagHtml += taghtml;
     }

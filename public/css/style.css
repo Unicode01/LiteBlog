@@ -16,8 +16,8 @@
   --text-secondary: var(--base-gray-700);
   --text-muted: #6C757D;
 
-  --card-width: 300px;
-  --card-height: 200px;
+  --card-width: {{global:card_max_width}};
+  --card-height: {{global:card_max_height}};
 }
 
 /* 全局样式 */
@@ -35,10 +35,12 @@ body {
     align-items: center;
     background-color: var(--base-white);
     border-bottom: 1px solid var(--base-gray-200);
+    z-index: 999;
+    overflow: hidden;
 }
 
 .logo {
-    font-size: 1.5rem;
+    font-size: 21px;
     font-weight: bold;
     color: var(--base-black);
 }
@@ -251,6 +253,15 @@ body {
     gap: 12px;
 }
 
+.bottom-div {
+    padding: 10px;
+    font-size: 14px;
+}
+
+.post-card-header {
+    font-size: 21px;
+}
+
 /* 辅助类 */
 
 .height-30px {
@@ -311,6 +322,14 @@ body {
 
 .flex-direction-column {
     flex-direction: column;
+}
+
+.flex-shrink-0 {
+    flex-shrink: 0;
+}
+
+.flex-shrink-1 {
+    flex-shrink: 1;
 }
 
 .align-items-center {
@@ -400,4 +419,16 @@ body {
 
 .position-fixed {
     position: fixed;
+}
+
+.min-width-0px {
+    min-width: 0;
+}
+
+.overflow-hidden {
+    overflow: hidden;
+}
+
+.overflow-auto {
+    overflow: auto;
 }

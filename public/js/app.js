@@ -36,9 +36,7 @@ function OnContextMenu(event) {
     // render context menu html
     var context_menu_norender = Context_menu_html;
     const prevmenu =     document.getElementById('context-menu');
-    if (prevmenu) {
-        prevmenu.remove();
-    }
+    prevmenu?.remove();
     
     domParser = new DOMParser();
     var context_menu_doc = domParser.parseFromString(context_menu_norender, "text/html").body.firstChild;
@@ -127,6 +125,19 @@ function OnContextMenu(event) {
                 var menu_line = document.createElement('div');
                 menu_line.classList.add('menu-item-line');
                 context_menu_doc.appendChild(menu_line);
+                // add edit option
+                var menu_edit = document.createElement('div');
+                menu_edit.classList.add('menu-item');
+                menu_edit.innerHTML = '<a class="link" href="#">Edit Card</a>';
+                menu_edit.firstChild.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    location.href = '/editcard.html?card_id=' + card.getAttribute("card-id");
+                });
+                context_menu_doc.appendChild(menu_edit);
+                // add item line
+                var menu_line = document.createElement('div');
+                menu_line.classList.add('menu-item-line');
+                context_menu_doc.appendChild(menu_line);
             }
             
         }
@@ -149,25 +160,111 @@ function OnContextMenu(event) {
         var menu_line = document.createElement('div');
         menu_line.classList.add('menu-item-line');
         context_menu_doc.appendChild(menu_line);
+        // add add article option
+        var menu_addarticle = document.createElement('div');
+        menu_addarticle.classList.add('menu-item');
+        menu_addarticle.innerHTML = '<a class="link" href="#">Add Article</a>';
+        menu_addarticle.firstChild.addEventListener('click', function(event) {
+            event.preventDefault();
+            location.href = '/addarticle.html';
+        });
+        context_menu_doc.appendChild(menu_addarticle);
+        // add item line
+        var menu_line = document.createElement('div');
+        menu_line.classList.add('menu-item-line');
+        context_menu_doc.appendChild(menu_line);
     }
     
     // add editmode option
-    var menu_editmode = document.createElement('div');
-    menu_editmode.classList.add('menu-item');
-    if (window._editMode) {
-        menu_editmode.innerHTML = '<a class="link" href="#">Exit Edit Mode</a>';
-    } else {
-        menu_editmode.innerHTML = '<a class="link" href="#">Edit Mode</a>';
-    }
-    menu_editmode.firstChild.addEventListener('click', function(event) {
-        event.preventDefault();
-        var editmode = document.getElementById('edit-button');
-        if (editmode) {
-            editmode.click();
+    const editmodeExist = document.getElementById('edit-button');
+    if (editmodeExist) {
+        var menu_editmode = document.createElement('div');
+        menu_editmode.classList.add('menu-item');
+        if (window._editMode) {
+            menu_editmode.innerHTML = '<a class="link" href="#">Exit Edit Mode</a>';
+        } else {
+            menu_editmode.innerHTML = '<a class="link" href="#">Edit Mode</a>';
         }
-    });
-    context_menu_doc.appendChild(menu_editmode);
+        menu_editmode.firstChild.addEventListener('click', function(event) {
+            event.preventDefault();
+            var editmode = document.getElementById('edit-button');
+            editmode?.click();
+        });
+        context_menu_doc.appendChild(menu_editmode);
+    }
 
+    // check if in addarticle.html or editarticle.html
+    if (location.pathname == '/addarticle.html' || location.pathname == '/editarticle.html') {
+        // add save as html option
+        var menu_save = document.createElement('div');
+        menu_save.classList.add('menu-item');
+        menu_save.innerHTML = '<a class="link" href="#">Save as HTML</a>';
+        menu_save.firstChild.addEventListener('click', function(event) {
+            event.preventDefault();
+            SaveArticle("html");
+        });
+        context_menu_doc.appendChild(menu_save);
+        // add item line
+        var menu_line = document.createElement('div');
+        menu_line.classList.add('menu-item-line');
+        context_menu_doc.appendChild(menu_line);
+        // add save as markdown option
+        var menu_save = document.createElement('div');
+        menu_save.classList.add('menu-item');
+        menu_save.innerHTML = '<a class="link" href="#">Save as Markdown</a>';
+        menu_save.firstChild.addEventListener('click', function(event) {
+            event.preventDefault();
+            SaveArticle("markdown");
+        });
+        context_menu_doc.appendChild(menu_save);
+        // add item line
+        var menu_line = document.createElement('div');
+        menu_line.classList.add('menu-item-line');
+        context_menu_doc.appendChild(menu_line);
+    }
+
+    // check if in /articles/
+    if (location.pathname.startsWith('/articles/')) {
+        // add edit article option
+        var menu_edit = document.createElement('div');
+        menu_edit.classList.add('menu-item');
+        menu_edit.innerHTML = '<a class="link" href="#">Edit Article</a>';
+        menu_edit.firstChild.addEventListener('click', function(event) {
+            event.preventDefault();
+            location.href = '/editarticle.html?article_id=' + location.pathname.split('/')[2];
+        });
+        context_menu_doc.appendChild(menu_edit);
+        // add item line
+        var menu_line = document.createElement('div');
+        menu_line.classList.add('menu-item-line');
+        context_menu_doc.appendChild(menu_line);
+        // add delete article option
+        var menu_delete = document.createElement('div');
+        menu_delete.classList.add('menu-item');
+        menu_delete.innerHTML = '<a class="link" href="#">Delete Article</a>';
+        menu_delete.firstChild.addEventListener('click', function(event) {
+            event.preventDefault();
+            DeleteArticleAPI(location.pathname.split('/')[2], function(result) {
+                if (result) {
+                    console.log("article deleted");
+                    location.href = '/';
+                } else {
+                    console.log("failed to delete article");
+                }
+            });
+        });
+        context_menu_doc.appendChild(menu_delete);
+        // add item line
+        var menu_line = document.createElement('div');
+        menu_line.classList.add('menu-item-line');
+        context_menu_doc.appendChild(menu_line);
+    }
+
+    // check if last item is line
+    var last_item = context_menu_doc.lastElementChild;
+    if (last_item.classList.contains('menu-item-line')) {
+        last_item.remove();
+    }
     // set position
     var menu_x = event.clientX;
     var menu_y = event.clientY;
@@ -180,10 +277,12 @@ function OnContextMenu(event) {
 }
 
 function AddEventListener() {
-    // add resize event listener to window
-    window.addEventListener('resize', function() {
-        ResizeCard();
-    });
+    // add resize event listener to window if /index
+    if (location.pathname == '/index') {
+        window.addEventListener('resize', function() {
+            ResizeCard();
+        });
+    }
     // add contextmenu event listener to body
     document.body.addEventListener('contextmenu', function(event) {
         event.preventDefault();

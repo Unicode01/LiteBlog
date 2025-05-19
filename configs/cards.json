@@ -2,7 +2,7 @@
     "cards": [
         {
             "card_description": "This is the first card with classical template",
-            "card_link": "https://www.google.com",
+            "card_link": "articles/firstArticle",
             "card_title": "Card 1",
             "id": "1",
             "order": "0",

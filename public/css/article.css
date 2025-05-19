@@ -1,0 +1,271 @@
+/* 文章容器 */
+#article-container {
+    padding: 12px;
+    width: 80%;
+}
+
+.article-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* 文章标题 */
+.article-title {
+    /* text-align: center; */
+    font-size: 2.5rem;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+    color: #2d3748;
+    font-weight: 700;
+}
+
+/* 文章信息容器 */
+.article-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    font-size: 0.9rem;
+    color: #718096;
+    margin-bottom: 1.5rem;
+}
+
+/* 作者样式 */
+.article-author {
+    font-weight: 600;
+    position: relative;
+    padding-right: 1.5rem;
+}
+
+.article-author::after {
+    content: "•";
+    position: absolute;
+    right: 0;
+    color: #cbd5e0;
+}
+
+/* 日期样式 */
+.article-date {
+    font-style: italic;
+}
+
+/* 文章正文 */
+.article-content {
+    margin: 0 auto;
+    line-height: 1.7;
+    font-size: 1.1rem;
+    color: #4a5568;
+}
+
+/* 评论区域 */
+.article-comments {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+#article-comment {
+    background: #f7fafc;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+#comment-Author {
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+}
+
+#comment-Date {
+    font-size: 0.85rem;
+    color: #718096;
+    margin-bottom: 1rem;
+}
+
+#comment-Content {
+    color: #4a5568;
+    line-height: 1.6;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .article-title {
+        font-size: 1.8rem;
+    }
+    
+    .article-info {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .article-author::after {
+        display: none;
+    }
+    
+    .article-content {
+        font-size: 1rem;
+        padding: 0 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .article-title {
+        font-size: 1.5rem;
+    }
+    
+    .article-content {
+        line-height: 1.6;
+    }
+}
+
+/* 以下为文章内容的样式 */
+
+/* 基础段落 */
+.article-content p {
+    margin: 1.2em 0;
+    word-break: break-word;
+}
+
+/* 标题层级 */
+.article-content h1 {
+    font-size: 1.8rem;
+    color: #2d3748;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 0.5rem;
+    margin: 2rem 0 1.5rem;
+}
+
+.article-content h2 {
+    font-size: 1.6rem;
+    color: #2d3748;
+    margin: 1.8rem 0 1.2rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.article-content h3 {
+    font-size: 1.4rem;
+    color: #3c4858;
+    margin: 1.5rem 0 1rem;
+}
+
+/* 列表样式 */
+.article-content ul,
+.article-content ol {
+    margin: 1rem 0;
+    padding-left: 2em;
+}
+
+.article-content li {
+    margin: 0.5em 0;
+    padding-left: 0.5em;
+}
+
+.article-content ul {
+    list-style: disc;
+}
+
+.article-content ol {
+    list-style: decimal;
+}
+
+/* 代码块 */
+.article-content pre {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 1.2em;
+    margin: 1.5rem 0;
+    overflow-x: auto;
+    font-size: 0.9em;
+}
+
+.article-content code {
+    background-color: #f8fafc;
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    color: #dd4b78;
+    font-family: Menlo, Monaco, Consolas, monospace;
+}
+
+.article-content pre code {
+    background: transparent;
+    padding: 0;
+    color: #4a5568;
+    font-size: 0.95em;
+}
+
+/* 引用块 */
+.article-content blockquote {
+    border-left: 4px solid #e2e8f0;
+    margin: 1.5rem 0;
+    padding: 0.8rem 1.2rem;
+    background-color: #f8fafc;
+    color: #718096;
+    font-style: italic;
+}
+
+.article-content blockquote p {
+    margin: 0;
+}
+
+/* 表格 */
+.article-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.article-content th,
+.article-content td {
+    padding: 0.8rem;
+    border: 1px solid #e2e8f0;
+    text-align: left;
+}
+
+.article-content th {
+    background-color: #f8fafc;
+    color: #2d3748;
+    font-weight: 600;
+}
+
+/* 图片 */
+.article-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1.5rem auto;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* 链接 */
+.article-content a {
+    color: #4299e1;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+}
+
+.article-content a:hover {
+    color: #3182ce;
+}
+
+/* 分割线 */
+.article-content hr {
+    border: 0;
+    height: 1px;
+    background: #e2e8f0;
+    margin: 2.5rem 0;
+}
+
+/* 数学公式对齐 */
+.article-content .math-display {
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    padding: 1rem;
+    text-align: center;
+}
