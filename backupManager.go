@@ -32,8 +32,10 @@ func BackupNow() {
 	// tar the blog directory and store it in the backup directory
 	src := "configs/"
 	dst := Config.BackupCfg.BackupDir + "/backup-" + time.Now().Format("2006-01-02_15-04-05") + ".tar.gz"
-	// make dir
-	os.MkdirAll(Config.BackupCfg.BackupDir, 0755)
+	// check dir
+	if _, err := os.Stat(Config.BackupCfg.BackupDir); os.IsNotExist(err) {
+		os.MkdirAll(Config.BackupCfg.BackupDir, 0755)
+	}
 	if err := TarDir(src, dst); err != nil {
 		Log(3, "Error while backing up: "+err.Error())
 	} else {

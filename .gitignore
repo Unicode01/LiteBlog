@@ -1,3 +1,5 @@
 cache
 backups
 LiteBlog
+build.sh
+release
