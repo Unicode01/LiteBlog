@@ -8,6 +8,10 @@
   transition: all 0.2s ease-in-out;
 }
 
+.card-modern .card-description {
+  margin: 10px 10px 0 10px;
+}
+
 .card-modern:hover {
   transform: translateY(-5px);
 }
