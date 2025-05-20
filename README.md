@@ -2,7 +2,7 @@
 LiteBlog is a simple blog system written in Golang,html,css,js. Aim to provide a simple, easy-to-use and lightweight blog system.
 ## Features
 - Simple, Lightweight and easy-to-use interface
-- Markdown and HTML support (with [markedJS](https://github.com/markedjs/marked) and [markdown-go]("github.com/russross/blackfriday"))
+- Markdown and HTML support (with [markedJS](https://github.com/markedjs/marked))
 - own script and style injection support
 - comment system support (Developing)
 - specialized full caching system for blog and asynchronous caching mechanism
