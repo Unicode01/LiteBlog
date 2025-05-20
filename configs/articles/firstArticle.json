@@ -1,9 +1,9 @@
 {
     "title": "My First article",
-    "content": "# This is unicode's first article.\n## edited again\n### edited third",
-    "article_type": "markdown",
+    "content": "# Your first article\n\nThis is your first article. You can write anything here.",
+    "content_html": "\u003ch1\u003eYour first article\u003c/h1\u003e\n\u003cp\u003eThis is your first article. You can write anything here.\u003c/p\u003e\n",
     "author": "Unicode",
-    "edit_date": "2025-05-19 23:41:42",
+    "edit_date": "2025-05-21 00:46:22",
     "pub_date": "2021-01-01 00:00:00",
     "comments": [
         {

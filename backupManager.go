@@ -64,7 +64,7 @@ func DeleteObsoleteBackups() {
 
 		t, err := time.Parse("2006-01-02_15-04-05", timeStr)
 		if err != nil {
-			Log(3, fmt.Sprintf("无法解析文件时间: %s, 错误: %v", fileName, err))
+			Log(3, fmt.Sprintf("Cant parse backup time from file name: %s, error: %v", fileName, err))
 			continue
 		}
 
@@ -102,9 +102,9 @@ func DeleteObsoleteBackups() {
 	for _, path := range toDelete {
 		if !seen[path] {
 			if err := os.Remove(path); err != nil {
-				Log(3, fmt.Sprintf("删除备份失败: %s, 错误: %v", path, err))
+				Log(3, fmt.Sprintf("Delete backup file error: %s, error: %v", path, err))
 			} else {
-				Log(1, fmt.Sprintf("已删除过期备份: %s", path))
+				Log(1, fmt.Sprintf("Deleted obsolete backup file: %s", path))
 			}
 			seen[path] = true
 		}

@@ -66,6 +66,17 @@ body {
   z-index: 1000;
 }
 
+.history-menu {
+    display: none;
+    box-sizing: border-box;
+    position: absolute;
+    background: var(--base-white);
+    border: 1px solid var(--base-gray-200);
+    /* min-width: auto; */
+    overflow: hidden;
+    z-index: 1000;
+  }
+
 .menu-item {
     box-sizing: border-box;
     display: block;

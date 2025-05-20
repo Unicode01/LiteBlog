@@ -11,7 +11,7 @@ function EnterEditMode() {
     if (window._editMode) {
         // save changes
         console.log("Save changes");
-        const api_dic = window.location.origin+"/" + path;
+        const api_dic = window.location.origin + "/" + path;
         const api_edit_order = api_dic + "/edit_order";
         const data = {
             token: token,
@@ -33,30 +33,30 @@ function EnterEditMode() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-                },
-            body: JSON.stringify(data)
             },
+            body: JSON.stringify(data)
+        },
         )
-       .then(response => {
-            if (response.ok) {
-                console.log("Save changes successfully");
-                window._editMode = false;
-                // remove edit-mode-border class
-                cards.forEach((card) => {
-                    card.classList.remove('edit-mode-border');
-                    card.classList.remove('draggable');
-                    card.draggable = false;
-                });
-                // check to remove add card input box
-                const card_input_box = document.querySelector('.card-input-box');
-                card_input_box?.remove();
-            } else {
-                console.log("Save changes failed");
-            }
-        })
-       .catch(error => {
-            console.log("Save changes failed: " + error);
-       });
+            .then(response => {
+                if (response.ok) {
+                    console.log("Save changes successfully");
+                    window._editMode = false;
+                    // remove edit-mode-border class
+                    cards.forEach((card) => {
+                        card.classList.remove('edit-mode-border');
+                        card.classList.remove('draggable');
+                        card.draggable = false;
+                    });
+                    // check to remove add card input box
+                    const card_input_box = document.querySelector('.card-input-box');
+                    card_input_box?.remove();
+                } else {
+                    console.log("Save changes failed");
+                }
+            })
+            .catch(error => {
+                console.log("Save changes failed: " + error);
+            });
     }
 
     window._editMode = true;
@@ -71,7 +71,7 @@ function EnterEditMode() {
             originalIndex.set(cardID, card.style.order);
             card.classList.add('edit-mode-border');
         }
-        
+
     });
 
     let dragging_card = null;
@@ -92,7 +92,7 @@ function EnterEditMode() {
         card.draggable = true;
         card.classList.add('draggable');
     });
-    
+
     let draggable_cards = document.querySelectorAll('.draggable');
 
     function dragstart_handler(event) {
@@ -104,7 +104,7 @@ function EnterEditMode() {
     function dragover_handler(event) {
         event.preventDefault();
         console.log("Drag over");
-        
+
     }
 
     function drop_handler(event) {
@@ -142,7 +142,7 @@ function EnterEditMode() {
             const offsetOrder = afterOrder - beforeOrder;
             draggable_cards.forEach((card) => {
                 const currentOrder = parseInt(card.style.order, 10);
-                
+
                 if (offsetOrder > 0) { // 向下拖动
                     // 位于原位置和目标位置之间的卡片，order 减 1
                     if (card !== dragging_card && currentOrder > beforeOrder && currentOrder <= afterOrder) {
@@ -155,7 +155,7 @@ function EnterEditMode() {
                     }
                 }
             });
-        
+
             // update order
             dragging_card.style.order = afterOrder;
         }
@@ -171,7 +171,7 @@ function DeleteCard(cardID) {
     const { path, token } = result;
     console.log("Access path: " + path);
     console.log("Access token: " + token);
-    const api_dic = window.location.origin+"/" + path;
+    const api_dic = window.location.origin + "/" + path;
     const api_delete_card = api_dic + "/delete_card";
     const data = {
         token: token,
@@ -181,25 +181,25 @@ function DeleteCard(cardID) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
-            },
-        body: JSON.stringify(data)
         },
+        body: JSON.stringify(data)
+    },
     )
-    .then(response => {
-        if (response.ok) {
-            console.log("Delete card successfully");
-            const card = document.querySelector(`[card-id="${cardID}"]`);
-            card.remove();
-            return true;
-        } else {
-            console.log("Delete card failed");
+        .then(response => {
+            if (response.ok) {
+                console.log("Delete card successfully");
+                const card = document.querySelector(`[card-id="${cardID}"]`);
+                card.remove();
+                return true;
+            } else {
+                console.log("Delete card failed");
+                return false;
+            }
+        })
+        .catch(error => {
+            console.log("Delete card failed: " + error);
             return false;
-        }
-    })
-   .catch(error => {
-        console.log("Delete card failed: " + error);
-        return false;
-   });
+        });
     return true;
 }
 
@@ -211,117 +211,14 @@ function AddCard() {
     }
     // this func is called to generate the card json and add it to the backend
     const add_card_input_box_html = `
-<div class="card-input-box">
-    <div class="input-group">
-        <label for="add-card-title">Title</label>
-        <input type="text" id="add-card-title" required>
-    </div>
-
-    <div class="input-group">
-        <label for="add-card-description">Description</label>
-        <textarea id="add-card-description" rows="3" required></textarea>
-    </div>
-
-    <div class="input-group">
-        <label for="add-card-link">Link</label>
-        <textarea id="add-card-link" rows="2" required></textarea>
-    </div>
-
-    <div class="input-group">
-        <label for="add-card-template">Template</label>
-        <input type="text" id="add-card-template" value="card_template_classical" required>
-    </div>
-
-    <div class="input-group">
-        <label for="add-card-tags">Tags</label>
-        <input type="text" id="add-card-tags" value="mytag1 mytag2" required>
-    </div>
-
-    <div class="custom-fields">
-        <button type="button" onclick="OncreateCustomFieldButtonClick()">
-            <span>+</span>
-            <span>Add Custom Field</span>
-        </button>
-        <div id="custom-fields-container"></div>
-    </div>
-
-    <div class="button-group">
-        <button type="button" class="add-card-button" onclick="OnAddCardButtonClick()">Add Card</button>
-        <button type="button" class="cancel-button" onclick="CancleInputBox()">Cancel</button>
-    </div>
-</div>
+        {{file:edit_card_input_box}}
     `;
     domP = new DOMParser();
     const add_card_box_doc = domP.parseFromString(add_card_input_box_html, "text/html").body.firstChild;
     document.body.appendChild(add_card_box_doc);
 }
 
-function OnAddCardButtonClick() {
-    function GetCardJson() {
-        const customFields = {};
-        
-        // 获取所有自定义字段
-        document.querySelectorAll('.custom-field-group').forEach(group => {
-            const name = group.querySelector('.field-name').value;
-            const value = group.querySelector('.field-value').value;
-            if (name && value) {
-                customFields[name] = value;
-            }
-        });
-        json =  {
-            card_title: document.getElementById('add-card-title').value.toString(),
-            card_description: document.getElementById('add-card-description').value.toString(),
-            card_link: document.getElementById('add-card-link').value.toString(),
-            template: document.getElementById('add-card-template').value.toString(),
-            tags: document.getElementById('add-card-tags').value.toString(),
-            order: document.querySelectorAll('.card-container').length.toString()
-        };
-        for (const key in customFields) {
-            json[key] = customFields[key].toString();
-        }
-        return json;
-    }
-    AddCardAPI(GetCardJson())
-    CancleInputBox();
-}
-
-function OncreateCustomFieldButtonClick() {
-    const container = document.getElementById('custom-fields-container');
-    
-    const fieldGroup = document.createElement('div');
-    fieldGroup.className = 'custom-field-group';
-    
-    // 字段名称输入框
-    const nameInput = document.createElement('input');
-    nameInput.type = "text";
-    nameInput.placeholder = "Field Name (e.g.: link)";
-    nameInput.className = "field-name";
-    
-    // 字段值输入框
-    const valueInput = document.createElement('input');
-    valueInput.type = "text";
-    valueInput.placeholder = "field value";
-    valueInput.className = "field-value";
-    
-    // 删除按钮
-    const removeBtn = document.createElement('button');
-    removeBtn.type = "button";
-    removeBtn.textContent = "×";
-    removeBtn.onclick = () => fieldGroup.remove();
-    
-    fieldGroup.appendChild(nameInput);
-    fieldGroup.appendChild(valueInput);
-    fieldGroup.appendChild(removeBtn);
-    container.appendChild(fieldGroup);
-}
-
-function CancleInputBox() {
-    const add_card_box = document.querySelector(".card-input-box");
-    add_card_box.remove();
-    window._addingCard = false;
-}
-
-function AddCardAPI(cardJson) {
+function GetCardJsonAPI(cardID, callback) {
     const result = GetAccessPathAndToken();
     if (!result) {
         console.log("Access path and token are required.");
@@ -330,7 +227,244 @@ function AddCardAPI(cardJson) {
     const { path, token } = result;
     console.log("Access path: " + path);
     console.log("Access token: " + token);
-    const api_dic = window.location.origin+"/" + path;
+    const api_dic = window.location.origin + "/" + path;
+    const api_get_card = api_dic + "/get_card";
+    const data = {
+        token: token,
+        cardID: cardID
+    }
+    fetch(api_get_card, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ERR，Code：${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log(data);
+            callback(data);
+        })
+        .catch(error => {
+            console.log(error);
+            callback("");
+        });
+}
+
+function EditCardAPI(cardJson, callback) {
+    const result = GetAccessPathAndToken();
+    if (!result) {
+        console.log("Access path and token are required.");
+        return false;
+    }
+    const { path, token } = result;
+    console.log("Access path: " + path);
+    console.log("Access token: " + token);
+    const api_dic = window.location.origin + "/" + path;
+    const api_edit_card = api_dic + "/edit_card";
+    const data = {
+        token: token,
+        card: cardJson
+    }
+    console.log(JSON.stringify(data));
+    fetch(api_edit_card, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ERR，Code：${response.status}`);
+            }
+            return response.text();
+        })
+        .then(data => {
+            console.log(data);
+            callback(data);
+        })
+        .catch(error => {
+            console.log(error);
+            callback("");
+        });
+}
+
+function EditCard(cardId) {
+    GetCardJsonAPI(cardId, (cardJson) => {
+        if (cardJson === "") {
+            console.log("Get card json failed");
+            return;
+        } else {
+            if (window._edittingCard) {
+                return;
+            } else {
+                window._edittingCard = true;
+                window._edittingCardID = cardId;
+            }
+            // this func is called to generate the card json and add it to the backend
+            const add_card_input_box_html = `
+            {{file:add_card_input_box}}
+            `;
+            domP = new DOMParser();
+            const add_card_box_doc = domP.parseFromString(add_card_input_box_html, "text/html").body.firstChild;
+            add_card_box_doc.querySelector("#add-card-title").value = cardJson.card_title;
+            add_card_box_doc.querySelector("#add-card-description").value = cardJson.card_description;
+            add_card_box_doc.querySelector("#add-card-link").value = cardJson.card_link;
+            add_card_box_doc.querySelector("#add-card-template").value = cardJson.template;
+            add_card_box_doc.querySelector("#add-card-tags").value = cardJson.tags;
+            for (const key in cardJson) {
+                if (key != "card_title" && key != "card_description" && key != "card_link" && key != "template" && key != "tags" && key != "id") {
+                    const customFieldGroup = document.createElement('div');
+                    customFieldGroup.className = 'custom-field-group';
+
+                    // 字段名称输入框
+                    const nameInput = document.createElement('input');
+                    nameInput.type = "text";
+                    nameInput.placeholder = "Field Name (e.g.: link)";
+                    nameInput.className = "field-name";
+                    nameInput.value = key.replace("custom_", "");
+
+                    // 字段值输入框
+                    const valueInput = document.createElement('input');
+                    valueInput.type = "text";
+                    valueInput.placeholder = "field value";
+                    valueInput.className = "field-value";
+                    valueInput.value = cardJson[key];
+
+                    // 删除按钮
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = "button";
+                    removeBtn.textContent = "×";
+                    removeBtn.onclick = () => customFieldGroup.remove();
+
+                    customFieldGroup.appendChild(nameInput);
+                    customFieldGroup.appendChild(valueInput);
+                    customFieldGroup.appendChild(removeBtn);
+                    add_card_box_doc.querySelector("#custom-fields-container").appendChild(customFieldGroup);
+                }
+            }
+            document.body.appendChild(add_card_box_doc);
+        }
+    });
+}
+
+function OnAddCardButtonClick(editMode = false) {
+    if (editMode) {
+        function GetCardJson() {
+            const customFields = {};
+
+            // 获取所有自定义字段
+            document.querySelectorAll('.custom-field-group').forEach(group => {
+                const name = group.querySelector('.field-name').value;
+                const value = group.querySelector('.field-value').value;
+                if (name && value) {
+                    customFields[name] = value;
+                }
+            });
+            json = {
+                card_title: document.getElementById('add-card-title').value.toString(),
+                card_description: document.getElementById('add-card-description').value.toString(),
+                card_link: document.getElementById('add-card-link').value.toString(),
+                template: document.getElementById('add-card-template').value.toString(),
+                tags: document.getElementById('add-card-tags').value.toString(),
+                order: document.querySelectorAll('.card-container').length.toString(),
+                id: window._edittingCardID.toString()
+            };
+            for (const key in customFields) {
+                json[key] = customFields[key].toString();
+            }
+            return json;
+        }
+        EditCardAPI(GetCardJson(), function (data) {
+            console.log(data);
+            CancleInputBox();
+        })
+    } else {
+        function GetCardJson() {
+            const customFields = {};
+
+            // 获取所有自定义字段
+            document.querySelectorAll('.custom-field-group').forEach(group => {
+                const name = group.querySelector('.field-name').value;
+                const value = group.querySelector('.field-value').value;
+                if (name && value) {
+                    customFields[name] = value;
+                }
+            });
+            json = {
+                card_title: document.getElementById('add-card-title').value.toString(),
+                card_description: document.getElementById('add-card-description').value.toString(),
+                card_link: document.getElementById('add-card-link').value.toString(),
+                template: document.getElementById('add-card-template').value.toString(),
+                tags: document.getElementById('add-card-tags').value.toString(),
+                order: document.querySelectorAll('.card-container').length.toString()
+            };
+            for (const key in customFields) {
+                json[key] = customFields[key].toString();
+            }
+            return json;
+        }
+        AddCardAPI(GetCardJson(), function (data) {
+            console.log(data);
+            CancleInputBox();
+        })
+    }
+}
+
+function OncreateCustomFieldButtonClick() {
+    const container = document.getElementById('custom-fields-container');
+
+    const fieldGroup = document.createElement('div');
+    fieldGroup.className = 'custom-field-group';
+
+    // 字段名称输入框
+    const nameInput = document.createElement('input');
+    nameInput.type = "text";
+    nameInput.placeholder = "Field Name (e.g.: link)";
+    nameInput.className = "field-name";
+
+    // 字段值输入框
+    const valueInput = document.createElement('input');
+    valueInput.type = "text";
+    valueInput.placeholder = "field value";
+    valueInput.className = "field-value";
+
+    // 删除按钮
+    const removeBtn = document.createElement('button');
+    removeBtn.type = "button";
+    removeBtn.textContent = "×";
+    removeBtn.onclick = () => fieldGroup.remove();
+
+    fieldGroup.appendChild(nameInput);
+    fieldGroup.appendChild(valueInput);
+    fieldGroup.appendChild(removeBtn);
+    container.appendChild(fieldGroup);
+}
+
+function CancleInputBox() {
+    const add_card_box = document.querySelector(".card-input-box");
+    add_card_box?.remove();
+    window._addingCard = false;
+    window._edittingCard = false;
+    window._edittingCardID = "";
+}
+
+function AddCardAPI(cardJson, callback) {
+    const result = GetAccessPathAndToken();
+    if (!result) {
+        console.log("Access path and token are required.");
+        return false;
+    }
+    const { path, token } = result;
+    console.log("Access path: " + path);
+    console.log("Access token: " + token);
+    const api_dic = window.location.origin + "/" + path;
     const api_add_card = api_dic + "/add_card";
     const data = {
         token: token,
@@ -341,24 +475,24 @@ function AddCardAPI(cardJson) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
-            },
-        body: JSON.stringify(data)
         },
+        body: JSON.stringify(data)
+    },
     )
-    .then(response => {
-        if (response.ok) {
-            console.log("Add card successfully");
-            return true;
-        } else {
-            console.log("Add card failed");
-            return false;
-        }
-    })
-   .catch(error => {
-        console.log("Add card failed: " + error);
-        return false;
-   });
-    return true;
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ERR，Code：${response.status}`);
+            }
+            return response.text();
+        })
+        .then(data => {
+            console.log(data);
+            callback(data);
+        })
+        .catch(error => {
+            console.log(error);
+            callback("");
+        });
 }
 
 function GetAccessPathAndToken() {
@@ -369,7 +503,7 @@ function GetAccessPathAndToken() {
         if (newPath === null) return null;
         const newToken = prompt("Enter the access token:");
         if (newToken === null) return null;
-        
+
         localStorage.setItem("access_path", newPath);
         localStorage.setItem("access_token", newToken);
         path = newPath;
@@ -382,7 +516,7 @@ function AddEditButtonListener() {
     const editButtons = document.querySelectorAll(".edit-button");
     editButtons.forEach(button => {
         button.addEventListener("click", EnterEditMode);
-        });
+    });
 }
 
 AddEditButtonListener();
