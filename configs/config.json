@@ -32,7 +32,7 @@
         "max_backups_survival_time": 86400
     },
     "comment_config": {
-        "enable": true,
+        "enable": false,
         "type": "cloudflare_turnstile",
         "cf_secret_key": "your_secret_key",
         "cf_site_key": "your_site_key",

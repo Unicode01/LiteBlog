@@ -260,6 +260,39 @@ function OnContextMenu(event) {
         var menu_line = document.createElement('div');
         menu_line.classList.add('menu-item-line');
         context_menu_doc.appendChild(menu_line);
+        // check if in comment doms
+        const comment_doms = document.querySelectorAll(".article-comment")
+        comment_doms.forEach(comment_dom => {
+            const cursorX = event.clientX;
+            const cursorY = event.clientY;
+            const commentX = comment_dom.getBoundingClientRect().left;
+            const commentY = comment_dom.getBoundingClientRect().top;
+            const commentWidth = comment_dom.getBoundingClientRect().width;
+            const commentHeight = comment_dom.getBoundingClientRect().height;
+            if (cursorX > commentX && cursorX < commentX + commentWidth && cursorY > commentY && cursorY < commentY + commentHeight) {
+                // in comment block, add delete comment option
+                var menu_deletecomment = document.createElement('div');
+                menu_deletecomment.classList.add('menu-item');
+                menu_deletecomment.innerHTML = '<a class="link" href="#">Delete Comment</a>';
+                menu_deletecomment.firstChild.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    const comment_id = comment_dom.getAttribute("comment-id");
+                    DeleteCommentAPI(comment_id, function (result) {
+                        if (result) {
+                            console.log("comment deleted");
+                            comment_dom.remove();
+                        } else {
+                            console.log("failed to delete comment");
+                        }
+                    });
+                });
+                context_menu_doc.appendChild(menu_deletecomment);
+                // add item line
+                var menu_line = document.createElement('div');
+                menu_line.classList.add('menu-item-line');
+                context_menu_doc.appendChild(menu_line);
+            }
+        });
     }
 
     // check if last item is line
@@ -308,25 +341,27 @@ function OnHistoryButtonClick() {
         history_menu.remove();
     } else {
         historyItems = localStorage.getItem('history');
-        if (historyItems) {
-            // get history from local storage
-            const DomParser = new DOMParser();
-            let menu_doc = DomParser.parseFromString(Context_menu_html, "text/html").body.firstChild;
-            menu_doc.style.minWidth = "200px";
-            menu_doc.id = 'history-menu';
-            menu_doc.classList.remove("context-menu")
-            menu_doc.classList.add("history-menu")
-            historyItems = JSON.parse(historyItems);
-            historyItems.forEach(function (item) {
-                const menu_item = document.createElement('div');
-                menu_item.classList.add('menu-item');
-                menu_item.innerHTML = '<a class="link" href="' + item.url + '">' + item.title + '</a>';
-                menu_doc.appendChild(menu_item);
-                var menu_line = document.createElement('div');
-                menu_line.classList.add('menu-item-line');
-                menu_doc.appendChild(menu_line);
-            });
+        if (!historyItems) {
+            return;
         }
+        // get history from local storage
+        const DomParser = new DOMParser();
+        let menu_doc = DomParser.parseFromString(Context_menu_html, "text/html").body.firstChild;
+        menu_doc.style.minWidth = "200px";
+        menu_doc.id = 'history-menu';
+        menu_doc.classList.remove("context-menu")
+        menu_doc.classList.add("history-menu")
+        historyItems = JSON.parse(historyItems);
+        historyItems.forEach(function (item) {
+            const menu_item = document.createElement('div');
+            menu_item.classList.add('menu-item');
+            menu_item.innerHTML = '<a class="link" href="' + item.url + '">' + item.title + '</a>';
+            menu_doc.appendChild(menu_item);
+            var menu_line = document.createElement('div');
+            menu_line.classList.add('menu-item-line');
+            menu_doc.appendChild(menu_line);
+        });
+
         if (menu_doc.lastElementChild.classList.contains('menu-item-line')) {
             menu_doc.lastElementChild.remove();
         }
@@ -346,6 +381,7 @@ function OnHistoryButtonClick() {
         menu_doc.style.top = menu_y + 'px';
         // append to body
         document.body.appendChild(menu_doc);
+
     }
 }
 
