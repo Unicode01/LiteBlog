@@ -12,6 +12,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"regexp"
@@ -27,6 +28,7 @@ var (
 	cacheManager       *CacheManager
 	deliverManager     *DeliverManager
 	pathTraversalRegex = regexp.MustCompile(`(?i)(\.\./|\.\.\\)|(/etc/passwd|/bin/sh|/bin/bash)`)
+	LastCommentTime    time.Time
 )
 
 // Init the network manager
@@ -134,12 +136,21 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// check backend url
-	backendPrefix := "/" + Config.AccessCfg.BackendPath + "/"
-	if strings.HasPrefix(r.URL.Path, backendPrefix) { // backend url
-		serveBackend(w, r)
+	// check public api
+	if strings.HasPrefix(r.URL.Path, "/api/v1/") { // public api
+		servePublicAPI(w, r)
 		return
 	}
+
+	// check backend url
+	if Config.AccessCfg.EnableBackend {
+		backendPrefix := "/" + Config.AccessCfg.BackendPath + "/"
+		if strings.HasPrefix(r.URL.Path, backendPrefix) { // backend url
+			serveBackend(w, r)
+			return
+		}
+	}
+
 	// check if article file
 	if strings.HasPrefix(r.URL.Path, "/articles/") { // article file
 		if Config.CacheCfg.UseDisk {
@@ -281,6 +292,25 @@ func serveBackend(w http.ResponseWriter, r *http.Request) {
 		return
 	case "/delete_article":
 		backendHandler_delete_article(w, r)
+		return
+	case "/get_card":
+		backendHandler_get_card(w, r)
+		return
+	case "/edit_card":
+		backendHandler_edit_card(w, r)
+		return
+	default:
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("404 Not Found"))
+		return
+	}
+}
+
+func servePublicAPI(w http.ResponseWriter, r *http.Request) {
+	api_path := r.URL.Path[len("/api/v1"):]
+	switch api_path {
+	case "/add_comment":
+		public_api_add_comment(w, r)
 		return
 	default:
 		w.WriteHeader(http.StatusNotFound)
@@ -504,6 +534,138 @@ func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func backendHandler_get_card(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	bodyBin, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	type cardrequest struct {
+		Token string `json:"token"`
+		ID    string `json:"cardID"`
+	}
+	var req cardrequest
+	err = json.Unmarshal(bodyBin, &req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Printf("Failed to parse request body, %s\n", err)
+		return
+	}
+	// check token
+	if req.Token != Config.AccessCfg.AccessToken {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	// get card
+	type cards struct {
+		Cards []map[string]string `json:"cards"`
+	}
+	var cardsData cards
+	cardsDataBin, err := os.ReadFile("configs/cards.json")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = json.Unmarshal(cardsDataBin, &cardsData)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	for _, card := range cardsData.Cards {
+		if card["id"] == req.ID {
+			cardBin, err := json.Marshal(card)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write(cardBin)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusNotFound)
+	w.Write([]byte("Card not found"))
+}
+
+func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	bodyBin, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	type cardrequest struct {
+		Token    string            `json:"token"`
+		CardJson map[string]string `json:"card"`
+	}
+	var req cardrequest
+	err = json.Unmarshal(bodyBin, &req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Printf("Failed to parse request body, %s\n", err)
+		return
+	}
+	// check token
+	if req.Token != Config.AccessCfg.AccessToken {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	// sanitize input, use bluemonday to prevent XSS attack
+	// NewPolicy() creates a new policy with the default settings.
+	p := bluemonday.NewPolicy()
+	for k, v := range req.CardJson {
+		req.CardJson[k] = p.Sanitize(v)
+	}
+	// update card
+	type cards struct {
+		Cards []map[string]string `json:"cards"`
+	}
+	var cardsData cards
+	cardsDataBin, err := os.ReadFile("configs/cards.json")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = json.Unmarshal(cardsDataBin, &cardsData)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	for i, card := range cardsData.Cards {
+		if card["id"] == req.CardJson["id"] {
+			cardsData.Cards[i] = req.CardJson
+			break
+		}
+	}
+	cardsDataBin, err = json.MarshalIndent(cardsData, "", "    ")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = os.WriteFile("configs/cards.json", cardsDataBin, 0644)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// response
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+	deliverManager.AddTask(func() {
+		// clear the cache
+		if Config.CacheCfg.UseDisk {
+			cacheManager.DelCacheItem("/index.html")
+		}
+	})
+}
+
 func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -517,10 +679,10 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 	type articlerequest struct {
 		Token   string `json:"token"`
 		Article struct {
-			Title        string `json:"title"`
-			Content      string `json:"content"`
-			Article_type string `json:"article_type"`
-			Author       string `json:"author"`
+			Title       string `json:"title"`
+			Content     string `json:"content"`
+			ContentHTML string `json:"content_html"`
+			Author      string `json:"author"`
 		} `json:"article"`
 	}
 	var req articlerequest
@@ -535,43 +697,38 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	switch req.Article.Article_type {
-	case "html":
-		// sanitize input, use bluemonday to prevent XSS attack
-		// NewPolicy() creates a new policy with the default settings.
-		p := bluemonday.NewPolicy()
-		pcontent := bluemonday.UGCPolicy()
-		req.Article.Title = p.Sanitize(req.Article.Title)
-		req.Article.Content = pcontent.Sanitize(req.Article.Content)
-		req.Article.Article_type = p.Sanitize(req.Article.Article_type)
-		req.Article.Author = p.Sanitize(req.Article.Author)
-	default:
-		// do nothing
-	}
+
+	// sanitize input, use bluemonday to prevent XSS attack
+	// NewPolicy() creates a new policy with the default settings.
+	p := bluemonday.NewPolicy()
+	pcontent := bluemonday.UGCPolicy()
+	req.Article.Title = p.Sanitize(req.Article.Title)
+	req.Article.Content = pcontent.Sanitize(req.Article.Content)
+	req.Article.Author = p.Sanitize(req.Article.Author)
 	// add article
 	// generate article id
 	articleID := generateTraceID()
 	articleJsonPath := "configs/articles/" + articleID + ".json"
 	type articleJsonStruct struct {
-		Title        string `json:"title"`
-		Content      string `json:"content"`
-		Article_type string `json:"article_type"`
-		Author       string `json:"author"`
-		Edit_Date    string `json:"edit_date"`
-		Pub_Date     string `json:"pub_date"`
-		Comments     []struct {
+		Title       string `json:"title"`
+		Content     string `json:"content"`
+		ContentHTML string `json:"content_html"`
+		Author      string `json:"author"`
+		Edit_Date   string `json:"edit_date"`
+		Pub_Date    string `json:"pub_date"`
+		Comments    []struct {
 			Author   string `json:"author"`
 			Content  string `json:"content"`
 			Pub_Date string `json:"pub_date"`
 		} `json:"comments"`
 	}
 	articleJson := articleJsonStruct{
-		Title:        req.Article.Title,
-		Content:      req.Article.Content,
-		Article_type: req.Article.Article_type,
-		Author:       req.Article.Author,
-		Edit_Date:    time.Now().Format("2006-01-02 15:04:05"),
-		Pub_Date:     time.Now().Format("2006-01-02 15:04:05"),
+		Title:       req.Article.Title,
+		Content:     req.Article.Content,
+		ContentHTML: req.Article.ContentHTML,
+		Author:      req.Article.Author,
+		Edit_Date:   time.Now().Format("2006-01-02 15:04:05"),
+		Pub_Date:    time.Now().Format("2006-01-02 15:04:05"),
 		Comments: make([]struct {
 			Author   string `json:"author"`
 			Content  string `json:"content"`
@@ -619,11 +776,11 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 	type articlerequest struct {
 		Token   string `json:"token"`
 		Article struct {
-			ID           string `json:"article_id"`
-			Title        string `json:"title"`
-			Content      string `json:"content"`
-			Article_type string `json:"article_type"`
-			Author       string `json:"author"`
+			ID          string `json:"article_id"`
+			Title       string `json:"title"`
+			Content     string `json:"content"`
+			ContentHTML string `json:"content_html"`
+			Author      string `json:"author"`
 		} `json:"article"`
 	}
 	var req articlerequest
@@ -638,29 +795,25 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	switch req.Article.Article_type {
-	case "html":
-		// sanitize input, use bluemonday to prevent XSS attack
-		// NewPolicy() creates a new policy with the default settings.
-		p := bluemonday.NewPolicy()
-		pcontent := bluemonday.UGCPolicy()
-		req.Article.Title = p.Sanitize(req.Article.Title)
-		req.Article.Content = pcontent.Sanitize(req.Article.Content)
-		req.Article.Article_type = p.Sanitize(req.Article.Article_type)
-		req.Article.Author = p.Sanitize(req.Article.Author)
-	default:
-		// do nothing
-	}
+
+	// sanitize input, use bluemonday to prevent XSS attack
+	// NewPolicy() creates a new policy with the default settings.
+	p := bluemonday.NewPolicy()
+	pcontent := bluemonday.UGCPolicy()
+	req.Article.Title = p.Sanitize(req.Article.Title)
+	req.Article.Content = pcontent.Sanitize(req.Article.Content)
+	req.Article.Author = p.Sanitize(req.Article.Author)
+
 	// update article
 	articleJsonPath := "configs/articles/" + req.Article.ID + ".json"
 	type articleJsonStruct struct {
-		Title        string `json:"title"`
-		Content      string `json:"content"`
-		Article_type string `json:"article_type"`
-		Author       string `json:"author"`
-		Edit_Date    string `json:"edit_date"`
-		Pub_Date     string `json:"pub_date"`
-		Comments     []struct {
+		Title       string `json:"title"`
+		Content     string `json:"content"`
+		ContentHTML string `json:"content_html"`
+		Author      string `json:"author"`
+		Edit_Date   string `json:"edit_date"`
+		Pub_Date    string `json:"pub_date"`
+		Comments    []struct {
 			Author   string `json:"author"`
 			Content  string `json:"content"`
 			Pub_Date string `json:"pub_date"`
@@ -679,7 +832,7 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 	}
 	articleJson.Title = req.Article.Title
 	articleJson.Content = req.Article.Content
-	articleJson.Article_type = req.Article.Article_type
+	articleJson.ContentHTML = req.Article.ContentHTML
 	articleJson.Author = req.Article.Author
 	articleJson.Edit_Date = time.Now().Format("2006-01-02 15:04:05")
 	articleJsonBin, err = json.MarshalIndent(articleJson, "", "    ")
@@ -783,6 +936,139 @@ func backendHandler_get_article(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(articleJsonBin)
+}
+
+func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
+	if !Config.CommentCfg.Enable {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	if LastCommentTime.Add(time.Second * time.Duration(Config.CommentCfg.MinSecondsBetweenComments)).After(time.Now()) { // check if the last comment is too frequent
+		w.WriteHeader(http.StatusTooManyRequests)
+		return
+	}
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	bodyBin, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	type commentRequest struct {
+		Verify_token string `json:"verify_token"`
+		Article_id   string `json:"article_id"`
+		Content      string `json:"content"`
+		Author       string `json:"author"`
+	}
+	var req commentRequest
+	err = json.Unmarshal(bodyBin, &req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Printf("Failed to parse request body, %s\n", err)
+		return
+	}
+
+	// check verify token
+	pass := false
+	switch Config.CommentCfg.Type {
+	case "cloudflare_turnstile":
+		pass = CFVerifyCheck(req.Verify_token, getRequestIP(r))
+	}
+	if !pass {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	// sanitize input, use bluemonday to prevent XSS attack
+	// NewPolicy() creates a new policy with the default settings.
+	p := bluemonday.NewPolicy()
+	req.Content = p.Sanitize(req.Content)
+	req.Author = p.Sanitize(req.Author)
+	// add comment
+	articleJsonPath := "configs/articles/" + req.Article_id + ".json"
+	type articleJsonStruct struct {
+		Title       string `json:"title"`
+		Content     string `json:"content"`
+		ContentHTML string `json:"content_html"`
+		Author      string `json:"author"`
+		Edit_Date   string `json:"edit_date"`
+		Pub_Date    string `json:"pub_date"`
+		Comments    []struct {
+			Author   string `json:"author"`
+			Content  string `json:"content"`
+			Pub_Date string `json:"pub_date"`
+		} `json:"comments"`
+	}
+	articleJsonBin, err := os.ReadFile(articleJsonPath)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	var articleJson articleJsonStruct
+	err = json.Unmarshal(articleJsonBin, &articleJson)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	articleJson.Comments = append(articleJson.Comments, struct {
+		Author   string `json:"author"`
+		Content  string `json:"content"`
+		Pub_Date string `json:"pub_date"`
+	}{
+		Author:   req.Author,
+		Content:  req.Content,
+		Pub_Date: time.Now().Format("2006-01-02 15:04:05"),
+	})
+	articleJsonBin, err = json.MarshalIndent(articleJson, "", "    ")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = os.WriteFile(articleJsonPath, articleJsonBin, 0644)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// response
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+	// set last comment time
+	LastCommentTime = time.Now()
+	deliverManager.AddTask(func() {
+		// clear the cache
+		if Config.CacheCfg.UseDisk {
+			cacheManager.DelCacheItem("/articles/" + req.Article_id)
+		}
+	})
+}
+
+func CFVerifyCheck(responseToken, userIP string) bool {
+	cf_verify_url := "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+	data := url.Values{
+		"secret":    {Config.CommentCfg.CFSecretKey},
+		"response":  {responseToken},
+		"client_ip": {userIP},
+		"site_key":  {Config.CommentCfg.CFSiteKey},
+	}
+	resp, err := http.PostForm(cf_verify_url, data)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false
+	}
+	var cf_response struct {
+		Success     bool     `json:"success"`
+		ErrorsCodes []string `json:"error-codes"`
+	}
+	err = json.Unmarshal(body, &cf_response)
+	if err != nil {
+		return false
+	}
+	return cf_response.Success
 }
 
 func GetContentType(filename string) string {

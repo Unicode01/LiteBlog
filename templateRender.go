@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gomarkdown/markdown"
 	"github.com/microcosm-cc/bluemonday"
 )
 
@@ -50,6 +49,13 @@ func RenderTemplate(template []byte, ReplaceMap map[string][]byte) []byte {
 				RenderedMapLocker.RLock()
 				value = RenderedMap[string(key[l2Index+1:])]
 				RenderedMapLocker.RUnlock()
+			}
+			if string(l2key) == "file" {
+				valueRead, err := os.ReadFile("templates/" + string(key[l2Index+1:]) + ".html")
+				if err != nil {
+					Log(3, "error reading file: "+err.Error())
+				}
+				value = valueRead
 			}
 		} else {
 			value = ReplaceMap[string(key)]
@@ -217,6 +223,7 @@ func renderarticle(articleID string) []byte {
 		ArticleType string `json:"article_type"`
 		Author      string `json:"author"`
 		Content     string `json:"content"`
+		ContentHTML string `json:"content_html"`
 		PubDate     string `json:"pub_date"`
 		Comments    []struct {
 			Author  string `json:"author"`
@@ -230,6 +237,26 @@ func renderarticle(articleID string) []byte {
 		Log(3, "error parsing article file: "+err.Error())
 		return []byte("")
 	}
+	// sort comments by date
+	sort.Slice(articlecfg.Comments, func(i, j int) bool {
+		layout := "2006-01-02 15:04:05"
+
+		// 解析时间
+		ti, err1 := time.Parse(layout, articlecfg.Comments[i].PubDate)
+		tj, err2 := time.Parse(layout, articlecfg.Comments[j].PubDate)
+
+		// 错误处理逻辑：无效日期视为更晚的时间
+		switch {
+		case err1 != nil && err2 != nil:
+			return false // 两者都无效时保持原顺序
+		case err1 != nil:
+			return false // 仅 i 无效，i 排到后面
+		case err2 != nil:
+			return true // 仅 j 无效，i 排到前面
+		default:
+			return ti.Before(tj) // 两者都有效时按时间排序
+		}
+	})
 	// render article comments
 	comments_html := []byte("")
 	for _, comment := range articlecfg.Comments {
@@ -240,20 +267,19 @@ func renderarticle(articleID string) []byte {
 		})
 		comments_html = append(comments_html, comment_html...)
 	}
-	if articlecfg.ArticleType == "markdown" {
-		article_html_unsafe := markdown.ToHTML([]byte(articlecfg.Content), nil, nil)
-		bl := bluemonday.UGCPolicy()
-		article_html := bl.SanitizeBytes(article_html_unsafe)
-		articlecfg.Content = string(article_html)
-	}
+
+	article_html_unsafe := articlecfg.ContentHTML
+	bl := bluemonday.UGCPolicy()
+	article_html := bl.Sanitize(article_html_unsafe)
+
 	// render article
-	article_html := RenderPageTemplate("article", map[string][]byte{
+	rendered_article_html := RenderPageTemplate("article", map[string][]byte{
 		"article_title":   []byte(articlecfg.Title),
 		"article_type":    []byte(articlecfg.ArticleType),
 		"article_author":  []byte(articlecfg.Author),
-		"article_content": []byte(articlecfg.Content),
+		"article_content": []byte(article_html),
 		"article_date":    []byte(articlecfg.PubDate),
 		"comments":        comments_html,
 	})
-	return article_html
+	return rendered_article_html
 }

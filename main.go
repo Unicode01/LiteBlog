@@ -6,6 +6,8 @@ var (
 
 func main() {
 	Config = ReadConfig()
+	SetVarToGlobalMap()
+	ReadGolbalConfig()
 	BackupConfigures()
 	AutoAddListener()
 	err := InitNetManager(&Config.ServerCfg)

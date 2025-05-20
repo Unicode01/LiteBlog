@@ -7,6 +7,7 @@
         }
     },
     "access_config" : {
+        "enable_backend": true,
         "backend_path": "yourbackendPath",
         "access_token": "yourAccessToken"
     },
@@ -29,5 +30,12 @@
         "backup_interval": 3600,
         "max_backups": 10,
         "max_backups_survival_time": 86400
+    },
+    "comment_config": {
+        "enable": true,
+        "type": "cloudflare_turnstile",
+        "cf_secret_key": "your_secret_key",
+        "cf_site_key": "your_site_key",
+        "min_seconds_between_comments": 30
     }
 }

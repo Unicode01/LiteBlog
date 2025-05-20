@@ -1,7 +1,7 @@
 /* 文章容器 */
 #article-container {
     padding: 12px;
-    width: 80%;
+    width: 65%;
 }
 
 .article-header {
@@ -119,6 +119,34 @@
     .article-content {
         line-height: 1.6;
     }
+}
+
+.comment-input-box {
+    transform: translate(-50%, -50%);
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    border: 1px solid var(--base-gray-200);
+    background-color: var(--base-white);
+
+    max-height: 70vh;
+    overflow-y: auto;
+    margin: 20px auto;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    
+    z-index: 1000;
+}
+
+.add-comment-button {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
 }
 
 /* 以下为文章内容的样式 */

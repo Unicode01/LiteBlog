@@ -9,6 +9,7 @@ var Context_menu_html = `{{rendered:context_menu_html}}`
 function init() {
     ResizeCard();
     AddEventListener();
+    LogHistory();
 }
 
 function ResizeCard() {
@@ -26,7 +27,7 @@ function ResizeCard() {
     if (Card_min_height < avalia_height && avalia_height <= Card_max_height) {
         card_height = avalia_height;
     } else if (avalia_height > Card_max_height) {
-       card_height = Card_max_height;
+        card_height = Card_max_height;
     }
     root.style.setProperty('--card-width', card_width + 'px');
     root.style.setProperty('--card-height', card_height + 'px');
@@ -35,9 +36,9 @@ function ResizeCard() {
 function OnContextMenu(event) {
     // render context menu html
     var context_menu_norender = Context_menu_html;
-    const prevmenu =     document.getElementById('context-menu');
+    const prevmenu = document.getElementById('context-menu');
     prevmenu?.remove();
-    
+
     domParser = new DOMParser();
     var context_menu_doc = domParser.parseFromString(context_menu_norender, "text/html").body.firstChild;
     // console.log(context_menu_doc);
@@ -48,7 +49,7 @@ function OnContextMenu(event) {
         var menu_copy = document.createElement('div');
         menu_copy.classList.add('menu-item');
         menu_copy.innerHTML = '<a class="link" href="#">Copy</a>';
-        menu_copy.firstChild.addEventListener('click', function(event) {
+        menu_copy.firstChild.addEventListener('click', function (event) {
             event.preventDefault();
             selection = window.getSelection();
             copyText(selection.toString());
@@ -63,7 +64,7 @@ function OnContextMenu(event) {
     var menu_Reload = document.createElement('div');
     menu_Reload.classList.add('menu-item');
     menu_Reload.innerHTML = '<a class="link" href="#">Reload</a>';
-    menu_Reload.firstChild.addEventListener('click', function(event) {
+    menu_Reload.firstChild.addEventListener('click', function (event) {
         event.preventDefault();
         location.reload();
     });
@@ -89,7 +90,7 @@ function OnContextMenu(event) {
             var menu_getlink = document.createElement('div');
             menu_getlink.classList.add('menu-item');
             menu_getlink.innerHTML = '<a class="link" href="#">Copy Link</a>';
-            menu_getlink.firstChild.addEventListener('click', function(event) {
+            menu_getlink.firstChild.addEventListener('click', function (event) {
                 event.preventDefault();
                 var link = card.querySelector('.link').href;
                 console.log(link);
@@ -109,7 +110,7 @@ function OnContextMenu(event) {
                 var menu_delete = document.createElement('div');
                 menu_delete.classList.add('menu-item');
                 menu_delete.innerHTML = '<a class="link" href="#">Delete Card</a>';
-                menu_delete.firstChild.addEventListener('click', function(event) {
+                menu_delete.firstChild.addEventListener('click', function (event) {
                     event.preventDefault();
                     if (DeleteCard(card.getAttribute("card-id"))) {
                         console.log("card deleted");
@@ -125,13 +126,14 @@ function OnContextMenu(event) {
                 var menu_line = document.createElement('div');
                 menu_line.classList.add('menu-item-line');
                 context_menu_doc.appendChild(menu_line);
+
                 // add edit option
                 var menu_edit = document.createElement('div');
                 menu_edit.classList.add('menu-item');
                 menu_edit.innerHTML = '<a class="link" href="#">Edit Card</a>';
-                menu_edit.firstChild.addEventListener('click', function(event) {
+                menu_edit.firstChild.addEventListener('click', function (event) {
                     event.preventDefault();
-                    location.href = '/editcard.html?card_id=' + card.getAttribute("card-id");
+                    EditCard(card.getAttribute("card-id"));
                 });
                 context_menu_doc.appendChild(menu_edit);
                 // add item line
@@ -139,7 +141,7 @@ function OnContextMenu(event) {
                 menu_line.classList.add('menu-item-line');
                 context_menu_doc.appendChild(menu_line);
             }
-            
+
         }
     });
 
@@ -149,7 +151,7 @@ function OnContextMenu(event) {
         var menu_addcard = document.createElement('div');
         menu_addcard.classList.add('menu-item');
         menu_addcard.innerHTML = '<a class="link" href="#">Add Card</a>';
-        menu_addcard.firstChild.addEventListener('click', function(event) {
+        menu_addcard.firstChild.addEventListener('click', function (event) {
             event.preventDefault();
             if (AddCard()) {
                 console.log("card added");
@@ -164,7 +166,7 @@ function OnContextMenu(event) {
         var menu_addarticle = document.createElement('div');
         menu_addarticle.classList.add('menu-item');
         menu_addarticle.innerHTML = '<a class="link" href="#">Add Article</a>';
-        menu_addarticle.firstChild.addEventListener('click', function(event) {
+        menu_addarticle.firstChild.addEventListener('click', function (event) {
             event.preventDefault();
             location.href = '/addarticle.html';
         });
@@ -174,7 +176,7 @@ function OnContextMenu(event) {
         menu_line.classList.add('menu-item-line');
         context_menu_doc.appendChild(menu_line);
     }
-    
+
     // add editmode option
     const editmodeExist = document.getElementById('edit-button');
     if (editmodeExist) {
@@ -185,7 +187,7 @@ function OnContextMenu(event) {
         } else {
             menu_editmode.innerHTML = '<a class="link" href="#">Edit Mode</a>';
         }
-        menu_editmode.firstChild.addEventListener('click', function(event) {
+        menu_editmode.firstChild.addEventListener('click', function (event) {
             event.preventDefault();
             var editmode = document.getElementById('edit-button');
             editmode?.click();
@@ -195,26 +197,13 @@ function OnContextMenu(event) {
 
     // check if in addarticle.html or editarticle.html
     if (location.pathname == '/addarticle.html' || location.pathname == '/editarticle.html') {
-        // add save as html option
+        // add save article option
         var menu_save = document.createElement('div');
         menu_save.classList.add('menu-item');
-        menu_save.innerHTML = '<a class="link" href="#">Save as HTML</a>';
-        menu_save.firstChild.addEventListener('click', function(event) {
+        menu_save.innerHTML = '<a class="link" href="#">Save Article</a>';
+        menu_save.firstChild.addEventListener('click', function (event) {
             event.preventDefault();
-            SaveArticle("html");
-        });
-        context_menu_doc.appendChild(menu_save);
-        // add item line
-        var menu_line = document.createElement('div');
-        menu_line.classList.add('menu-item-line');
-        context_menu_doc.appendChild(menu_line);
-        // add save as markdown option
-        var menu_save = document.createElement('div');
-        menu_save.classList.add('menu-item');
-        menu_save.innerHTML = '<a class="link" href="#">Save as Markdown</a>';
-        menu_save.firstChild.addEventListener('click', function(event) {
-            event.preventDefault();
-            SaveArticle("markdown");
+            SaveArticle();
         });
         context_menu_doc.appendChild(menu_save);
         // add item line
@@ -229,7 +218,7 @@ function OnContextMenu(event) {
         var menu_edit = document.createElement('div');
         menu_edit.classList.add('menu-item');
         menu_edit.innerHTML = '<a class="link" href="#">Edit Article</a>';
-        menu_edit.firstChild.addEventListener('click', function(event) {
+        menu_edit.firstChild.addEventListener('click', function (event) {
             event.preventDefault();
             location.href = '/editarticle.html?article_id=' + location.pathname.split('/')[2];
         });
@@ -242,9 +231,9 @@ function OnContextMenu(event) {
         var menu_delete = document.createElement('div');
         menu_delete.classList.add('menu-item');
         menu_delete.innerHTML = '<a class="link" href="#">Delete Article</a>';
-        menu_delete.firstChild.addEventListener('click', function(event) {
+        menu_delete.firstChild.addEventListener('click', function (event) {
             event.preventDefault();
-            DeleteArticleAPI(location.pathname.split('/')[2], function(result) {
+            DeleteArticleAPI(location.pathname.split('/')[2], function (result) {
                 if (result) {
                     console.log("article deleted");
                     location.href = '/';
@@ -254,6 +243,19 @@ function OnContextMenu(event) {
             });
         });
         context_menu_doc.appendChild(menu_delete);
+        // add item line
+        var menu_line = document.createElement('div');
+        menu_line.classList.add('menu-item-line');
+        context_menu_doc.appendChild(menu_line);
+        // add add comment option
+        var menu_addcomment = document.createElement('div');
+        menu_addcomment.classList.add('menu-item');
+        menu_addcomment.innerHTML = '<a class="link" href="#">Add Comment</a>';
+        menu_addcomment.firstChild.addEventListener('click', function (event) {
+            event.preventDefault();
+            ShowCommentInputBox();
+        });
+        context_menu_doc.appendChild(menu_addcomment);
         // add item line
         var menu_line = document.createElement('div');
         menu_line.classList.add('menu-item-line');
@@ -270,46 +272,121 @@ function OnContextMenu(event) {
     var menu_y = event.clientY;
     context_menu_doc.style.left = menu_x + 'px';
     context_menu_doc.style.top = menu_y + 'px';
-    
+
     // append to body
     document.body.appendChild(context_menu_doc);
-   
+
 }
 
 function AddEventListener() {
     // add resize event listener to window if /index
     if (location.pathname == '/index') {
-        window.addEventListener('resize', function() {
+        window.addEventListener('resize', function () {
             ResizeCard();
         });
     }
     // add contextmenu event listener to body
-    document.body.addEventListener('contextmenu', function(event) {
+    document.body.addEventListener('contextmenu', function (event) {
         event.preventDefault();
         OnContextMenu(event);
     });
     // add click event listener to body to hide context menu
-    document.addEventListener('click', function() {
-        const menu =     document.getElementById('context-menu');
-        if (menu) {
-            menu.remove();
-        }
+    document.addEventListener('click', function () {
+        const menu = document.getElementById('context-menu');
+        menu?.remove();
     });
+    // add click event listener to history button
+    const history_button = document.getElementById('history-button');
+    history_button?.addEventListener('click', function () {
+        OnHistoryButtonClick();
+    });
+}
+
+function OnHistoryButtonClick() {
+    var history_menu = document.getElementById('history-menu');
+    if (history_menu) {
+        history_menu.remove();
+    } else {
+        historyItems = localStorage.getItem('history');
+        if (historyItems) {
+            // get history from local storage
+            const DomParser = new DOMParser();
+            let menu_doc = DomParser.parseFromString(Context_menu_html, "text/html").body.firstChild;
+            menu_doc.style.minWidth = "200px";
+            menu_doc.id = 'history-menu';
+            menu_doc.classList.remove("context-menu")
+            menu_doc.classList.add("history-menu")
+            historyItems = JSON.parse(historyItems);
+            historyItems.forEach(function (item) {
+                const menu_item = document.createElement('div');
+                menu_item.classList.add('menu-item');
+                menu_item.innerHTML = '<a class="link" href="' + item.url + '">' + item.title + '</a>';
+                menu_doc.appendChild(menu_item);
+                var menu_line = document.createElement('div');
+                menu_line.classList.add('menu-item-line');
+                menu_doc.appendChild(menu_line);
+            });
+        }
+        if (menu_doc.lastElementChild.classList.contains('menu-item-line')) {
+            menu_doc.lastElementChild.remove();
+        }
+        // add click event listener to history menu
+        menu_doc.addEventListener('click', function (event) {
+            event.stopPropagation();
+            const target = event.target;
+            if (target.tagName == 'A') {
+                window.location.href = target.href;
+            }
+        });
+        // set position
+        const history_button = document.getElementById('history-button');
+        const menu_x = history_button.offsetLeft + history_button.offsetWidth - 200;
+        const menu_y = history_button.offsetTop + history_button.offsetHeight;
+        menu_doc.style.left = menu_x + 'px';
+        menu_doc.style.top = menu_y + 'px';
+        // append to body
+        document.body.appendChild(menu_doc);
+    }
+}
+
+function LogHistory() {
+    if (!window.location.pathname.startsWith('/articles/')) {
+        return;
+    }
+    // log to history
+    const url = window.location.href;
+    let historyJson = localStorage.getItem('history');
+    if (historyJson) {
+        historyJson = JSON.parse(historyJson);
+    } else {
+        historyJson = [];
+    }
+    // remove old history
+    historyJson = historyJson.filter(function (item) {
+        return item.url != url;
+    });
+    // add new history
+    historyJson.unshift({
+        url: url,
+        title: document.title
+    });
+    // save to local storage
+    localStorage.setItem('history', JSON.stringify(historyJson));
 }
 
 // tool functions
 async function copyText(text) {
     try {
-      await navigator.clipboard.writeText(text);
-      console.log("link copied to clipboard with clipboard api:" + text);
+        await navigator.clipboard.writeText(text);
+        console.log("link copied to clipboard with clipboard api:" + text);
     } catch (err) {
-      // 现代 API 失败时回退到旧方法
-      const success = document.execCommand("copy");
-      if (success) {
-        console.log("link copied to clipboard:" + text);
-      } else {
-        console.log("failed to copy link:" + text);
-      }
+        // 现代 API 失败时回退到旧方法
+        const success = document.execCommand("copy");
+        if (success) {
+            console.log("link copied to clipboard:" + text);
+        } else {
+            console.log("failed to copy link:" + text);
+        }
     }
 }
 

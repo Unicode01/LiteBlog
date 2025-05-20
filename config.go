@@ -19,6 +19,7 @@ type AllConfig struct {
 	CacheCfg   CacheConfig   `json:"cache_config"`
 	DeliverCfg DeliverConfig `json:"deliver_config"`
 	BackupCfg  BackupsConfig `json:"backup_config"`
+	CommentCfg CommentConfig `json:"comment_config"`
 }
 
 type ServerConfig struct {
@@ -34,8 +35,9 @@ type TlsConfig struct {
 }
 
 type AccessConfig struct {
-	BackendPath string `json:"backend_path"`
-	AccessToken string `json:"access_token"`
+	EnableBackend bool   `json:"enable_backend"`
+	BackendPath   string `json:"backend_path"`
+	AccessToken   string `json:"access_token"`
 }
 
 type CacheConfig struct {
@@ -58,6 +60,14 @@ type BackupsConfig struct {
 	MaxBackupsSurvivalTime int    `json:"max_backups_survival_time"`
 }
 
+type CommentConfig struct {
+	Enable                    bool   `json:"enable"`
+	Type                      string `json:"type"`
+	CFSecretKey               string `json:"cf_secret_key"`
+	CFSiteKey                 string `json:"cf_site_key"`
+	MinSecondsBetweenComments int    `json:"min_seconds_between_comments"`
+}
+
 func ReadConfig() AllConfig {
 	configFile, err := os.ReadFile("configs/config.json")
 	if err != nil {
@@ -68,7 +78,6 @@ func ReadConfig() AllConfig {
 	if err != nil {
 		panic(err)
 	}
-	ReadGolbalConfig()
 	return config
 }
 
@@ -94,6 +103,7 @@ func AutoAddListener() {
 		Log(1, "Config file(configs/config.json) changed, reloading...")
 		Config = ReadConfig()
 		BackupConfigures()
+		SetVarToGlobalMap()
 	})
 	if err != nil {
 		Log(3, "Config watcher error:"+err.Error())
@@ -161,6 +171,18 @@ func BackupConfigures() {
 			ctx, cancle := context.WithCancel(context.Background())
 			EnableBackupThread(ctx)
 			BackupThreadCancel = cancle
+		}
+	}
+}
+
+func SetVarToGlobalMap() {
+	if Config.CommentCfg.Enable {
+		switch Config.CommentCfg.Type {
+		case "cloudflare_turnstile":
+			GlobalMapLocker.Lock()
+			GlobalMap["cf_site_key"] = []byte(Config.CommentCfg.CFSiteKey)
+			GlobalMap["comment_check_type"] = []byte(Config.CommentCfg.Type)
+			GlobalMapLocker.Unlock()
 		}
 	}
 }

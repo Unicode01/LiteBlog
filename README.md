@@ -2,7 +2,7 @@
 LiteBlog is a simple blog system written in Golang,html,css,js. Aim to provide a simple, easy-to-use and lightweight blog system.
 ## Features
 - Simple, Lightweight and easy-to-use interface
-- Markdown and HTML support (with [markedJS](https://github.com/markedjs/marked) and [markdown-go](https://github.com/gomarkdown/markdown))
+- Markdown and HTML support (with [markedJS](https://github.com/markedjs/marked) and [markdown-go]("github.com/russross/blackfriday"))
 - own script and style injection support
 - comment system support (Developing)
 - specialized full caching system for blog and asynchronous caching mechanism
@@ -65,10 +65,7 @@ When you in the article page, you can right click the and select `Edit Article` 
 ### Article Add Mode
 When you in the index page, you can enter the edit mode and click the `Add Article` button on context menu to enter the add mode. In the add mode, you can add a new article.
 ### Article Save
-#### Save as Markdown
-When you in the article page, you can right click the and select `Save as Markdown` to save the article as markdown file. You can edit it later.
-#### Save as HTML
-When you in the article page, you can right click the and select `Save as HTML` to save the article as html file. **You can't edit it more!**
+When you in the article page, you can right click the and select `Save Article` to save the article file. You can edit it later.
 ### Comment System
 The comment system is under development.
 ### Add your own script and style
