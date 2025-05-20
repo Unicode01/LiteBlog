@@ -218,20 +218,7 @@ func renderarticle(articleID string) []byte {
 		return []byte("")
 	}
 	jsonParser := json.NewDecoder(article_file)
-	type ArticleCfg struct {
-		Title       string `json:"title"`
-		ArticleType string `json:"article_type"`
-		Author      string `json:"author"`
-		Content     string `json:"content"`
-		ContentHTML string `json:"content_html"`
-		PubDate     string `json:"pub_date"`
-		Comments    []struct {
-			Author  string `json:"author"`
-			Content string `json:"content"`
-			PubDate string `json:"pub_date"`
-		} `json:"comments"`
-	}
-	var articlecfg ArticleCfg
+	var articlecfg articleJsonStruct
 	err = jsonParser.Decode(&articlecfg)
 	if err != nil {
 		Log(3, "error parsing article file: "+err.Error())
@@ -242,8 +229,8 @@ func renderarticle(articleID string) []byte {
 		layout := "2006-01-02 15:04:05"
 
 		// 解析时间
-		ti, err1 := time.Parse(layout, articlecfg.Comments[i].PubDate)
-		tj, err2 := time.Parse(layout, articlecfg.Comments[j].PubDate)
+		ti, err1 := time.Parse(layout, articlecfg.Comments[i].Pub_Date)
+		tj, err2 := time.Parse(layout, articlecfg.Comments[j].Pub_Date)
 
 		// 错误处理逻辑：无效日期视为更晚的时间
 		switch {
@@ -263,7 +250,8 @@ func renderarticle(articleID string) []byte {
 		comment_html := RenderPageTemplate("comment", map[string][]byte{
 			"comment_author":  []byte(comment.Author),
 			"comment_content": []byte(comment.Content),
-			"comment_date":    []byte(comment.PubDate),
+			"comment_date":    []byte(comment.Pub_Date),
+			"comment_id":      []byte(comment.ID),
 		})
 		comments_html = append(comments_html, comment_html...)
 	}
@@ -275,10 +263,9 @@ func renderarticle(articleID string) []byte {
 	// render article
 	rendered_article_html := RenderPageTemplate("article", map[string][]byte{
 		"article_title":   []byte(articlecfg.Title),
-		"article_type":    []byte(articlecfg.ArticleType),
 		"article_author":  []byte(articlecfg.Author),
 		"article_content": []byte(article_html),
-		"article_date":    []byte(articlecfg.PubDate),
+		"article_date":    []byte(articlecfg.Pub_Date),
 		"comments":        comments_html,
 	})
 	return rendered_article_html

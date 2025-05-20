@@ -31,6 +31,21 @@ var (
 	LastCommentTime    time.Time
 )
 
+type articleJsonStruct struct {
+	Title       string `json:"title"`
+	Content     string `json:"content"`
+	ContentHTML string `json:"content_html"`
+	Author      string `json:"author"`
+	Edit_Date   string `json:"edit_date"`
+	Pub_Date    string `json:"pub_date"`
+	Comments    []struct {
+		Author   string `json:"author"`
+		Content  string `json:"content"`
+		Pub_Date string `json:"pub_date"`
+		ID       string `json:"id"`
+	} `json:"comments"`
+}
+
 // Init the network manager
 // init net proxy
 func InitNetManager(config *ServerConfig) error {
@@ -298,6 +313,9 @@ func serveBackend(w http.ResponseWriter, r *http.Request) {
 		return
 	case "/edit_card":
 		backendHandler_edit_card(w, r)
+		return
+	case "/delete_comment":
+		backendHandler_delete_comment(w, r)
 		return
 	default:
 		w.WriteHeader(http.StatusNotFound)
@@ -709,19 +727,6 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 	// generate article id
 	articleID := generateTraceID()
 	articleJsonPath := "configs/articles/" + articleID + ".json"
-	type articleJsonStruct struct {
-		Title       string `json:"title"`
-		Content     string `json:"content"`
-		ContentHTML string `json:"content_html"`
-		Author      string `json:"author"`
-		Edit_Date   string `json:"edit_date"`
-		Pub_Date    string `json:"pub_date"`
-		Comments    []struct {
-			Author   string `json:"author"`
-			Content  string `json:"content"`
-			Pub_Date string `json:"pub_date"`
-		} `json:"comments"`
-	}
 	articleJson := articleJsonStruct{
 		Title:       req.Article.Title,
 		Content:     req.Article.Content,
@@ -733,6 +738,7 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 			Author   string `json:"author"`
 			Content  string `json:"content"`
 			Pub_Date string `json:"pub_date"`
+			ID       string `json:"id"`
 		}, 0),
 	}
 	articleJsonBin, err := json.MarshalIndent(articleJson, "", "    ")
@@ -806,19 +812,6 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 
 	// update article
 	articleJsonPath := "configs/articles/" + req.Article.ID + ".json"
-	type articleJsonStruct struct {
-		Title       string `json:"title"`
-		Content     string `json:"content"`
-		ContentHTML string `json:"content_html"`
-		Author      string `json:"author"`
-		Edit_Date   string `json:"edit_date"`
-		Pub_Date    string `json:"pub_date"`
-		Comments    []struct {
-			Author   string `json:"author"`
-			Content  string `json:"content"`
-			Pub_Date string `json:"pub_date"`
-		} `json:"comments"`
-	}
 	articleJsonBin, err := os.ReadFile(articleJsonPath)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -938,6 +931,79 @@ func backendHandler_get_article(w http.ResponseWriter, r *http.Request) {
 	w.Write(articleJsonBin)
 }
 
+func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	bodyBin, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	type commentrequest struct {
+		Token     string `json:"token"`
+		ArticleID string `json:"article_id"`
+		CommentID string `json:"comment_id"`
+	}
+	var req commentrequest
+	err = json.Unmarshal(bodyBin, &req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Printf("Failed to parse request body, %s\n", err)
+		return
+	}
+	// check token
+	if req.Token != Config.AccessCfg.AccessToken {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	// delete comment
+	articleJsonPath := "configs/articles/" + req.ArticleID + ".json"
+	articleJsonBin, err := os.ReadFile(articleJsonPath)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	var articleJson articleJsonStruct
+	err = json.Unmarshal(articleJsonBin, &articleJson)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	foundComment := false
+	for i, comment := range articleJson.Comments {
+		if comment.ID == req.CommentID {
+			articleJson.Comments = append(articleJson.Comments[:i], articleJson.Comments[i+1:]...)
+			foundComment = true
+			break
+		}
+	}
+	if !foundComment {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	articleJsonBin, err = json.MarshalIndent(articleJson, "", "    ")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = os.WriteFile(articleJsonPath, articleJsonBin, 0644)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// response
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+	deliverManager.AddTask(func() {
+		// clear the cache
+		if Config.CacheCfg.UseDisk {
+			cacheManager.DelCacheItem("/articles/" + req.ArticleID)
+		}
+	})
+}
+
 func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 	if !Config.CommentCfg.Enable {
 		w.WriteHeader(http.StatusForbidden)
@@ -987,19 +1053,7 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 	req.Author = p.Sanitize(req.Author)
 	// add comment
 	articleJsonPath := "configs/articles/" + req.Article_id + ".json"
-	type articleJsonStruct struct {
-		Title       string `json:"title"`
-		Content     string `json:"content"`
-		ContentHTML string `json:"content_html"`
-		Author      string `json:"author"`
-		Edit_Date   string `json:"edit_date"`
-		Pub_Date    string `json:"pub_date"`
-		Comments    []struct {
-			Author   string `json:"author"`
-			Content  string `json:"content"`
-			Pub_Date string `json:"pub_date"`
-		} `json:"comments"`
-	}
+
 	articleJsonBin, err := os.ReadFile(articleJsonPath)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -1015,9 +1069,11 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 		Author   string `json:"author"`
 		Content  string `json:"content"`
 		Pub_Date string `json:"pub_date"`
+		ID       string `json:"id"`
 	}{
 		Author:   req.Author,
 		Content:  req.Content,
+		ID:       generateTraceID(),
 		Pub_Date: time.Now().Format("2006-01-02 15:04:05"),
 	})
 	articleJsonBin, err = json.MarshalIndent(articleJson, "", "    ")

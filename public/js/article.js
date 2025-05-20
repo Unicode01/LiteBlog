@@ -167,6 +167,46 @@ function AddCommentAPI(article_id, author, content, callback) {
         });
 }
 
+function DeleteCommentAPI(comment_id, callback) {
+    const result = GetAccessPathAndToken();
+    if (!result) {
+        console.log("Access path and token are required.");
+        return false;
+    }
+    const { path, token } = result;
+    console.log("Access path: " + path);
+    console.log("Access token: " + token);
+    const api_dic = window.location.origin + "/" + path;
+    const api_delete_comment = api_dic + "/delete_comment";
+    const data = {
+        token: token,
+        article_id: getQueryVariable("article_id"),
+        comment_id: comment_id
+    }
+    console.log(data);
+    fetch(api_delete_comment, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ERR，Code：${response.status}`);
+            }
+            return response.text();
+        })
+        .then(data => {
+            console.log(data);
+            callback(data);
+        })
+        .catch(error => {
+            console.log(error);
+            callback("");
+        });
+}
+
 function DeleteArticleAPI(article_id, callback) {
     const result = GetAccessPathAndToken();
     if (!result) {
