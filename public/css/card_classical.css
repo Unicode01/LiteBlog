@@ -7,6 +7,10 @@
   transition: all 0.2s ease-in-out;
 }
 
+.card-classical .card-description {
+  margin: 10px 12px 0 12px;
+}
+
 .card-classical:hover {
   transform: translateY(-5px);
 }
