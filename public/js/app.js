@@ -313,7 +313,7 @@ function OnContextMenu(event) {
 
 function AddEventListener() {
     // add resize event listener to window if /index
-    if (location.pathname == '/index') {
+    if (location.pathname == '/index.html') {
         window.addEventListener('resize', function () {
             ResizeCard();
         });
