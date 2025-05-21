@@ -3,7 +3,9 @@
         "host" : "0.0.0.0",
         "port" : 880,
         "tls_config": {
-            "enabled": false
+            "enabled": false,
+            "cert_file": "fullchain.crt",
+            "key_file": "private.key"
         }
     },
     "access_config" : {
