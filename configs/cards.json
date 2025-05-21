@@ -28,13 +28,14 @@
             "template": "card_template_classical"
         },
         {
-            "card_description": "This is the forth card",
-            "card_link": "https://www.google.com",
-            "card_title": "Card 4",
             "id": "4",
+            "music_artist": "4",
+            "music_image": "https://cr.un1c0de.com/f/kQt1/111063093_p0.jpg",
+            "music_link": "1",
+            "music_title": "2",
             "order": "2",
             "tags": "go tag1 tag2",
-            "template": "card_template_classical"
+            "template": "card_template_music_player_test"
         }
     ]
 }
