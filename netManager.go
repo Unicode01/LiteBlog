@@ -143,7 +143,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		io.Copy(w, f)
 		f.Close()
 		// add to block list
-		fireWall.AddRule(&firewall.Rule{Action: 1, Rule: IP, Timeout: time.Now().Add(time.Hour).Unix()})
+		fireWall.AddRule(&firewall.Rule{Action: 1, Rule: IP, Type: "ipaddr", Timeout: time.Now().Add(time.Hour).Unix()})
 		return
 	}
 	if strings.HasSuffix(r.URL.Path, "/") { // redirect to index.html
