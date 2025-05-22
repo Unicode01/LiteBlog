@@ -3,6 +3,7 @@ package firewall
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"os"
 	"strconv"
 	"sync"
@@ -75,11 +76,32 @@ func (f *Firewall) MatchRule(rule string) int {
 	f.ruleLocker.RLock()
 	defer f.ruleLocker.RUnlock()
 	for curr := f.headRule; curr != nil; curr = curr.next {
-		if curr.Rule.Rule == rule {
-			if curr.Rule.Timeout > 0 && curr.Rule.Timeout < time.Now().Unix() { // timeout
-				return 0
+		switch curr.Rule.Type {
+		case "ipaddr":
+			if curr.Rule.Rule == rule {
+				if curr.Rule.Timeout > 0 && curr.Rule.Timeout < time.Now().Unix() { // timeout
+					return 0
+				}
+				return curr.Rule.Action
 			}
-			return curr.Rule.Action
+		case "ipcidr":
+			// parse ip cidr
+			_, mask, err := net.ParseCIDR(rule)
+			if err != nil {
+				continue
+			}
+			// parse rule to net.ip
+			ruleIP := net.ParseIP(rule)
+			if ruleIP == nil {
+				continue
+			}
+			// check ip(rule) in cidr
+			if mask.Contains(ruleIP) {
+				if curr.Rule.Timeout > 0 && curr.Rule.Timeout < time.Now().Unix() { // timeout
+					return 0
+				}
+				return curr.Rule.Action
+			}
 		}
 	}
 	return 0
@@ -133,7 +155,7 @@ func (f *Firewall) ReadRules() bool {
 	for _, rule := range cfg.Rules {
 		action, _ := strconv.Atoi(rule["action"])
 		timeout, _ := strconv.ParseInt(rule["timeout"], 10, 64)
-		f.AddRule(&Rule{Action: action, Rule: rule["rule"], Timeout: timeout})
+		f.AddRule(&Rule{Action: action, Rule: rule["rule"], Type: rule["type"], Timeout: timeout})
 	}
 	return true
 }
@@ -144,6 +166,7 @@ func (f *Firewall) SaveRules() bool {
 	type Rule struct {
 		Action  int    `json:"action"` // 保持原始数值类型
 		Rule    string `json:"rule"`
+		Type    string `json:"type"`
 		Timeout int64  `json:"timeout"`
 	}
 
@@ -186,7 +209,8 @@ type chainRule struct {
 }
 
 type Rule struct {
-	Action  int
-	Rule    string
-	Timeout int64 // timeout timestamp
+	Action  int    // 1: block, 0: allow/default
+	Rule    string // here store the ip addr
+	Type    string // "ipaddr": ip address, "ipcidr": ip address with mask
+	Timeout int64  // timeout timestamp
 }

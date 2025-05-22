@@ -32,14 +32,14 @@ function music_player_on_hover(e,card) {
     var player_player_container = card.querySelector(".player-container");
     var player_image_container = card.querySelector("#image-container");
     player_shift_container.style.display = "block";
-    // add filter: blur to image container
-    card.querySelector("#image-container").style.filter = "blur(5px)";
     // remove transform
     player_shift_container.style.transform = "translateX(0px)";
     // set player z-index to 1
-    player_player_container.style.zIndex = 1;
+    // player_player_container.style.zIndex = 1;
     // set image z-index to 2
-    player_image_container.style.zIndex = 2;
+    // player_image_container.style.zIndex = 2;
+    // add filter: blur to image container
+    card.querySelector("#image-container").style.filter = "blur(5px)";
 }
 
 function music_player_on_mouseout(e,card) {
@@ -48,14 +48,14 @@ function music_player_on_mouseout(e,card) {
     var player_player_container = card.querySelector(".player-container");
     var player_image_container = card.querySelector("#image-container");
     player_shift_container.style.display = "none";
-    // remove filter: blur from image container
-    card.querySelector("#image-container").style.filter = "blur(0px)";
     // add transform
     player_shift_container.style.transform = "translateY(100%)";
     // set player z-index to 2
-    player_player_container.style.zIndex = 2;
+    // player_player_container.style.zIndex = 2;
     // set image z-index to 1
-    player_image_container.style.zIndex = 1;
+    // player_image_container.style.zIndex = 1;
+    // remove filter: blur from image container
+    card.querySelector("#image-container").style.filter = "blur(0px)";
 }
 
 function get_music_info(card) {
@@ -66,5 +66,16 @@ function get_music_info(card) {
     returnvar["artist"] = music_info_container.getAttribute("data-music-artist");
     returnvar["link"] = music_info_container.getAttribute("data-music-link");
     returnvar["image"] = music_info_container.getAttribute("data-music-image");
+    returnvar["lyricLink"]= music_info_container.getAttribute("data-music-lyric");
     return returnvar;
+}
+
+class MusicPlayer {
+    constructor(music_info) {
+        this.music_info = music_info;
+        // music_info should include title, artist, link
+    }
+    init() {
+
+    }
 }

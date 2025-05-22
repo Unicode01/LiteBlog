@@ -48,15 +48,58 @@
 }
 
 .card-music-player .player-title {
-    font-size: 21px;
+    font-size: 24px;
 
 }
 
 .card-music-player .player-artist {
     font-size: 18px;
+    color: #999;
 }
 
 .card-music-player .music-info-container {
     display: none;
 }
 
+.card-music-player .player-progress {
+    width: 80%;
+    border-radius: 2px;
+    transition: width 0.1s linear;
+}
+
+.card-music-player .player-time {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.card-music-player .player-progress-bar {
+    width: 100%;
+    height: 5px;
+    background: white;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+    border-radius: 2px;
+    transition: width 0.1s linear;
+}
+
+.card-music-player .player-prev {
+    display: inline-block;
+    margin: 0 20px;
+    font-size: 24px;
+    color:#999
+}
+
+.card-music-player .player-next {
+    display: inline-block;
+    margin: 0 20px;
+    font-size: 24px;
+    color:#999
+}
+
+.card-music-player .player-pause {
+    display: inline-block;
+    font-size: 36px;
+    color: #000;
+    cursor: pointer;
+}
