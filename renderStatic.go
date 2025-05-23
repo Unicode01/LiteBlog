@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -29,7 +30,7 @@ func RenderStatic() {
 	RenderedMap["bottom_bar"] = RenderPageTemplate("bottom_bar", map[string][]byte{})
 
 	// render RSS
-	RenderedMap["rss_feed"] = renderRSSFeed()
+	RenderedMap["rss_feed"] = renderRSSFeedStatic()
 
 	// fmt.Printf("card rendered\n")
 	render_end_time := time.Now()
@@ -193,4 +194,46 @@ func renderCardsStatic() []byte {
 	}
 
 	return cards_bytes
+}
+
+func renderRSSFeedStatic() []byte {
+	type Card_Config struct {
+		Cards []map[string]string `json:"cards"`
+	}
+	var cardcfg Card_Config
+	card_config_filepath := "configs/cards.json"
+	card_file, err := os.ReadFile(card_config_filepath)
+	if err != nil {
+		Log(3, "error reading card config file: "+err.Error())
+		return []byte("")
+	}
+	err = json.Unmarshal(card_file, &cardcfg)
+	if err != nil {
+		Log(3, "error parsing card config file: "+err.Error())
+		return []byte("")
+	}
+	rss_posts := []byte("")
+	// sort cards by order
+	sort.Slice(cardcfg.Cards, func(i, j int) bool {
+		return cardcfg.Cards[i]["order"] < cardcfg.Cards[j]["order"]
+	})
+	for _, card := range cardcfg.Cards {
+		card_title := card["card_title"]
+		card_description := card["card_description"]
+		card_link := card["card_link"]
+		if strings.HasPrefix(card_link, "/articles/") || strings.HasPrefix(card_link, "articles/") {
+			card_link = card_link + ".html"
+		}
+		rss_post := RenderPageTemplate("rss_post", map[string][]byte{
+			"RSS_TITLE":       []byte(card_title),
+			"RSS_LINK":        []byte(card_link),
+			"RSS_DESCRIPTION": []byte(card_description),
+		})
+		rss_posts = append(rss_posts, rss_post...)
+	}
+	// RenderedMap["RSSPosts"] = rss_posts
+	rss_feed := RenderPageTemplate("rss", map[string][]byte{
+		"RSSPosts": rss_posts,
+	})
+	return rss_feed
 }
