@@ -33,13 +33,13 @@
             "card_title": "",
             "id": "4",
             "music_artist": "unicode",
-            "music_image": "https://cr.un1c0de.com/f/kQt1/111063093_p0.jpg",
-            "music_link": "link of music",
+            "music_image": "your card background image",
+            "music_link": "your music link",
+            "music_lyric_link": "your lyric link",
             "music_title": "music title",
             "order": "2",
             "tags": "go tag1 tag2",
-            "template": "card_template_music_player_test",
-            "music_lyric_link": "https://lyric_link"
+            "template": "card_template_music_player_test"
         }
     ]
 }

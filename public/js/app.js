@@ -92,7 +92,12 @@ function OnContextMenu(event) {
             menu_getlink.innerHTML = '<a class="link" href="#">Copy Link</a>';
             menu_getlink.firstChild.addEventListener('click', function (event) {
                 event.preventDefault();
-                var link = card.querySelector('.link').href;
+                var linkdom = card.querySelector('.link');
+                if (!linkdom) {
+                    console.log("no link found");
+                    return;
+                }
+                var link = linkdom.href;
                 console.log(link);
                 // copy link to clipboard
                 copyText(link);

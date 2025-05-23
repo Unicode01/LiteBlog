@@ -63,6 +63,7 @@
 
 .card-music-player .player-progress {
     width: 80%;
+    padding-top: 12px;
     border-radius: 2px;
     transition: width 0.1s linear;
 }
@@ -87,14 +88,16 @@
     display: inline-block;
     margin: 0 20px;
     font-size: 24px;
-    color:#999
+    color: #999;
+    cursor: pointer;
 }
 
 .card-music-player .player-next {
     display: inline-block;
     margin: 0 20px;
     font-size: 24px;
-    color:#999
+    color: #999;
+    cursor: pointer;
 }
 
 .card-music-player .player-pause {
@@ -102,4 +105,41 @@
     font-size: 36px;
     color: #000;
     cursor: pointer;
+}
+
+
+.card-music-player .player-shift-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    transition: all 0.4s ease-in-out;
+}
+
+.card-music-player .player-lyric-pre {
+    padding: 20px;
+    font-size: 10px;
+    max-height: 30px;
+    color: #999;
+    text-align: center;
+    transition: all 0.4s ease-in-out;
+}
+
+.card-music-player .player-lyric-current {
+    font-size: 16px;
+    max-height: 40px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.4s ease-in-out;
+}
+
+.card-music-player .player-lyric-next {
+    padding: 20px;
+    font-size: 10px;
+    max-height: 30px;
+    color: #999;
+    text-align: center;
+    transition: all 0.4s ease-in-out;
 }
