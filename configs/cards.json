@@ -39,7 +39,8 @@
             "music_title": "music title",
             "order": "2",
             "tags": "go tag1 tag2",
-            "template": "card_template_music_player_test"
+            "template": "card_template_music_player_test",
+            "bg_image_theme": "dark"
         }
     ]
 }
