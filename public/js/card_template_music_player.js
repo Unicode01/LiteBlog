@@ -38,7 +38,7 @@ function card_music_player_init() {
             const currentLyricDom = card.querySelector(".player-lyric-current");
             const nextLyricDom = card.querySelector(".player-lyric-next");
             if (currentLyricIndex != -1) {
-                if (currentLyricIndex > 1) {
+                if (currentLyricIndex > 0) {
                     prevLyricDom.textContent = music_player.lyrics[currentLyricIndex - 1].text;
                 } else {
                     prevLyricDom.textContent = "";
@@ -112,7 +112,7 @@ function card_music_player_init() {
         player_next_button.addEventListener("click", function () {
             const newMusicCardIndex = card.thisMusicIndex +1;
             console.log(newMusicCardIndex)
-            if (newMusicCardIndex >= 0 && newMusicCardIndex <= window._cards_for_musics.length) {
+            if (newMusicCardIndex >= 0 && newMusicCardIndex < window._cards_for_musics.length) {
                 console.log(window._cards_for_musics)
                 window._cards_for_musics[newMusicCardIndex].thisMusicPlayer.play();
                 window._cards_for_musics[newMusicCardIndex].querySelector(".player-pause").innerHTML = "⏸";
