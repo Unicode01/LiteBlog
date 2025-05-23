@@ -16,6 +16,19 @@ function card_music_player_init() {
         card.thisMusicIndex = i;
         i++;
         const music_info = get_music_info(card);
+        // check bg theme
+        if (music_info.imageTheme === "dark") {
+            // reset dom colors
+            card.querySelector(".player-title").style.color = "white";
+            card.querySelector(".player-artist").style.color = "#999";
+            card.querySelector(".player-lyric-pre").style.color = "#999";
+            card.querySelector(".player-lyric-current").style.color = "white";
+            card.querySelector(".player-lyric-next").style.color = "#999";
+            card.querySelector(".player-duration").style.color = "white";
+            card.querySelector(".player-current-time").style.color = "white";
+            card.querySelector(".player-pause").style.color = "white";
+
+        }
         console.log(music_info);
         // set background image
         card.querySelector("#image-container").style.backgroundImage = "url('" + music_info["image"] + "')";
@@ -180,6 +193,7 @@ function get_music_info(card) {
     returnvar["link"] = music_info_container.getAttribute("data-music-link");
     returnvar["image"] = music_info_container.getAttribute("data-music-image");
     returnvar["lyricLink"] = music_info_container.getAttribute("data-music-lyric");
+    returnvar["imageTheme"] = music_info_container.getAttribute("data-image-theme");
     return returnvar;
 }
 
