@@ -323,6 +323,8 @@ function ShowCommentInputBox() {
         const turnstile_script = document.createElement("script");
         turnstile_script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback";
         document.body.appendChild(turnstile_script);
+    } else {
+        alert("Comment system has been disabled.")
     }
 }
 
