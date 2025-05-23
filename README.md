@@ -49,6 +49,11 @@ This is the deliver configuration. Impact the asynchronous cache mechanism.
 - `backup_interval`: This is the interval of the backup in seconds.
 - `max_backups`: This is the maximum number of backup files to keep.
 - `max_backups_survival_time`: This is the maximum survival time of the backup files in seconds.
+##### comment_config
+This is the comment configuration.
+- `enable`: This is a boolean value to enable or disable the comment system.
+- `type`: This is the comment system type. Currently only support `cloudflare_turnstile`.
+- `min_seconds_between_comments`: This is the minimum seconds between two comments. Used to prevent spam.
 #### configs/global.json
 This configs are used to customize the front-end.
 #### configs/articles/*.json
@@ -78,7 +83,35 @@ The cache is used to improve the performance of the server. The cache will store
 ### How does the asynchronous cache mechanism work?
 The asynchronous cache mechanism is used to improve the performance of the server. When the resource can be cached, the server will use asynchronized deliver manager to deliver the content which need be cached. This can improve the performance of the server when need to cache a large amount of data.
 ### Can I configure the firewall rules?
-Yes, but the rules now are not perfect, i will improve it in the future. You can configure the firewall rules in the `configs/firewall.json` file.
+Yes, Here is some example of the firewall rules:
+- if you want to block the ip address `8.9.10.11`, you can add the following rule to the `configs/firewall.json` file:
+``` json
+{
+	"rules": [
+        "//": "Action 1: block, 0: allow/default",
+        "Action": 1,
+        "Type": "ipaddr",
+        "Rule": "8.9.10.11",
+        "Timeout": 99999999999
+    ]
+}
+```
+- if you want to block the ip cidr `192.168.0.0/24`, you can add the following rule to the `configs/firewall.json` file:
+``` json
+{
+    "rules": [
+        "//": "Action 1: block, 0: allow/default",
+        "Action": 1,
+        "Type": "ipcidr",
+        "Rule": "192.168.0.0/24",
+        "Timeout": 99999999999
+    ]
+}
+```
+- more Types are under development.
+# Full static
+If you want to use it in full static mode, you can use `-static` flag to start the server. It will create a `static/public` directory and render all the pages to the directory. You can use nginx or other web server to serve the static files.
+- this will use your configs to generate the static file. So before generate static file. Make sure your configs are made for static mode.
 ## Demo
 [Unicode LiteBlog](https://un1c0de.com)
 ## License
