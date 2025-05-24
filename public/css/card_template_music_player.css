@@ -82,6 +82,7 @@
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
     border-radius: 2px;
     transition: width 0.1s linear;
+    cursor: pointer;
 }
 
 .card-music-player .player-prev {

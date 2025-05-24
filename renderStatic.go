@@ -221,6 +221,9 @@ func renderRSSFeedStatic() []byte {
 		card_title := card["card_title"]
 		card_description := card["card_description"]
 		card_link := card["card_link"]
+		if card_link == "" {
+			continue
+		}
 		if strings.HasPrefix(card_link, "/articles/") || strings.HasPrefix(card_link, "articles/") {
 			card_link = card_link + ".html"
 		}

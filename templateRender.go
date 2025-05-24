@@ -167,6 +167,9 @@ func renderRSSFeed() []byte {
 		card_title := card["card_title"]
 		card_description := card["card_description"]
 		card_link := card["card_link"]
+		if card_link == "" {
+			continue
+		}
 		rss_post := RenderPageTemplate("rss_post", map[string][]byte{
 			"RSS_TITLE":       []byte(card_title),
 			"RSS_LINK":        []byte(card_link),

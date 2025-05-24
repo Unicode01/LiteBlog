@@ -1,16 +1,16 @@
 # LiteBlog
-LiteBlog is a simple blog system written in Golang,html,css,js. Aim to provide a simple, easy-to-use and lightweight blog system.
+LiteBlog is a blog system written in Golang,html,css,js. Aim to provide a simple, easy-to-use, highly customizable and lightweight blog system.
 ## Features
 - Simple, Lightweight and easy-to-use interface
 - Markdown and HTML support (with [markedJS](https://github.com/markedjs/marked))
 - own script and style injection support
-- comment system support (Developing)
+- comment system support
 - specialized full caching system for blog and asynchronous caching mechanism
 - Auto block malicious request with firewall and XSS attack (with [bluemonday](https://github.com/microcosm-cc/bluemonday))
 - RSS Feed support
 - Auto backup the configs and data
 - Easy to deploy and manage
-- Full static is under development
+- Full static support
 ## Requirements
 - Golang 1.16+
 ## Installation
@@ -34,6 +34,8 @@ Run `./build.sh` to build the zip. **Before build the zip, You should write your
 Here is a example to run liteblog with docker, and mount the `configs` directory to the container.
 If you want to change `public` or `templates` directory, you can mount it to the container using `-v` option.
 ```bash
+git clone https://github.com/LiteBlog/LiteBlog.git
+cd LiteBlog
 ./build.sh
 docker build -t liteblog .
 docker run -p 80:80 -v $(pwd)/configs:/liteblog/configs/ liteblog
