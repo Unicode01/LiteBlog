@@ -30,7 +30,7 @@ func main() {
 
 func ReadFlag() {
 	var generateStatic bool
-	flag.BoolVar(&generateStatic, "static", false, "host to listen on")
+	flag.BoolVar(&generateStatic, "static", false, "generate static files")
 	flag.Parse()
 	if generateStatic {
 		RenderStatic()

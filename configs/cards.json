@@ -30,6 +30,17 @@
         {
             "card_description": "",
             "card_link": "",
+            "card_title": "Player",
+            "id": "5",
+            "order": "2",
+            "tags": "",
+            "template": "card_template_split_line"
+        },
+        {
+            "//": "the bg_image_theme can be light or dark",
+            "bg_image_theme": "light",
+            "card_description": "",
+            "card_link": "",
             "card_title": "",
             "id": "4",
             "music_artist": "unicode",
@@ -37,11 +48,9 @@
             "music_link": "your music link",
             "music_lyric_link": "your lyric link",
             "music_title": "music title",
-            "order": "2",
+            "order": "3",
             "tags": "go tag1 tag2",
-            "template": "card_template_music_player_test",
-            "bg_image_theme": "light",
-            "//": "the bg_image_theme can be light or dark"
+            "template": "card_template_music_player_test"
         }
     ]
 }
