@@ -40,7 +40,8 @@
             "order": "2",
             "tags": "go tag1 tag2",
             "template": "card_template_music_player_test",
-            "bg_image_theme": "dark"
+            "bg_image_theme": "light",
+            "//": "the bg_image_theme can be light or dark"
         }
     ]
 }

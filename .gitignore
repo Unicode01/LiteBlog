@@ -1,6 +1,6 @@
 cache
 backups
 LiteBlog
-build.sh
+# build.sh
 release
 static
