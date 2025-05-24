@@ -29,6 +29,15 @@ cd LiteBlog
 go build -o LiteBlog
 ./LiteBlog
 ```
+### From Docker
+Run `./build.sh` to build the zip. **Before build the zip, You should write your own configs in `configs/`**
+Here is a example to run liteblog with docker, and mount the `configs` directory to the container.
+If you want to change `public` or `templates` directory, you can mount it to the container using `-v` option.
+```bash
+./build.sh
+docker build -t liteblog .
+docker run -p 80:80 -v $(pwd)/configs:/liteblog/configs/ liteblog
+```
 ## Configuration
 #### configs/config.json
 This file contains the server configurations such as server port,TLS settings, cache settings, etc.  
