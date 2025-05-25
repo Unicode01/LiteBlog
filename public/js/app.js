@@ -53,7 +53,7 @@ function OnContextMenu(event) {
             event.preventDefault();
             selection = window.getSelection();
             copyText(selection.toString());
-        },true);
+        });
         context_menu_doc.appendChild(menu_copy);
         // add item line
         var menu_line = document.createElement('div');
@@ -67,7 +67,7 @@ function OnContextMenu(event) {
     menu_Reload.addEventListener('click', function (event) {
         event.preventDefault();
         location.reload();
-    },true);
+    });
     context_menu_doc.appendChild(menu_Reload);
 
     // add menu line
@@ -101,7 +101,7 @@ function OnContextMenu(event) {
                 console.log(link);
                 // copy link to clipboard
                 copyText(link);
-            },true);
+            });
             context_menu_doc.appendChild(menu_getlink);
 
             // add item line
@@ -124,7 +124,7 @@ function OnContextMenu(event) {
                     } else {
                         console.log("failed to delete card");
                     }
-                },true);
+                });
                 context_menu_doc.appendChild(menu_delete);
 
                 // add item line
@@ -139,7 +139,7 @@ function OnContextMenu(event) {
                 menu_edit.addEventListener('click', function (event) {
                     event.preventDefault();
                     EditCard(card.getAttribute("card-id"));
-                },true);
+                });
                 context_menu_doc.appendChild(menu_edit);
                 // add item line
                 var menu_line = document.createElement('div');
@@ -161,7 +161,7 @@ function OnContextMenu(event) {
             if (AddCard()) {
                 console.log("card added");
             };
-        },true);
+        });
         context_menu_doc.appendChild(menu_addcard);
         // add item line
         var menu_line = document.createElement('div');
@@ -174,7 +174,7 @@ function OnContextMenu(event) {
         menu_addarticle.addEventListener('click', function (event) {
             event.preventDefault();
             location.href = '/addarticle.html';
-        },true);
+        });
         context_menu_doc.appendChild(menu_addarticle);
         // add item line
         var menu_line = document.createElement('div');
@@ -196,7 +196,7 @@ function OnContextMenu(event) {
             event.preventDefault();
             var editmode = document.getElementById('edit-button');
             editmode?.click();
-        },true);
+        });
         context_menu_doc.appendChild(menu_editmode);
     }
 
@@ -209,7 +209,7 @@ function OnContextMenu(event) {
         menu_save.addEventListener('click', function (event) {
             event.preventDefault();
             SaveArticle();
-        },true);
+        });
         context_menu_doc.appendChild(menu_save);
         // add item line
         var menu_line = document.createElement('div');
@@ -226,7 +226,7 @@ function OnContextMenu(event) {
         menu_edit.addEventListener('click', function (event) {
             event.preventDefault();
             location.href = '/editarticle.html?article_id=' + location.pathname.split('/')[2];
-        },true);
+        });
         context_menu_doc.appendChild(menu_edit);
         // add item line
         var menu_line = document.createElement('div');
@@ -246,7 +246,7 @@ function OnContextMenu(event) {
                     console.log("failed to delete article");
                 }
             });
-        },true);
+        });
         context_menu_doc.appendChild(menu_delete);
         // add item line
         var menu_line = document.createElement('div');
@@ -259,7 +259,7 @@ function OnContextMenu(event) {
         menu_addcomment.addEventListener('click', function (event) {
             event.preventDefault();
             ShowCommentInputBox();
-        },true);
+        });
         context_menu_doc.appendChild(menu_addcomment);
         // add item line
         var menu_line = document.createElement('div');
@@ -290,7 +290,7 @@ function OnContextMenu(event) {
                             console.log("failed to delete comment");
                         }
                     });
-                },true);
+                });
                 context_menu_doc.appendChild(menu_deletecomment);
                 // add item line
                 var menu_line = document.createElement('div');
