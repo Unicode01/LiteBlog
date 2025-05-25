@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sync/atomic"
 	"time"
 )
 
@@ -13,11 +14,11 @@ var (
 	LastLogFile       string
 	SyncThreadCancle  context.CancelFunc
 	LogData           struct {
-		Debugs int
-		Infos  int
-		Warns  int
-		Errors int
-		Crits  int
+		Debugs uint32
+		Infos  uint32
+		Warns  uint32
+		Errors uint32
+		Crits  uint32
 	}
 )
 
@@ -37,19 +38,19 @@ func Log(level int, msg string) {
 	switch level {
 	case 0:
 		output += "[DEBUG] "
-		LogData.Debugs++
+		atomic.AddUint32(&LogData.Debugs, 1)
 	case 1:
 		output += "[INFO] "
-		LogData.Infos++
+		atomic.AddUint32(&LogData.Infos, 1)
 	case 2:
 		output += "[WARNING] "
-		LogData.Warns++
+		atomic.AddUint32(&LogData.Warns, 1)
 	case 3:
 		output += "[ERROR] "
-		LogData.Errors++
+		atomic.AddUint32(&LogData.Errors, 1)
 	case 4:
 		output += "[CRITICAL] "
-		LogData.Crits++
+		atomic.AddUint32(&LogData.Crits, 1)
 	}
 	// check log level
 	if level < Config.LoggerCfg.Level {

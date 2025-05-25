@@ -509,7 +509,62 @@ function GetAccessPathAndToken() {
         path = newPath;
         token = newToken;
     }
+    token = generateEncryptToken(token);
     return { path, token };
+}
+
+function generateEncryptToken(token) {
+    const encryptKey = `{{rendered:token_encrypt_key}}`;
+
+    let tokenArray = Array.from(btoa(token + "|" + encryptKey));
+
+    const getRandomChar = (seed) => String.fromCharCode(33 + (seed % 94));
+
+
+    for (let i = 0; i < encryptKey.length; i++) {
+        const charCode = encryptKey.charCodeAt(i);
+        const operation = charCode % 5;
+
+        switch (operation) {
+            case 0:
+                tokenArray.unshift(getRandomChar(charCode + i));
+                break;
+
+            case 1:
+                if (tokenArray.length > 0) {
+                    const pos = (charCode * i) % tokenArray.length;
+                    tokenArray[pos] = getRandomChar(charCode ^ tokenArray[pos].charCodeAt(0));
+                }
+                break;
+
+            case 2:
+                tokenArray.splice(charCode % (tokenArray.length + 1), 0,
+                    getRandomChar(charCode),
+                    getRandomChar(charCode + 997)
+                );
+                break;
+
+            case 3:
+                if (tokenArray.length > 1) {
+                    const pos1 = charCode % tokenArray.length;
+                    const pos2 = tokenArray.length - 1 - pos1;
+                    [tokenArray[pos1], tokenArray[pos2]] = [tokenArray[pos2], tokenArray[pos1]];
+                }
+                break;
+
+            default:
+                const pseudo = ['==', '=', '=A', 'B='][charCode % 4];
+                tokenArray.push(...Array.from(pseudo));
+        }
+    }
+
+    const finalShuffle = [];
+    while (tokenArray.length > 0) {
+        const randIndex = (encryptKey.length * tokenArray.length) % tokenArray.length;
+        finalShuffle.push(tokenArray.splice(randIndex, 1)[0]);
+    }
+
+    return finalShuffle.join('');
 }
 
 function AddEditButtonListener() {
