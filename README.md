@@ -65,6 +65,8 @@ This is the comment configuration.
 - `enable`: This is a boolean value to enable or disable the comment system.
 - `type`: This is the comment system type. Currently only support `cloudflare_turnstile`.
 - `min_seconds_between_comments`: This is the minimum seconds between two comments. Used to prevent spam.
+##### logger_config
+This is the logger configuration.
 #### configs/global.json
 This configs are used to customize the front-end.
 #### configs/articles/*.json
@@ -99,11 +101,11 @@ Yes, Here is some example of the firewall rules:
 ``` json
 {
 	"rules": [
-        "//": "Action 1: block, 0: allow/default",
-        "Action": 1,
-        "Type": "ipaddr",
-        "Rule": "8.9.10.11",
-        "Timeout": 99999999999
+        "//": "action 1: block, 0: allow/default",
+        "action": 1,
+        "type": "ipaddr",
+        "rule": "8.9.10.11",
+        "timeout": 99999999999
     ]
 }
 ```
@@ -111,14 +113,25 @@ Yes, Here is some example of the firewall rules:
 ``` json
 {
     "rules": [
-        "//": "Action 1: block, 0: allow/default",
-        "Action": 1,
-        "Type": "ipcidr",
-        "Rule": "192.168.0.0/24",
-        "Timeout": 99999999999
+        "//": "action 1: block, 0: allow/default",
+        "action": 1,
+        "type": "ipcidr",
+        "rule": "192.168.0.0/24",
+        "timeout": 99999999999
     ]
 }
 ```
+- if you want to block the user agent `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36`, you can add the following rule to the `configs/firewall.json` file:
+``` json
+{
+    "rules": [
+        "//": "action 1: block, 0: allow/default",
+        "action": 1,
+        "type": "useragent",
+        "rule": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36",
+        "timeout": 99999999999
+    ]
+}
 - more Types are under development.
 # Full static
 If you want to use it in full static mode, you can use `-static` flag to start the server. It will create a `static/public` directory and render all the pages to the directory. You can use nginx or other web server to serve the static files.

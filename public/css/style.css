@@ -64,6 +64,9 @@ body {
   /* min-width: auto; */
   overflow: hidden;
   z-index: 1000;
+  transform: scale(0);
+  transform-origin: left top;
+  transition: all 0.3s ease-in-out;
 }
 
 .history-menu {
