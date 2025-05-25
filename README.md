@@ -132,6 +132,7 @@ Yes, Here is some example of the firewall rules:
         "timeout": 99999999999
     ]
 }
+```
 - more Types are under development.
 # Full static
 If you want to use it in full static mode, you can use `-static` flag to start the server. It will create a `static/public` directory and render all the pages to the directory. You can use nginx or other web server to serve the static files.
