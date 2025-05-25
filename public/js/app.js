@@ -49,11 +49,11 @@ function OnContextMenu(event) {
         var menu_copy = document.createElement('div');
         menu_copy.classList.add('menu-item');
         menu_copy.innerHTML = '<a class="link" href="#">Copy</a>';
-        menu_copy.firstChild.addEventListener('click', function (event) {
+        menu_copy.addEventListener('click', function (event) {
             event.preventDefault();
             selection = window.getSelection();
             copyText(selection.toString());
-        });
+        },true);
         context_menu_doc.appendChild(menu_copy);
         // add item line
         var menu_line = document.createElement('div');
@@ -64,10 +64,10 @@ function OnContextMenu(event) {
     var menu_Reload = document.createElement('div');
     menu_Reload.classList.add('menu-item');
     menu_Reload.innerHTML = '<a class="link" href="#">Reload</a>';
-    menu_Reload.firstChild.addEventListener('click', function (event) {
+    menu_Reload.addEventListener('click', function (event) {
         event.preventDefault();
         location.reload();
-    });
+    },true);
     context_menu_doc.appendChild(menu_Reload);
 
     // add menu line
@@ -90,7 +90,7 @@ function OnContextMenu(event) {
             var menu_getlink = document.createElement('div');
             menu_getlink.classList.add('menu-item');
             menu_getlink.innerHTML = '<a class="link" href="#">Copy Link</a>';
-            menu_getlink.firstChild.addEventListener('click', function (event) {
+            menu_getlink.addEventListener('click', function (event) {
                 event.preventDefault();
                 var linkdom = card.querySelector('.link');
                 if (!linkdom) {
@@ -101,7 +101,7 @@ function OnContextMenu(event) {
                 console.log(link);
                 // copy link to clipboard
                 copyText(link);
-            });
+            },true);
             context_menu_doc.appendChild(menu_getlink);
 
             // add item line
@@ -115,7 +115,7 @@ function OnContextMenu(event) {
                 var menu_delete = document.createElement('div');
                 menu_delete.classList.add('menu-item');
                 menu_delete.innerHTML = '<a class="link" href="#">Delete Card</a>';
-                menu_delete.firstChild.addEventListener('click', function (event) {
+                menu_delete.addEventListener('click', function (event) {
                     event.preventDefault();
                     if (DeleteCard(card.getAttribute("card-id"))) {
                         console.log("card deleted");
@@ -124,7 +124,7 @@ function OnContextMenu(event) {
                     } else {
                         console.log("failed to delete card");
                     }
-                });
+                },true);
                 context_menu_doc.appendChild(menu_delete);
 
                 // add item line
@@ -136,10 +136,10 @@ function OnContextMenu(event) {
                 var menu_edit = document.createElement('div');
                 menu_edit.classList.add('menu-item');
                 menu_edit.innerHTML = '<a class="link" href="#">Edit Card</a>';
-                menu_edit.firstChild.addEventListener('click', function (event) {
+                menu_edit.addEventListener('click', function (event) {
                     event.preventDefault();
                     EditCard(card.getAttribute("card-id"));
-                });
+                },true);
                 context_menu_doc.appendChild(menu_edit);
                 // add item line
                 var menu_line = document.createElement('div');
@@ -156,12 +156,12 @@ function OnContextMenu(event) {
         var menu_addcard = document.createElement('div');
         menu_addcard.classList.add('menu-item');
         menu_addcard.innerHTML = '<a class="link" href="#">Add Card</a>';
-        menu_addcard.firstChild.addEventListener('click', function (event) {
+        menu_addcard.addEventListener('click', function (event) {
             event.preventDefault();
             if (AddCard()) {
                 console.log("card added");
             };
-        });
+        },true);
         context_menu_doc.appendChild(menu_addcard);
         // add item line
         var menu_line = document.createElement('div');
@@ -171,10 +171,10 @@ function OnContextMenu(event) {
         var menu_addarticle = document.createElement('div');
         menu_addarticle.classList.add('menu-item');
         menu_addarticle.innerHTML = '<a class="link" href="#">Add Article</a>';
-        menu_addarticle.firstChild.addEventListener('click', function (event) {
+        menu_addarticle.addEventListener('click', function (event) {
             event.preventDefault();
             location.href = '/addarticle.html';
-        });
+        },true);
         context_menu_doc.appendChild(menu_addarticle);
         // add item line
         var menu_line = document.createElement('div');
@@ -192,11 +192,11 @@ function OnContextMenu(event) {
         } else {
             menu_editmode.innerHTML = '<a class="link" href="#">Edit Mode</a>';
         }
-        menu_editmode.firstChild.addEventListener('click', function (event) {
+        menu_editmode.addEventListener('click', function (event) {
             event.preventDefault();
             var editmode = document.getElementById('edit-button');
             editmode?.click();
-        });
+        },true);
         context_menu_doc.appendChild(menu_editmode);
     }
 
@@ -206,10 +206,10 @@ function OnContextMenu(event) {
         var menu_save = document.createElement('div');
         menu_save.classList.add('menu-item');
         menu_save.innerHTML = '<a class="link" href="#">Save Article</a>';
-        menu_save.firstChild.addEventListener('click', function (event) {
+        menu_save.addEventListener('click', function (event) {
             event.preventDefault();
             SaveArticle();
-        });
+        },true);
         context_menu_doc.appendChild(menu_save);
         // add item line
         var menu_line = document.createElement('div');
@@ -223,10 +223,10 @@ function OnContextMenu(event) {
         var menu_edit = document.createElement('div');
         menu_edit.classList.add('menu-item');
         menu_edit.innerHTML = '<a class="link" href="#">Edit Article</a>';
-        menu_edit.firstChild.addEventListener('click', function (event) {
+        menu_edit.addEventListener('click', function (event) {
             event.preventDefault();
             location.href = '/editarticle.html?article_id=' + location.pathname.split('/')[2];
-        });
+        },true);
         context_menu_doc.appendChild(menu_edit);
         // add item line
         var menu_line = document.createElement('div');
@@ -236,7 +236,7 @@ function OnContextMenu(event) {
         var menu_delete = document.createElement('div');
         menu_delete.classList.add('menu-item');
         menu_delete.innerHTML = '<a class="link" href="#">Delete Article</a>';
-        menu_delete.firstChild.addEventListener('click', function (event) {
+        menu_delete.addEventListener('click', function (event) {
             event.preventDefault();
             DeleteArticleAPI(location.pathname.split('/')[2], function (result) {
                 if (result) {
@@ -246,7 +246,7 @@ function OnContextMenu(event) {
                     console.log("failed to delete article");
                 }
             });
-        });
+        },true);
         context_menu_doc.appendChild(menu_delete);
         // add item line
         var menu_line = document.createElement('div');
@@ -256,10 +256,10 @@ function OnContextMenu(event) {
         var menu_addcomment = document.createElement('div');
         menu_addcomment.classList.add('menu-item');
         menu_addcomment.innerHTML = '<a class="link" href="#">Add Comment</a>';
-        menu_addcomment.firstChild.addEventListener('click', function (event) {
+        menu_addcomment.addEventListener('click', function (event) {
             event.preventDefault();
             ShowCommentInputBox();
-        });
+        },true);
         context_menu_doc.appendChild(menu_addcomment);
         // add item line
         var menu_line = document.createElement('div');
@@ -279,7 +279,7 @@ function OnContextMenu(event) {
                 var menu_deletecomment = document.createElement('div');
                 menu_deletecomment.classList.add('menu-item');
                 menu_deletecomment.innerHTML = '<a class="link" href="#">Delete Comment</a>';
-                menu_deletecomment.firstChild.addEventListener('click', function (event) {
+                menu_deletecomment.addEventListener('click', function (event) {
                     event.preventDefault();
                     const comment_id = comment_dom.getAttribute("comment-id");
                     DeleteCommentAPI(comment_id, function (result) {
@@ -290,7 +290,7 @@ function OnContextMenu(event) {
                             console.log("failed to delete comment");
                         }
                     });
-                });
+                },true);
                 context_menu_doc.appendChild(menu_deletecomment);
                 // add item line
                 var menu_line = document.createElement('div');
