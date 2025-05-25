@@ -310,9 +310,12 @@ function OnContextMenu(event) {
     var menu_y = event.clientY;
     context_menu_doc.style.left = menu_x + 'px';
     context_menu_doc.style.top = menu_y + 'px';
-
     // append to body
     document.body.appendChild(context_menu_doc);
+    // force rerender
+    context_menu_doc.offsetHeight;
+    // set scale to 1
+    context_menu_doc.style.transform = "scale(1)";
 
 }
 

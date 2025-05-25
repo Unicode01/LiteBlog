@@ -20,6 +20,7 @@ type AllConfig struct {
 	DeliverCfg DeliverConfig `json:"deliver_config"`
 	BackupCfg  BackupsConfig `json:"backup_config"`
 	CommentCfg CommentConfig `json:"comment_config"`
+	LoggerCfg  LoggerConfig  `json:"logger_config"`
 }
 
 type ServerConfig struct {
@@ -66,6 +67,13 @@ type CommentConfig struct {
 	CFSecretKey               string `json:"cf_secret_key"`
 	CFSiteKey                 string `json:"cf_site_key"`
 	MinSecondsBetweenComments int    `json:"min_seconds_between_comments"`
+}
+
+type LoggerConfig struct {
+	Level            int    `json:"level"`
+	LogFile          string `json:"log_file"`
+	FileSyncInterval int    `json:"file_sync_interval"`
+	DisableStdout    bool   `json:"disable_stdout"`
 }
 
 func ReadConfig() AllConfig {

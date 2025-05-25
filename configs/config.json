@@ -39,5 +39,12 @@
         "cf_secret_key": "your_secret_key",
         "cf_site_key": "your_site_key",
         "min_seconds_between_comments": 30
+    },
+    "logger_config": {
+        "//": "0: debug/all 1: info 2: warning 3: error 4: critical; file_sync_interval: the interval to sync the log file to disk, default is 10 seconds; disable_stdout: disable the output to stdout, default is false",
+        "level": 1,
+        "log_file": "liteblog.log",
+        "file_sync_interval": 10,
+        "disable_stdout": false
     }
 }

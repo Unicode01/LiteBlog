@@ -4,3 +4,4 @@ LiteBlog
 # build.sh
 release
 static
+liteblog.log

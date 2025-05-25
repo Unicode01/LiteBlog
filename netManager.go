@@ -119,10 +119,10 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		response_end_time := time.Now()
 		response_time := response_end_time.Sub(response_start_time)
-		Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, method: %s %s, %s, disk_cached=%t", IP, traceID, r.Method, r.URL.Path, response_time, cached))
+		Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, UA: '%s', %s %s, %s, disk_cached=%t", IP, traceID, r.Header.Get("User-Agent"), r.Method, r.URL.Path, response_time, cached))
 	}()
 
-	if fireWall.MatchRule(IP) == 1 { // block ip
+	if fireWall.MatchRule(IP, r) == 1 {
 		w.WriteHeader(http.StatusForbidden)
 		f, err := os.Open("public/403.html")
 		if err != nil {
@@ -147,7 +147,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasSuffix(r.URL.Path, "/") { // redirect to index.html
-		http.Redirect(w, r, r.URL.Path+"index.html", http.StatusFound)
+		http.Redirect(w, r, r.URL.Path+"index.html", http.StatusMovedPermanently)
 		return
 	}
 

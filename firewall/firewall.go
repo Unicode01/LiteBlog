@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"net"
+	"net/http"
 	"os"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -72,13 +72,13 @@ func (f *Firewall) DeleteRule(rule string) bool {
 }
 
 // return Action Code,0 -> not found
-func (f *Firewall) MatchRule(rule string) int {
+func (f *Firewall) MatchRule(ip string, r *http.Request) int {
 	f.ruleLocker.RLock()
 	defer f.ruleLocker.RUnlock()
 	for curr := f.headRule; curr != nil; curr = curr.next {
 		switch curr.Rule.Type {
 		case "ipaddr":
-			if curr.Rule.Rule == rule {
+			if curr.Rule.Rule == ip {
 				if curr.Rule.Timeout > 0 && curr.Rule.Timeout < time.Now().Unix() { // timeout
 					return 0
 				}
@@ -86,12 +86,12 @@ func (f *Firewall) MatchRule(rule string) int {
 			}
 		case "ipcidr":
 			// parse ip cidr
-			_, mask, err := net.ParseCIDR(rule)
+			_, mask, err := net.ParseCIDR(curr.Rule.Rule)
 			if err != nil {
 				continue
 			}
 			// parse rule to net.ip
-			ruleIP := net.ParseIP(rule)
+			ruleIP := net.ParseIP(ip)
 			if ruleIP == nil {
 				continue
 			}
@@ -102,7 +102,15 @@ func (f *Firewall) MatchRule(rule string) int {
 				}
 				return curr.Rule.Action
 			}
+		case "useragent":
+			if curr.Rule.Rule == r.Header.Get("User-Agent") {
+				if curr.Rule.Timeout > 0 && curr.Rule.Timeout < time.Now().Unix() { // timeout
+					return 0
+				}
+				return curr.Rule.Action
+			}
 		}
+
 	}
 	return 0
 }
@@ -144,7 +152,12 @@ func (f *Firewall) ReadRules() bool {
 	}
 	// parse json
 	type Config struct {
-		Rules []map[string]string `json:"rules"`
+		Rules []struct {
+			Action  int    `json:"action"`
+			Rule    string `json:"rule"`
+			Type    string `json:"type"`
+			Timeout int64  `json:"timeout"`
+		} `json:"rules"`
 	}
 	var cfg Config
 	err = json.Unmarshal(cfg_filebin, &cfg)
@@ -153,9 +166,7 @@ func (f *Firewall) ReadRules() bool {
 	}
 	// add rules
 	for _, rule := range cfg.Rules {
-		action, _ := strconv.Atoi(rule["action"])
-		timeout, _ := strconv.ParseInt(rule["timeout"], 10, 64)
-		f.AddRule(&Rule{Action: action, Rule: rule["rule"], Type: rule["type"], Timeout: timeout})
+		f.AddRule(&Rule{Action: rule.Action, Rule: rule.Rule, Type: rule.Type, Timeout: rule.Timeout})
 	}
 	return true
 }
@@ -185,12 +196,13 @@ func (f *Firewall) SaveRules() bool {
 		cfg.Rules = append(cfg.Rules, Rule{
 			Action:  r.Action,
 			Rule:    r.Rule,
+			Type:    r.Type,
 			Timeout: r.Timeout,
 		})
 	}
 
 	// 生成带格式的 JSON
-	data, err := json.MarshalIndent(cfg, "", "\t")
+	data, err := json.MarshalIndent(cfg, "", "    ")
 	if err != nil {
 		return false
 	}

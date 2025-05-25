@@ -14,13 +14,14 @@ func Test_firewall(t *testing.T) {
 		wall.AddRule(&firewall.Rule{
 			Rule:   "myrule" + fmt.Sprintf("%d", i),
 			Action: i,
+			Type:   "ipaddr",
 		})
 	}
 	fmt.Printf("Add Timeused: %d\n", time.Now().Nanosecond()-timeNow)
 
 	timeNow = time.Now().Nanosecond()
 	for i := 9000000; i < 9000010; i++ {
-		fmt.Printf("match rule: %s, result: %d\n", "myrule"+fmt.Sprintf("%d", i), wall.MatchRule("myrule"+fmt.Sprintf("%d", i)))
+		fmt.Printf("match rule: %s, result: %d\n", "myrule"+fmt.Sprintf("%d", i), wall.MatchRule("myrule"+fmt.Sprintf("%d", i), nil))
 	}
 	fmt.Printf("Del Timeused: %d\n", time.Now().Nanosecond()-timeNow)
 

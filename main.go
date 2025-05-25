@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 var (
@@ -10,6 +12,7 @@ var (
 )
 
 func main() {
+	go ExitListener()
 	Config = ReadConfig()
 	SetVarToGlobalMap()
 	ReadGolbalConfig()
@@ -21,9 +24,6 @@ func main() {
 	err := InitNetManager(&Config.ServerCfg)
 	if err != nil {
 		panic(err)
-	}
-	if Config.BackupCfg.Enabled {
-		BackupNow()
 	}
 	select {}
 }
@@ -38,4 +38,15 @@ func ReadFlag() {
 		os.Exit(0)
 	}
 
+}
+
+func ExitListener() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	sig := <-c
+	Log(1, "Exiting with signal: "+sig.String())
+	CloseLogger()
+	fireWall.SaveRules()
+	deliverManager.Shutdown()
+	os.Exit(0)
 }
