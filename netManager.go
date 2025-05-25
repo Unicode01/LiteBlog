@@ -29,6 +29,7 @@ var (
 	deliverManager     *DeliverManager
 	pathTraversalRegex = regexp.MustCompile(`(?i)(\.\./|\.\.\\)|(/etc/passwd|/bin/sh|/bin/bash)`)
 	LastCommentTime    time.Time
+	EncryptToken       string
 )
 
 type articleJsonStruct struct {
@@ -362,7 +363,7 @@ func backendHandler_edit_order(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != Config.AccessCfg.AccessToken {
+	if req.Token != EncryptToken {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -434,7 +435,7 @@ func backendHandler_delete_card(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != Config.AccessCfg.AccessToken {
+	if req.Token != EncryptToken {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -503,7 +504,7 @@ func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != Config.AccessCfg.AccessToken {
+	if req.Token != EncryptToken {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -574,7 +575,7 @@ func backendHandler_get_card(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != Config.AccessCfg.AccessToken {
+	if req.Token != EncryptToken {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -632,7 +633,7 @@ func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != Config.AccessCfg.AccessToken {
+	if req.Token != EncryptToken {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -711,7 +712,7 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != Config.AccessCfg.AccessToken {
+	if req.Token != EncryptToken {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -721,7 +722,7 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 	p := bluemonday.NewPolicy()
 	pcontent := bluemonday.UGCPolicy()
 	req.Article.Title = p.Sanitize(req.Article.Title)
-	req.Article.Content = pcontent.Sanitize(req.Article.Content)
+	req.Article.ContentHTML = pcontent.Sanitize(req.Article.ContentHTML)
 	req.Article.Author = p.Sanitize(req.Article.Author)
 	// add article
 	// generate article id
@@ -797,7 +798,7 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != Config.AccessCfg.AccessToken {
+	if req.Token != EncryptToken {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -807,7 +808,7 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 	p := bluemonday.NewPolicy()
 	pcontent := bluemonday.UGCPolicy()
 	req.Article.Title = p.Sanitize(req.Article.Title)
-	req.Article.Content = pcontent.Sanitize(req.Article.Content)
+	req.Article.ContentHTML = pcontent.Sanitize(req.Article.ContentHTML)
 	req.Article.Author = p.Sanitize(req.Article.Author)
 
 	// update article
@@ -871,7 +872,7 @@ func backendHandler_delete_article(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != Config.AccessCfg.AccessToken {
+	if req.Token != EncryptToken {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -915,7 +916,7 @@ func backendHandler_get_article(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != Config.AccessCfg.AccessToken {
+	if req.Token != EncryptToken {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -954,7 +955,7 @@ func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != Config.AccessCfg.AccessToken {
+	if req.Token != EncryptToken {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}

@@ -3,7 +3,10 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 	"sort"
 	"sync"
@@ -101,6 +104,11 @@ func autoRender(ctx context.Context) {
 
 			// render RSS
 			RenderedMap["rss_feed"] = renderRSSFeed()
+
+			// generate token encrypt key
+			newToken := sha256.Sum256([]byte(Config.AccessCfg.BackendPath + Config.AccessCfg.AccessToken))
+			RenderedMap["token_encrypt_key"] = []byte(fmt.Sprintf("%x", newToken))
+			EncryptToken = generateEncryptToken(Config.AccessCfg.AccessToken, fmt.Sprintf("%x", newToken))
 
 			// fmt.Printf("card rendered\n")
 			render_end_time := time.Now()
@@ -272,4 +280,56 @@ func renderarticle(articleID string) []byte {
 		"comments":        comments_html,
 	})
 	return rendered_article_html
+}
+
+func generateEncryptToken(token, encryptKey string) string {
+	data := []byte(token + "|" + encryptKey)
+	encoded := base64.StdEncoding.EncodeToString(data)
+	tokenArray := []byte(encoded)
+
+	getRandomChar := func(seed int) byte {
+		return byte(33 + (seed % 94))
+	}
+
+	for i := 0; i < len(encryptKey); i++ {
+		charCode := int(encryptKey[i])
+		operation := charCode % 5
+
+		switch operation {
+		case 0:
+			tokenArray = append([]byte{getRandomChar(charCode + i)}, tokenArray...)
+
+		case 1:
+			if len(tokenArray) > 0 {
+				pos := (charCode * i) % len(tokenArray)
+				tokenArray[pos] = getRandomChar(charCode ^ int(tokenArray[pos]))
+			}
+
+		case 2:
+			insertPos := charCode % (len(tokenArray) + 1)
+			char1 := getRandomChar(charCode)
+			char2 := getRandomChar(charCode + 997)
+			tokenArray = append(tokenArray[:insertPos], append([]byte{char1, char2}, tokenArray[insertPos:]...)...)
+
+		case 3:
+			if len(tokenArray) > 1 {
+				pos1 := charCode % len(tokenArray)
+				pos2 := len(tokenArray) - 1 - pos1
+				tokenArray[pos1], tokenArray[pos2] = tokenArray[pos2], tokenArray[pos1]
+			}
+
+		default:
+			pseudo := [...]string{"==", "=", "=A", "B="}[charCode%4]
+			tokenArray = append(tokenArray, []byte(pseudo)...)
+		}
+	}
+
+	finalShuffle := make([]byte, 0, len(tokenArray))
+	for len(tokenArray) > 0 {
+		randIndex := (len(encryptKey) * len(tokenArray)) % len(tokenArray)
+		finalShuffle = append(finalShuffle, tokenArray[randIndex])
+		tokenArray = append(tokenArray[:randIndex], tokenArray[randIndex+1:]...)
+	}
+
+	return string(finalShuffle)
 }
