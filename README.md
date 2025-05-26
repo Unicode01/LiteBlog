@@ -62,11 +62,15 @@ This is the deliver configuration. Impact the asynchronous cache mechanism.
 - `max_backups_survival_time`: This is the maximum survival time of the backup files in seconds.
 ##### comment_config
 This is the comment configuration.
-- `enable`: This is a boolean value to enable or disable the comment system.
+- `enabled`: This is a boolean value to enable or disable the comment system.
 - `type`: This is the comment system type. Currently only support `cloudflare_turnstile`.
 - `min_seconds_between_comments`: This is the minimum seconds between two comments. Used to prevent spam.
-##### logger_config
-This is the logger configuration.
+##### contentAdvisor_config
+This is the content advisor configuration. It may used to avoid the XSS attack.
+- `enabled`: This is a boolean value to enable or disable the content advisor.
+- `filter_article`: This is a boolean value to enable or disable the article filter. Affect the `edit_article` `add_article` api.
+- `filter_comment`: This is a boolean value to enable or disable the comment filter. Affect the `add_comment` public api.
+- `filter_card`: This is a boolean value to enable or disable the card filter. Affect the `edit_card` `add_card` api.
 #### configs/global.json
 This configs are used to customize the front-end.
 #### configs/articles/*.json

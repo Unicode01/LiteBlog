@@ -27,7 +27,6 @@ function card_music_player_init() {
             card.querySelector(".player-duration").style.color = "white";
             card.querySelector(".player-current-time").style.color = "white";
             card.querySelector(".player-pause").style.color = "white";
-
         }
         console.log(music_info);
         // set background image
@@ -50,6 +49,7 @@ function card_music_player_init() {
             const prevLyricDom = card.querySelector(".player-lyric-pre");
             const currentLyricDom = card.querySelector(".player-lyric-current");
             const nextLyricDom = card.querySelector(".player-lyric-next");
+            var player_hover_line = card.querySelector(".player-hover-line");
             if (currentLyricIndex != -1) {
                 if (currentLyricIndex > 0) {
                     prevLyricDom.textContent = music_player.lyrics[currentLyricIndex - 1].text;
@@ -59,6 +59,9 @@ function card_music_player_init() {
                 currentLyricDom.textContent = music_player.lyrics[currentLyricIndex].text;
                 if (currentLyricIndex < music_player.lyrics.length - 1) {
                     nextLyricDom.textContent = music_player.lyrics[currentLyricIndex + 1].text;
+                    if (player_hover_line.style.opacity === "0") {
+                        player_hover_line.style.opacity = "1";
+                    }
                 } else {
                     nextLyricDom.textContent = "";
                 }
@@ -110,7 +113,7 @@ function card_music_player_init() {
         });
         // add prev button event listener
         player_prev_button.addEventListener("click", function () {
-            const newMusicCardIndex = card.thisMusicIndex -1;
+            const newMusicCardIndex = card.thisMusicIndex - 1;
             console.log(newMusicCardIndex)
             if (newMusicCardIndex >= 0 && newMusicCardIndex <= window._cards_for_musics.length) {
                 console.log(window._cards_for_musics)
@@ -123,7 +126,7 @@ function card_music_player_init() {
         });
         // add next button event listener
         player_next_button.addEventListener("click", function () {
-            const newMusicCardIndex = card.thisMusicIndex +1;
+            const newMusicCardIndex = card.thisMusicIndex + 1;
             console.log(newMusicCardIndex)
             if (newMusicCardIndex >= 0 && newMusicCardIndex < window._cards_for_musics.length) {
                 console.log(window._cards_for_musics)
@@ -143,6 +146,7 @@ function music_player_on_move(e, card) {
     var player_shift_container = card.querySelector(".player-shift-container");
     var player_player_container = card.querySelector(".player-container");
     var player_image_container = card.querySelector("#image-container");
+    var player_hover_line = card.querySelector(".player-hover-line");
 
     // check if cursor in last 10px
     const containerRect = player_player_container.getBoundingClientRect();
@@ -153,35 +157,43 @@ function music_player_on_move(e, card) {
         e.clientX >= containerRect.left &&
         e.clientX <= containerRect.right
     ) {
-        // remove transform
-        player_shift_container.style.transform = "translateY(0px)";
-        // set player z-index to 1
-        // player_player_container.style.zIndex = 1;
-        // set image z-index to 2
-        // player_image_container.style.zIndex = 2;
-        // add filter: blur to image container
-        player_image_container.style.filter = "blur(5px)";
-        // set player_player_container opacity to 0
-        player_player_container.style.opacity = 0;
+        if (card.thisMusicPlayer.lyricsLoaded) {
+            // remove transform
+            player_shift_container.style.transform = "translateY(0px)";
+            // set player z-index to 1
+            // player_player_container.style.zIndex = 1;
+            // set image z-index to 2
+            // player_image_container.style.zIndex = 2;
+            // add filter: blur to image container
+            player_image_container.style.filter = "blur(5px)";
+            // set player_player_container opacity to 0
+            player_player_container.style.opacity = 0;
+            player_hover_line.style.opacity = 0;
+        }
+
     }
 
 }
 
 function music_player_on_mouseleave(e, card) {
-    // query player-shift-container
-    var player_shift_container = card.querySelector(".player-shift-container");
-    var player_player_container = card.querySelector(".player-container");
-    var player_image_container = card.querySelector("#image-container");
-    // add transform
-    player_shift_container.style.transform = "translateY(100%)";
-    // set player z-index to 2
-    // player_player_container.style.zIndex = 2;
-    // set image z-index to 1
-    // player_image_container.style.zIndex = 1;
-    // remove filter: blur from image container
-    player_image_container.style.filter = "blur(0px)";
-    // set player_player_container opacity to 1
-    player_player_container.style.opacity = 1;
+    if (card.thisMusicPlayer.lyricsLoaded) {
+        // query player-shift-container
+        var player_shift_container = card.querySelector(".player-shift-container");
+        var player_player_container = card.querySelector(".player-container");
+        var player_image_container = card.querySelector("#image-container");
+        var player_hover_line = card.querySelector(".player-hover-line");
+        // add transform
+        player_shift_container.style.transform = "translateY(100%)";
+        // set player z-index to 2
+        // player_player_container.style.zIndex = 2;
+        // set image z-index to 1
+        // player_image_container.style.zIndex = 1;
+        // remove filter: blur from image container
+        player_image_container.style.filter = "blur(0px)";
+        // set player_player_container opacity to 1
+        player_player_container.style.opacity = 1;
+        player_hover_line.style.opacity = 1;
+    }
 }
 
 function get_music_info(card) {
@@ -213,6 +225,7 @@ class MusicPlayer {
         this.player_container = null;
         // 歌词相关
         this.lyrics = [];         // 解析后的歌词数组
+        this.lyricsLoaded = false; // 歌词是否已加载
         this.currentLyricIndex = -1; // 当前歌词索引
     }
 
@@ -261,6 +274,9 @@ class MusicPlayer {
             const text = await response.text();
             // console.log(text);
             this.lyrics = this.parseLyrics(text);
+            if (this.lyrics.length > 0) {
+                this.lyricsLoaded = true;
+            }
         } catch (error) {
             console.error("Failed to load lyrics:", error);
         }

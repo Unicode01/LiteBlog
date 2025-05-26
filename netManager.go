@@ -508,11 +508,13 @@ func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	// sanitize input, use bluemonday to prevent XSS attack
-	// NewPolicy() creates a new policy with the default settings.
-	p := bluemonday.NewPolicy()
-	for k, v := range req.CardJson {
-		req.CardJson[k] = p.Sanitize(v)
+	if Config.ContentAdvisorCfg.Enabled && Config.ContentAdvisorCfg.FilterCard {
+		// sanitize input, use bluemonday to prevent XSS attack
+		// NewPolicy() creates a new policy with the default settings.
+		p := bluemonday.NewPolicy()
+		for k, v := range req.CardJson {
+			req.CardJson[k] = p.Sanitize(v)
+		}
 	}
 	// add card
 	type cards struct {
@@ -637,11 +639,13 @@ func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	// sanitize input, use bluemonday to prevent XSS attack
-	// NewPolicy() creates a new policy with the default settings.
-	p := bluemonday.NewPolicy()
-	for k, v := range req.CardJson {
-		req.CardJson[k] = p.Sanitize(v)
+	if Config.ContentAdvisorCfg.Enabled && Config.ContentAdvisorCfg.FilterCard {
+		// sanitize input, use bluemonday to prevent XSS attack
+		// NewPolicy() creates a new policy with the default settings.
+		p := bluemonday.NewPolicy()
+		for k, v := range req.CardJson {
+			req.CardJson[k] = p.Sanitize(v)
+		}
 	}
 	// update card
 	type cards struct {
@@ -716,14 +720,15 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-
-	// sanitize input, use bluemonday to prevent XSS attack
-	// NewPolicy() creates a new policy with the default settings.
-	p := bluemonday.NewPolicy()
-	pcontent := bluemonday.UGCPolicy()
-	req.Article.Title = p.Sanitize(req.Article.Title)
-	req.Article.ContentHTML = pcontent.Sanitize(req.Article.ContentHTML)
-	req.Article.Author = p.Sanitize(req.Article.Author)
+	if Config.ContentAdvisorCfg.Enabled && Config.ContentAdvisorCfg.FilterArticle {
+		// sanitize input, use bluemonday to prevent XSS attack
+		// NewPolicy() creates a new policy with the default settings.
+		p := bluemonday.NewPolicy()
+		pcontent := bluemonday.UGCPolicy()
+		req.Article.Title = p.Sanitize(req.Article.Title)
+		req.Article.ContentHTML = pcontent.Sanitize(req.Article.ContentHTML)
+		req.Article.Author = p.Sanitize(req.Article.Author)
+	}
 	// add article
 	// generate article id
 	articleID := generateTraceID()
@@ -802,15 +807,15 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-
-	// sanitize input, use bluemonday to prevent XSS attack
-	// NewPolicy() creates a new policy with the default settings.
-	p := bluemonday.NewPolicy()
-	pcontent := bluemonday.UGCPolicy()
-	req.Article.Title = p.Sanitize(req.Article.Title)
-	req.Article.ContentHTML = pcontent.Sanitize(req.Article.ContentHTML)
-	req.Article.Author = p.Sanitize(req.Article.Author)
-
+	if Config.ContentAdvisorCfg.Enabled && Config.ContentAdvisorCfg.FilterArticle {
+		// sanitize input, use bluemonday to prevent XSS attack
+		// NewPolicy() creates a new policy with the default settings.
+		p := bluemonday.NewPolicy()
+		pcontent := bluemonday.UGCPolicy()
+		req.Article.Title = p.Sanitize(req.Article.Title)
+		req.Article.ContentHTML = pcontent.Sanitize(req.Article.ContentHTML)
+		req.Article.Author = p.Sanitize(req.Article.Author)
+	}
 	// update article
 	articleJsonPath := "configs/articles/" + req.Article.ID + ".json"
 	articleJsonBin, err := os.ReadFile(articleJsonPath)
@@ -1006,7 +1011,7 @@ func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
 }
 
 func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
-	if !Config.CommentCfg.Enable {
+	if !Config.CommentCfg.Enabled {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -1047,11 +1052,14 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	// sanitize input, use bluemonday to prevent XSS attack
-	// NewPolicy() creates a new policy with the default settings.
-	p := bluemonday.NewPolicy()
-	req.Content = p.Sanitize(req.Content)
-	req.Author = p.Sanitize(req.Author)
+
+	if Config.ContentAdvisorCfg.Enabled && Config.ContentAdvisorCfg.FilterComment {
+		// sanitize input, use bluemonday to prevent XSS attack
+		// NewPolicy() creates a new policy with the default settings.
+		p := bluemonday.NewPolicy()
+		req.Content = p.Sanitize(req.Content)
+		req.Author = p.Sanitize(req.Author)
+	}
 	// add comment
 	articleJsonPath := "configs/articles/" + req.Article_id + ".json"
 

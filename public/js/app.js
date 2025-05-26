@@ -364,6 +364,10 @@ function OnHistoryButtonClick() {
             const menu_item = document.createElement('div');
             menu_item.classList.add('menu-item');
             menu_item.innerHTML = '<a class="link" href="' + item.url + '">' + item.title + '</a>';
+            menu_item.addEventListener('click', function (event) {
+                event.preventDefault();
+                window.location.href = item.url;
+            });
             menu_doc.appendChild(menu_item);
             var menu_line = document.createElement('div');
             menu_line.classList.add('menu-item-line');
@@ -373,14 +377,6 @@ function OnHistoryButtonClick() {
         if (menu_doc.lastElementChild.classList.contains('menu-item-line')) {
             menu_doc.lastElementChild.remove();
         }
-        // add click event listener to history menu
-        menu_doc.addEventListener('click', function (event) {
-            event.stopPropagation();
-            const target = event.target;
-            if (target.tagName == 'A') {
-                window.location.href = target.href;
-            }
-        });
         // set position
         const history_button = document.getElementById('history-button');
         const menu_x = history_button.offsetLeft + history_button.offsetWidth - 200;
