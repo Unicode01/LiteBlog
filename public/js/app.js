@@ -180,6 +180,19 @@ function OnContextMenu(event) {
         var menu_line = document.createElement('div');
         menu_line.classList.add('menu-item-line');
         context_menu_doc.appendChild(menu_line);
+        // add edit custom settings option
+        var menu_editsettings = document.createElement('div');
+        menu_editsettings.classList.add('menu-item');
+        menu_editsettings.innerHTML = '<a class="link" href="#">Custom Settings</a>';
+        menu_editsettings.addEventListener('click', function (event) {
+            event.preventDefault();
+            EditCustomSettings();
+        });
+        context_menu_doc.appendChild(menu_editsettings);
+        // add item line
+        var menu_line = document.createElement('div');
+        menu_line.classList.add('menu-item-line');
+        context_menu_doc.appendChild(menu_line);
     }
 
     // add editmode option

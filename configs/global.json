@@ -1,17 +1,13 @@
 {
-    "app_name": "LiteBlog",
-    "card_max_width": "500",
-    "card_min_width": "300",
-    "card_max_height": "300",
-    "card_min_height": "200",
     "IndexPageTitle": "Welcome to LiteBlog",
-    "TopBarTitle": "LiteBlog",
-    "RSSChannelTitle": "LiteBlog RSS Feed",
-    "RSSChannelLink": "https://example.com/rss.xml",
     "RSSChannelDescription": "Latest posts from LiteBlog",
-    "TopBarTags": [
-        "go",
-        "html"
-    ]
-
+    "RSSChannelLink": "https://example.com/rss.xml",
+    "RSSChannelTitle": "LiteBlog RSS Feed",
+    "TopBarTags": "go tag1",
+    "TopBarTitle": "LiteBlog",
+    "app_name": "LiteBlog",
+    "card_max_height": "300",
+    "card_max_width": "500",
+    "card_min_height": "200",
+    "card_min_width": "300"
 }

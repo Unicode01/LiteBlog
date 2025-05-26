@@ -1,23 +1,23 @@
 :root {
     /* 基础色板 */
-  --base-white: #FFFFFF;
-  --base-gray-100: #F8F9FA;
-  --base-gray-200: #E9ECEF;
-  --base-gray-300: #DEE2E6;
-  --base-gray-700: #495057;
-  --base-black: #212529;
+    --base-white: #FFFFFF;
+    --base-gray-100: #F8F9FA;
+    --base-gray-200: #E9ECEF;
+    --base-gray-300: #DEE2E6;
+    --base-gray-700: #495057;
+    --base-black: #212529;
 
-  /* 强调色 */
-  --primary-blue: #007BFF;
-  --secondary-blue: #0056B3;
-  
-  /* 字体 */
-  --text-primary: var(--base-black);
-  --text-secondary: var(--base-gray-700);
-  --text-muted: #6C757D;
+    /* 强调色 */
+    --primary-blue: #007BFF;
+    --secondary-blue: #0056B3;
 
-  --card-width: {{global:card_max_width}};
-  --card-height: {{global:card_max_height}};
+    /* 字体 */
+    --text-primary: var(--base-black);
+    --text-secondary: var(--base-gray-700);
+    --text-muted: #6C757D;
+
+    --card-width: {{global:card_max_width}};
+    --card-height: {{global:card_max_height}};
 }
 
 /* 全局样式 */
@@ -33,7 +33,8 @@ body {
     width: 100%;
     height: 2rem;
     align-items: center;
-    background-color: var(--base-white);
+    background: none;
+    backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--base-gray-200);
     z-index: 999;
     overflow: hidden;
@@ -56,17 +57,18 @@ body {
 }
 
 .context-menu {
-  display: none;
-  box-sizing: border-box;
-  position: absolute;
-  background: var(--base-white);
-  border: 1px solid var(--base-gray-200);
-  /* min-width: auto; */
-  overflow: hidden;
-  z-index: 1000;
-  transform: scale(0);
-  transform-origin: left top;
-  transition: all 0.3s ease-in-out;
+    display: none;
+    box-sizing: border-box;
+    position: absolute;
+    background: var(--base-white);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--base-gray-200);
+    /* min-width: auto; */
+    overflow: hidden;
+    z-index: 1000;
+    transform: scale(0);
+    transform-origin: left top;
+    transition: all 0.3s ease-in-out;
 }
 
 .history-menu {
@@ -74,11 +76,12 @@ body {
     box-sizing: border-box;
     position: absolute;
     background: var(--base-white);
+    backdrop-filter: blur(10px);
     border: 1px solid var(--base-gray-200);
     /* min-width: auto; */
     overflow: hidden;
     z-index: 1000;
-  }
+}
 
 .menu-item {
     box-sizing: border-box;
@@ -172,7 +175,8 @@ body {
     transform: scale(0.95);
 }
 
-.card-input-box {
+.card-input-box,
+.edit-settings-box {
     transform: translate(-50%, -50%);
     position: fixed;
     top: 50%;
@@ -186,7 +190,7 @@ body {
     padding: 25px;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    
+
     z-index: 1000;
 }
 
@@ -350,7 +354,7 @@ body {
     align-items: center;
 }
 
-.align-items-flex-start{
+.align-items-flex-start {
     align-items: flex-start;
 }
 
@@ -383,7 +387,7 @@ body {
     justify-content: space-between;
 }
 
-.font-size-14px{
+.font-size-14px {
     font-size: 14px;
 }
 

@@ -28,7 +28,7 @@
     outline: none;
     background: transparent;
     padding: 8px 12px;
-    text-align: center;
+    /* text-align: center; */
     overflow: hidden;
 }
 

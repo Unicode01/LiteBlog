@@ -318,6 +318,12 @@ func serveBackend(w http.ResponseWriter, r *http.Request) {
 	case "/delete_comment":
 		backendHandler_delete_comment(w, r)
 		return
+	case "/get_custom_settings":
+		backendHandler_get_custom_settings(w, r)
+		return
+	case "/edit_custom_settings":
+		backendHandler_edit_custom_settings(w, r)
+		return
 	default:
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("404 Not Found"))
@@ -1006,6 +1012,125 @@ func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
 		// clear the cache
 		if Config.CacheCfg.UseDisk {
 			cacheManager.DelCacheItem("/articles/" + req.ArticleID)
+		}
+	})
+}
+
+func backendHandler_get_custom_settings(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	bodyBin, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	type tokenrequest struct {
+		Token string `json:"token"`
+	}
+	var req tokenrequest
+	err = json.Unmarshal(bodyBin, &req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Printf("Failed to parse request body, %s\n", err)
+		return
+	}
+	// check token
+	if req.Token != EncryptToken {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	Output := make(map[string]interface{})
+	// get global settings
+	NewMap := make(map[string]interface{})
+	for k, v := range GlobalMap {
+		NewMap[k] = string(v)
+	}
+	Output["global_settings"] = NewMap
+	// set custom settings
+	// set custom script field
+	script, err := os.ReadFile("public/js/inject.js")
+	if err == nil {
+		Output["custom_script"] = string(script)
+	}
+	// set custom style field
+	style, err := os.ReadFile("public/css/customizestyle.css")
+	if err == nil {
+		Output["custom_style"] = string(style)
+	}
+
+	customSettingsBin, err := json.Marshal(Output)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(customSettingsBin)
+}
+
+func backendHandler_edit_custom_settings(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	bodyBin, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	type customsettingsrequest struct {
+		Token          string `json:"token"`
+		CustomSettings struct {
+			GlobalSettings map[string]string `json:"global_settings"`
+			CustomScript   string            `json:"custom_script"`
+			CustomStyle    string            `json:"custom_style"`
+		} `json:"custom_settings"`
+	}
+	var req customsettingsrequest
+	err = json.Unmarshal(bodyBin, &req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Printf("Failed to parse request body, %s\n", err)
+		return
+	}
+	// check token
+	if req.Token != EncryptToken {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	// write to file
+	jsonData, err := json.MarshalIndent(req.CustomSettings.GlobalSettings, "", "    ")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = os.WriteFile("configs/global.json", jsonData, 0644)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// update custom script
+	err = os.WriteFile("public/js/inject.js", []byte(req.CustomSettings.CustomScript), 0644)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// update custom style
+	err = os.WriteFile("public/css/customizestyle.css", []byte(req.CustomSettings.CustomStyle), 0644)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// response
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+	// clear the cache
+	deliverManager.AddTask(func() {
+		if Config.CacheCfg.UseDisk {
+			cacheManager.DelCacheItem("/css/customizestyle.css")
+			cacheManager.DelCacheItem("/js/inject.js")
 		}
 	})
 }
