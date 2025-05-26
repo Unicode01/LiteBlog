@@ -1044,8 +1044,19 @@ func backendHandler_get_custom_settings(w http.ResponseWriter, r *http.Request) 
 	Output := make(map[string]interface{})
 	// get global settings
 	NewMap := make(map[string]interface{})
+	blackList := []string{"cf_site_key", "comment_check_type"}
 	for k, v := range GlobalMap {
-		NewMap[k] = string(v)
+		inBlackList := false
+		// check if the key is in the black list
+		for blackListKey := range blackList {
+			if k == blackList[blackListKey] {
+				inBlackList = true
+				break
+			}
+		}
+		if !inBlackList {
+			NewMap[k] = string(v)
+		}
 	}
 	Output["global_settings"] = NewMap
 	// set custom settings
@@ -1053,13 +1064,16 @@ func backendHandler_get_custom_settings(w http.ResponseWriter, r *http.Request) 
 	script, err := os.ReadFile("public/js/inject.js")
 	if err == nil {
 		Output["custom_script"] = string(script)
+	} else {
+		Output["custom_script"] = ""
 	}
 	// set custom style field
 	style, err := os.ReadFile("public/css/customizestyle.css")
 	if err == nil {
 		Output["custom_style"] = string(style)
+	} else {
+		Output["custom_style"] = ""
 	}
-
 	customSettingsBin, err := json.Marshal(Output)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

@@ -29,6 +29,10 @@ rm -rf $output_dir
 # 需要打包的资源目录
 resource_dirs=("configs" "templates" "public")
 
+# 设置黑名单
+# 黑名单中的文件或目录不会被打包到最终的 zip 文件中
+blacklist=("public/js/inject.js" "public/css/customizestyle.css")
+
 # 额外参数
 args=(-ldflags "-s -w" -gcflags "-B" -tags "nomsgpack netgo osusergo")
 
@@ -81,6 +85,13 @@ for platform in "${platforms[@]}"; do
             cp -r "$dir" "$temp_dir/"
         else
             echo "Warning: Resource directory $dir not found!"
+        fi
+    done
+    
+    # 移除黑名单中的文件或目录
+    for file in "${blacklist[@]}"; do
+        if [ -e "$temp_dir/$file" ]; then
+            rm "$temp_dir/$file"
         fi
     done
 
