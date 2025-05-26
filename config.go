@@ -14,13 +14,14 @@ var (
 )
 
 type AllConfig struct {
-	ServerCfg  ServerConfig  `json:"server_config"`
-	AccessCfg  AccessConfig  `json:"access_config"`
-	CacheCfg   CacheConfig   `json:"cache_config"`
-	DeliverCfg DeliverConfig `json:"deliver_config"`
-	BackupCfg  BackupsConfig `json:"backup_config"`
-	CommentCfg CommentConfig `json:"comment_config"`
-	LoggerCfg  LoggerConfig  `json:"logger_config"`
+	ServerCfg         ServerConfig         `json:"server_config"`
+	AccessCfg         AccessConfig         `json:"access_config"`
+	CacheCfg          CacheConfig          `json:"cache_config"`
+	DeliverCfg        DeliverConfig        `json:"deliver_config"`
+	BackupCfg         BackupsConfig        `json:"backup_config"`
+	CommentCfg        CommentConfig        `json:"comment_config"`
+	LoggerCfg         LoggerConfig         `json:"logger_config"`
+	ContentAdvisorCfg ContentAdvisorConfig `json:"contentAdvisor_config"`
 }
 
 type ServerConfig struct {
@@ -62,7 +63,7 @@ type BackupsConfig struct {
 }
 
 type CommentConfig struct {
-	Enable                    bool   `json:"enable"`
+	Enabled                   bool   `json:"enabled"`
 	Type                      string `json:"type"`
 	CFSecretKey               string `json:"cf_secret_key"`
 	CFSiteKey                 string `json:"cf_site_key"`
@@ -74,6 +75,13 @@ type LoggerConfig struct {
 	LogFile          string `json:"log_file"`
 	FileSyncInterval int    `json:"file_sync_interval"`
 	DisableStdout    bool   `json:"disable_stdout"`
+}
+
+type ContentAdvisorConfig struct {
+	Enabled       bool `json:"enabled"`
+	FilterComment bool `json:"filter_comment"`
+	FilterArticle bool `json:"filter_article"`
+	FilterCard    bool `json:"filter_card"`
 }
 
 func ReadConfig() AllConfig {
@@ -184,7 +192,7 @@ func BackupConfigures() {
 }
 
 func SetVarToGlobalMap() {
-	if Config.CommentCfg.Enable {
+	if Config.CommentCfg.Enabled {
 		switch Config.CommentCfg.Type {
 		case "cloudflare_turnstile":
 			GlobalMapLocker.Lock()

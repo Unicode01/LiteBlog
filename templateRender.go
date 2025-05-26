@@ -266,11 +266,14 @@ func renderarticle(articleID string) []byte {
 		})
 		comments_html = append(comments_html, comment_html...)
 	}
-
-	article_html_unsafe := articlecfg.ContentHTML
-	bl := bluemonday.UGCPolicy()
-	article_html := bl.Sanitize(article_html_unsafe)
-
+	article_html := articlecfg.ContentHTML
+	if Config.ContentAdvisorCfg.Enabled && Config.ContentAdvisorCfg.FilterArticle {
+		bl := bluemonday.UGCPolicy()
+		article_html = bl.Sanitize(article_html)
+	}
+	if articlecfg.Edit_Date != articlecfg.Pub_Date {
+		articlecfg.Pub_Date = "ed. " + articlecfg.Edit_Date
+	}
 	// render article
 	rendered_article_html := RenderPageTemplate("article", map[string][]byte{
 		"article_title":   []byte(articlecfg.Title),

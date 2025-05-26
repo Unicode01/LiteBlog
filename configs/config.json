@@ -14,7 +14,7 @@
         "access_token": "yourAccessToken"
     },
     "cache_config": {
-        "//": "this used to cache the rendered pages, default is in memory,if use_disk is true, it will cache in disk and using",
+        "//": "this used to cache the rendered pages, default is in memory,if use_disk is true, it will cache in disk and using.",
         "use_disk": false,
         "max_cache_size": 2147483648,
         "max_cache_items": 1000000,
@@ -26,7 +26,7 @@
         "threads": 2
     },
     "backup_config": {
-        "//": "this used to backup the blog data, default is disabled, if enabled is true, it will backup the blog data every backup_interval minutes, and keep max_backups backups, and delete the backups that are older than max_backups_suvival_time miniutes",
+        "//": "this used to backup the blog data, default is disabled, if enabled is true, it will backup the blog data every backup_interval minutes, and keep max_backups backups, and delete the backups that are older than max_backups_suvival_time miniutes.",
         "enabled": false,
         "backup_dir": "backups",
         "backup_interval": 3600,
@@ -34,17 +34,24 @@
         "max_backups_survival_time": 86400
     },
     "comment_config": {
-        "enable": false,
+        "enabled": false,
         "type": "cloudflare_turnstile",
         "cf_secret_key": "your_secret_key",
         "cf_site_key": "your_site_key",
         "min_seconds_between_comments": 30
     },
     "logger_config": {
-        "//": "0: debug/all 1: info 2: warning 3: error 4: critical; file_sync_interval: the interval to sync the log file to disk, default is 10 seconds; disable_stdout: disable the output to stdout, default is false",
+        "//": "0: debug/all 1: info 2: warning 3: error 4: critical; file_sync_interval: the interval to sync the log file to disk, default is 10 seconds; disable_stdout: disable the output to stdout, default is false.",
         "level": 1,
         "log_file": "liteblog.log",
         "file_sync_interval": 10,
         "disable_stdout": false
+    },
+    "contentAdvisor_config": {
+        "//": "This is the content advisor config, if enabled is true, it will use content advisor to filter the comments and articles, and cards, means it will avoid possible spam(like XSS) in content.",
+        "enabled": true,
+        "filter_comment": true,
+        "filter_article": true,
+        "filter_card": true
     }
 }
