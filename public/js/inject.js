@@ -1,2 +1,1 @@
-// you can add your own code here to be executed on the client side
-console.log("injected")
+// This file is used to inject the content of the blog post into the page.

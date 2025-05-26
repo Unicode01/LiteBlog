@@ -1,3 +1,5 @@
+var dragging_card = null;
+
 function EnterEditMode() {
     const result = GetAccessPathAndToken();
     if (!result) {
@@ -45,7 +47,11 @@ function EnterEditMode() {
                     cards.forEach((card) => {
                         card.classList.remove('edit-mode-border');
                         card.classList.remove('draggable');
-                        card.draggable = false;
+                        card.removeAttribute("draggable");
+                        // remove drag and drop event listener
+                        card.removeEventListener('dragstart', dragstart_handler);
+                        card.removeEventListener('dragover', dragover_handler);
+                        card.removeEventListener('drop', drop_handler);
                     });
                     // check to remove add card input box
                     const card_input_box = document.querySelector('.card-input-box');
@@ -57,6 +63,7 @@ function EnterEditMode() {
             .catch(error => {
                 console.log("Save changes failed: " + error);
             });
+        return;
     }
 
     window._editMode = true;
@@ -64,7 +71,7 @@ function EnterEditMode() {
     var originalIndex = new Map(); // cardID -> original order
     const cards = document.querySelectorAll('.card-container');
     cards.forEach((card) => {
-        cardID = card.getAttribute('card-id');
+        const cardID = card.getAttribute('card-id');
         order = card.style.order;
         if (order != -1) { // not the Top up card
             // console.log("Card ID: " + cardID);
@@ -74,91 +81,84 @@ function EnterEditMode() {
 
     });
 
-    let dragging_card = null;
+
     // add drag and drop event listener to each card
     cards.forEach((card) => {
         if (card.style.order == -1) { // Top up card
             return;
         }
-        card.addEventListener('dragstart', (event) => {
-            dragstart_handler(event);
-        });
-        card.addEventListener('dragover', (event) => {
-            dragover_handler(event);
-        });
-        card.addEventListener('drop', (event) => {
-            drop_handler(event);
-        });
+        card.addEventListener('dragstart', dragstart_handler);
+        card.addEventListener('dragover', dragover_handler);
+        card.addEventListener('drop', drop_handler);
         card.draggable = true;
         card.classList.add('draggable');
     });
+}
 
-    let draggable_cards = document.querySelectorAll('.draggable');
+function dragstart_handler(event) {
+    console.log("Drag start");
+    dragging_card = event.target;
+    dragging_card.classList.add('dragging');
+}
 
-    function dragstart_handler(event) {
-        console.log("Drag start");
-        dragging_card = event.target;
-        dragging_card.classList.add('dragging');
-    }
+function dragover_handler(event) {
+    event.preventDefault();
+    console.log("Drag over");
 
-    function dragover_handler(event) {
-        event.preventDefault();
-        console.log("Drag over");
+}
 
-    }
+function drop_handler(event) {
+    event.preventDefault();
+    console.log("Drop");
+    updateViewCardOrder(event);
+    dragging_card.classList.remove('dragging');
+    // const cardID = event.target.getAttribute('card-id');
+}
 
-    function drop_handler(event) {
-        event.preventDefault();
-        console.log("Drop");
-        updateViewCardOrder(event);
-        dragging_card.classList.remove('dragging');
-        // const cardID = event.target.getAttribute('card-id');
-    }
-
-    function updateViewCardOrder(event) {
-        // get cursor position
-        const cursorPositionX = event.clientX + window.scrollX; // event.pageX
-        const cursorPositionY = event.clientY + window.scrollY; // event.pageY
-        let localted_card = dragging_card;
-        // check where cursor located
-        for (let i = 0; i < draggable_cards.length; i++) {
-            const card = draggable_cards[i];
-            const card_positionX = card.offsetLeft;
-            const card_positionY = card.offsetTop;
-            const card_width = card.offsetWidth;
-            const card_height = card.offsetHeight;
-            if (card.style.order != -1 && card != dragging_card && (cursorPositionX >= card_positionX && cursorPositionX <= card_positionX + card_width && cursorPositionY >= card_positionY && cursorPositionY <= card_positionY + card_height)) {
-                // cursor located in this card
-                localted_card = card;
-                break;
-            }
+function updateViewCardOrder(event) {
+    const draggable_cards = document.querySelectorAll('.draggable');
+    // get cursor position
+    const cursorPositionX = event.clientX + window.scrollX; // event.pageX
+    const cursorPositionY = event.clientY + window.scrollY; // event.pageY
+    let localted_card = dragging_card;
+    // check where cursor located
+    for (let i = 0; i < draggable_cards.length; i++) {
+        const card = draggable_cards[i];
+        const card_positionX = card.offsetLeft;
+        const card_positionY = card.offsetTop;
+        const card_width = card.offsetWidth;
+        const card_height = card.offsetHeight;
+        if (card.style.order != -1 && card != dragging_card && (cursorPositionX >= card_positionX && cursorPositionX <= card_positionX + card_width && cursorPositionY >= card_positionY && cursorPositionY <= card_positionY + card_height)) {
+            // cursor located in this card
+            localted_card = card;
+            break;
         }
-        if (localted_card && (localted_card != dragging_card)) { // cursor located in a card
-            // change dragged card order to the position of cursor
-            const beforeOrder = parseInt(dragging_card.style.order, 10);
-            const afterOrder = parseInt(localted_card.style.order, 10);
-            // calc offset order
-            // offsetOrder used to adjust the order of cards after dragging
-            const offsetOrder = afterOrder - beforeOrder;
-            draggable_cards.forEach((card) => {
-                const currentOrder = parseInt(card.style.order, 10);
+    }
+    if (localted_card && (localted_card != dragging_card)) { // cursor located in a card
+        // change dragged card order to the position of cursor
+        const beforeOrder = parseInt(dragging_card.style.order, 10);
+        const afterOrder = parseInt(localted_card.style.order, 10);
+        // calc offset order
+        // offsetOrder used to adjust the order of cards after dragging
+        const offsetOrder = afterOrder - beforeOrder;
+        draggable_cards.forEach((card) => {
+            const currentOrder = parseInt(card.style.order, 10);
 
-                if (offsetOrder > 0) { // 向下拖动
-                    // 位于原位置和目标位置之间的卡片，order 减 1
-                    if (card !== dragging_card && currentOrder > beforeOrder && currentOrder <= afterOrder) {
-                        card.style.order = currentOrder - 1;
-                    }
-                } else if (offsetOrder < 0) { // 向上拖动
-                    // 位于目标位置和原位置之间的卡片，order 加 1
-                    if (card !== dragging_card && currentOrder >= afterOrder && currentOrder < beforeOrder) {
-                        card.style.order = currentOrder + 1;
-                    }
+            if (offsetOrder > 0) { // 向下拖动
+                // 位于原位置和目标位置之间的卡片，order 减 1
+                if (card !== dragging_card && currentOrder > beforeOrder && currentOrder <= afterOrder) {
+                    card.style.order = currentOrder - 1;
                 }
-            });
+            } else if (offsetOrder < 0) { // 向上拖动
+                // 位于目标位置和原位置之间的卡片，order 加 1
+                if (card !== dragging_card && currentOrder >= afterOrder && currentOrder < beforeOrder) {
+                    card.style.order = currentOrder + 1;
+                }
+            }
+        });
 
-            // update order
-            dragging_card.style.order = afterOrder;
-        }
+        // update order
+        dragging_card.style.order = afterOrder;
     }
 }
 
@@ -293,6 +293,137 @@ function EditCardAPI(cardJson, callback) {
             console.log(error);
             callback("");
         });
+}
+
+function GetCustomSettingsAPI(callback) {
+    const result = GetAccessPathAndToken();
+    if (!result) {
+        console.log("Access path and token are required.");
+        return false;
+    }
+    const { path, token } = result;
+    console.log("Access path: " + path);
+    console.log("Access token: " + token);
+    const api_dic = window.location.origin + "/" + path;
+    const api_get_custom_settings = api_dic + "/get_custom_settings";
+    const data = {
+        token: token
+    }
+    fetch(api_get_custom_settings, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ERR，Code：${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log(data);
+            callback(data);
+        })
+        .catch(error => {
+            console.log(error);
+            callback("");
+        });
+}
+
+function EditCustomSettingsAPI(customSettings, callback) {
+    const result = GetAccessPathAndToken();
+    if (!result) {
+        console.log("Access path and token are required.");
+        return false;
+    }
+    const { path, token } = result;
+    console.log("Access path: " + path);
+    console.log("Access token: " + token);
+    const api_dic = window.location.origin + "/" + path;
+    const api_edit_custom_settings = api_dic + "/edit_custom_settings";
+    const data = {
+        token: token,
+        custom_settings: customSettings
+    }
+    console.log(JSON.stringify(data));
+    fetch(api_edit_custom_settings, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ERR，Code：${response.status}`);
+            }
+            return response.text();
+        })
+        .then(data => {
+            console.log(data);
+            callback(data);
+        })
+        .catch(error => {
+            console.log(error);
+            callback("");
+        });
+}
+
+function EditCustomSettings() {
+    GetCustomSettingsAPI(function (data) {
+        if (data === "") {
+            console.log("Get custom settings failed");
+            return;
+        } else {
+            if (window._edittingCustomSettings) {
+                return;
+            } else {
+                window._edittingCustomSettings = true;
+            }
+            // this func is called to generate the card json and add it to the backend
+            const edit_custom_settings_html = `
+            {{file:edit_custom_settings_box}}
+            `;
+            domP = new DOMParser();
+            const edit_custom_settings_doc = domP.parseFromString(edit_custom_settings_html, "text/html").body.firstChild;
+            edit_custom_settings_doc.querySelector("#edit-settings-style").value = data.custom_style;
+            edit_custom_settings_doc.querySelector("#edit-settings-script").value = data.custom_script;
+            for (const key in data.global_settings) {
+                if (key != "custom_style" && key != "custom_script") {
+                    const customFieldGroup = document.createElement('div');
+                    customFieldGroup.className = 'custom-field-group';
+
+                    // 字段名称输入框
+                    const nameInput = document.createElement('input');
+                    nameInput.type = "text";
+                    nameInput.placeholder = "Field Name (e.g.: link)";
+                    nameInput.className = "field-name";
+                    nameInput.value = key
+
+                    // 字段值输入框
+                    const valueInput = document.createElement('input');
+                    valueInput.type = "text";
+                    valueInput.placeholder = "field value";
+                    valueInput.className = "field-value";
+                    valueInput.value = data.global_settings[key];
+
+                    // 删除按钮
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = "button";
+                    removeBtn.textContent = "×";
+                    removeBtn.onclick = () => customFieldGroup.remove();
+
+                    customFieldGroup.appendChild(nameInput);
+                    customFieldGroup.appendChild(valueInput);
+                    customFieldGroup.appendChild(removeBtn);
+                    edit_custom_settings_doc.querySelector("#custom-fields-container").appendChild(customFieldGroup);
+                }
+            }
+            document.body.appendChild(edit_custom_settings_doc);
+        }
+    });
 }
 
 function EditCard(cardId) {
@@ -447,11 +578,43 @@ function OncreateCustomFieldButtonClick() {
     container.appendChild(fieldGroup);
 }
 
+function OnEditSettingsButtonClick() {
+    function GetGlobalSettings() {
+        const customFields = {};
+
+        // 获取所有自定义字段
+        document.querySelectorAll('.custom-field-group').forEach(group => {
+            const name = group.querySelector('.field-name').value;
+            const value = group.querySelector('.field-value').value;
+            if (name && value) {
+                customFields[name] = value;
+            }
+        });
+        json = {
+            custom_style: document.getElementById('edit-settings-style').value.toString(),
+            custom_script: document.getElementById('edit-settings-script').value.toString(),
+            global_settings: {}
+        };
+        for (const key in customFields) {
+            json.global_settings[key] = customFields[key].toString();
+        }
+        return json;
+    }
+    EditCustomSettingsAPI(GetGlobalSettings(), function (data) {
+        console.log(data);
+        CancleInputBox();
+    });
+
+}
+
 function CancleInputBox() {
     const add_card_box = document.querySelector(".card-input-box");
+    const edit_settings_box = document.querySelector(".edit-settings-box");
     add_card_box?.remove();
+    edit_settings_box?.remove();
     window._addingCard = false;
     window._edittingCard = false;
+    window._edittingCustomSettings = false;
     window._edittingCardID = "";
 }
 

@@ -1,0 +1,25 @@
+<div class="edit-settings-box">
+
+    <div class="input-group">
+        <label for="edit-settings-style">Style</label>
+        <textarea id="edit-settings-style" rows="3" required></textarea>
+    </div>
+
+    <div class="input-group">
+        <label for="edit-settings-script">Script</label>
+        <textarea id="edit-settings-script" rows="3" required></textarea>
+    </div>
+
+    <div class="custom-fields">
+        <button type="button" onclick="OncreateCustomFieldButtonClick()">
+            <span>+</span>
+            <span>Add Global Setting Field</span>
+        </button>
+        <div id="custom-fields-container"></div>
+    </div>
+
+    <div class="button-group">
+        <button type="button" class="add-card-button" onclick="OnEditSettingsButtonClick()">Save Changes</button>
+        <button type="button" class="cancel-button" onclick="CancleInputBox()">Cancel</button>
+    </div>
+</div>

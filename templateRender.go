@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -193,24 +194,9 @@ func renderRSSFeed() []byte {
 }
 
 func renderTopBarTags() []byte {
-	// read tags config
-	type GlobalCfg struct {
-		Tagcfg []string `json:"TopBarTags"`
-	}
-	var tagcfg GlobalCfg
-	tag_config_filepath := "configs/global.json"
-	tag_file, err := os.ReadFile(tag_config_filepath)
-	if err != nil {
-		Log(3, "error reading tag config file: "+err.Error())
-		return []byte("")
-	}
-	err = json.Unmarshal(tag_file, &tagcfg)
-	if err != nil {
-		Log(3, "error parsing tag config file: "+err.Error())
-		return []byte("")
-	}
 	tags := []byte("")
-	for _, tag := range tagcfg.Tagcfg {
+	tagsarry := strings.Split(string(GlobalMap["TopBarTags"]), " ")
+	for _, tag := range tagsarry {
 		tag_html := RenderPageTemplate("top_tag", map[string][]byte{
 			"tag_name": []byte(tag),
 		})

@@ -233,7 +233,7 @@
     padding: 0.8rem 1.2rem;
     background-color: #f8fafc;
     color: #718096;
-    font-style: italic;
+    /* font-style: italic; */
 }
 
 .article-content blockquote p {

@@ -30,13 +30,13 @@ func EnableBackupThread(ctx context.Context) {
 
 func BackupNow() {
 	// tar the blog directory and store it in the backup directory
-	src := "configs/"
+	srcs := []string{"configs/", "public/", "templates/"}
 	dst := Config.BackupCfg.BackupDir + "/backup-" + time.Now().Format("2006-01-02_15-04-05") + ".tar.gz"
 	// check dir
 	if _, err := os.Stat(Config.BackupCfg.BackupDir); os.IsNotExist(err) {
 		os.MkdirAll(Config.BackupCfg.BackupDir, 0755)
 	}
-	if err := TarDir(src, dst); err != nil {
+	if err := TarDir(srcs, dst); err != nil {
 		Log(3, "Error while backing up: "+err.Error())
 	} else {
 		Log(1, "Backup successful: "+dst)
@@ -111,7 +111,7 @@ func DeleteObsoleteBackups() {
 	}
 }
 
-func TarDir(src string, dst string) (err error) {
+func TarDir(srcs []string, dst string) (err error) {
 	fw, err := os.Create(dst)
 	if err != nil {
 		return
@@ -124,31 +124,36 @@ func TarDir(src string, dst string) (err error) {
 	tw := tar.NewWriter(gw)
 
 	defer tw.Close()
-
-	return filepath.Walk(src, func(fileName string, fi os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		hdr, err := tar.FileInfoHeader(fi, "")
-		if err != nil {
-			return err
-		}
-		hdr.Name = strings.TrimPrefix(fileName, string(filepath.Separator))
-		if err := tw.WriteHeader(hdr); err != nil {
-			return err
-		}
-		if !fi.Mode().IsRegular() {
+	for _, src := range srcs {
+		err = filepath.Walk(src, func(fileName string, fi os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			hdr, err := tar.FileInfoHeader(fi, "")
+			if err != nil {
+				return err
+			}
+			hdr.Name = strings.TrimPrefix(fileName, string(filepath.Separator))
+			if err := tw.WriteHeader(hdr); err != nil {
+				return err
+			}
+			if !fi.Mode().IsRegular() {
+				return nil
+			}
+			fr, err := os.Open(fileName)
+			if err != nil {
+				return err
+			}
+			_, err = io.Copy(tw, fr)
+			fr.Close()
+			if err != nil {
+				return err
+			}
 			return nil
-		}
-		fr, err := os.Open(fileName)
+		})
 		if err != nil {
 			return err
 		}
-		defer fr.Close()
-		_, err = io.Copy(tw, fr)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	}
+	return nil
 }
