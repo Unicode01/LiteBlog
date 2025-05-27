@@ -179,6 +179,15 @@ func renderRSSFeed() []byte {
 		if card_link == "" {
 			continue
 		}
+		if GlobalMap["RSSLinkHead"][len(GlobalMap["RSSLinkHead"])-1] == '/' {
+			GlobalMap["RSSLinkHead"] = GlobalMap["RSSLinkHead"][:len(GlobalMap["RSSLinkHead"])-1] // remove last '/'
+		}
+		if strings.HasPrefix(card_link, "articles/") {
+			card_link = string(GlobalMap["RSSLinkHead"]) + "/" + card_link
+		} else if strings.HasPrefix(card_link, "/articles/") {
+			card_link = string(GlobalMap["RSSLinkHead"]) + card_link
+		}
+
 		rss_post := RenderPageTemplate("rss_post", map[string][]byte{
 			"RSS_TITLE":       []byte(card_title),
 			"RSS_LINK":        []byte(card_link),

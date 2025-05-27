@@ -211,6 +211,10 @@ function OnContextMenu(event) {
             editmode?.click();
         });
         context_menu_doc.appendChild(menu_editmode);
+        // add item line
+        var menu_line = document.createElement('div');
+        menu_line.classList.add('menu-item-line');
+        context_menu_doc.appendChild(menu_line);
     }
 
     // check if in addarticle.html or editarticle.html
@@ -407,7 +411,7 @@ function LogHistory() {
         return;
     }
     // log to history
-    const url = window.location.href;
+    const url = window.location.pathname;
     let historyJson = localStorage.getItem('history');
     if (historyJson) {
         historyJson = JSON.parse(historyJson);

@@ -732,9 +732,32 @@ function generateEncryptToken(token) {
 
 function AddEditButtonListener() {
     const editButtons = document.querySelectorAll(".edit-button");
-    editButtons.forEach(button => {
-        button.addEventListener("click", EnterEditMode);
-    });
+    const saveButtons = document.querySelectorAll(".save-button");
+    // console.log(location.pathname)
+    if (location.pathname.startsWith("/articles/")) {
+
+        editButtons.forEach(button => {
+            button.addEventListener("click", function (event) {
+                event.preventDefault();
+                location.href = '/editarticle.html?article_id=' + location.pathname.split('/')[2];
+            });
+        });
+    } else if (location.pathname == "/index.html") {
+        editButtons.forEach(button => {
+            button.addEventListener("click", function (event) {
+                event.preventDefault();
+                EnterEditMode();
+            });
+        });
+    }
+    if (location.pathname == "/editarticle.html" || location.pathname == "/addarticle.html") {
+        saveButtons.forEach(button => {
+            button.addEventListener("click", function (event) {
+                event.preventDefault();
+                SaveArticle();
+            })
+        });
+    }
 }
 
 AddEditButtonListener();
