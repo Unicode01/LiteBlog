@@ -235,7 +235,8 @@ body {
 }
 
 .add-card-button,
-.cancel-button {
+.cancel-button,
+.add-comment-button {
     flex: 1;
     padding: 12px 20px;
     border: none;

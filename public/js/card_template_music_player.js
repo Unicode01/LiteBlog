@@ -27,6 +27,7 @@ function card_music_player_init() {
             card.querySelector(".player-duration").style.color = "white";
             card.querySelector(".player-current-time").style.color = "white";
             card.querySelector(".player-pause").style.color = "white";
+            card.style.boxShadow = "0 0 10px #3A3A3A";
         }
         console.log(music_info);
         // set background image

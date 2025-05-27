@@ -140,16 +140,6 @@
     z-index: 1000;
 }
 
-.add-comment-button {
-    flex: 1;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.2s ease;
-}
-
 /* 以下为文章内容的样式 */
 
 /* 基础段落 */

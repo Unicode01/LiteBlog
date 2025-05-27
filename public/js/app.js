@@ -197,7 +197,7 @@ function OnContextMenu(event) {
 
     // add editmode option
     const editmodeExist = document.getElementById('edit-button');
-    if (editmodeExist) {
+    if (editmodeExist && location.pathname == '/index.html') {
         var menu_editmode = document.createElement('div');
         menu_editmode.classList.add('menu-item');
         if (window._editMode) {

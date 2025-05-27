@@ -23,6 +23,10 @@ go run LiteBlog
 ```
 ### From Binary
 Download the latest binary from [release page](https://github.com/Unicode01/LiteBlog/releases) and run it.
+- Before compile the binary, you should run following command to install the dependencies.
+```bash
+apt update && apt install -y golang git
+```
 ```bash
 git clone https://github.com/LiteBlog/LiteBlog.git
 cd LiteBlog
@@ -33,12 +37,20 @@ go build -o LiteBlog
 Run `./build.sh` to build the zip. **Before build the zip, You should write your own configs in `configs/`**
 Here is a example to run liteblog with docker, and mount the `configs` directory to the container.
 If you want to change `public` or `templates` directory, you can mount it to the container using `-v` option.
+- Before build the docker image, you should run following command to install the dependencies.
+```bash
+apt update && apt install -y golang git zip docker.io docker-compose
+```
 ```bash
 git clone https://github.com/LiteBlog/LiteBlog.git
 cd LiteBlog
 ./build.sh
 docker build -t liteblog .
 docker run -p 80:80 -v $(pwd)/configs:/liteblog/configs/ liteblog
+```
+- If you need to run the docker container in background, you can use `-d` option.
+```bash
+docker run -d -p 80:80 -v $(pwd)/configs:/liteblog/configs/ liteblog
 ```
 ## Configuration
 #### configs/config.json
