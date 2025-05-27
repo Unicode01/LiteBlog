@@ -1,11 +1,11 @@
 :root {
     /* 基础色板 */
-    --base-white: #FFFFFF;
+    --base-white: #1A1A1A;
     --base-gray-100: #F8F9FA;
-    --base-gray-200: #E9ECEF;
+    --base-gray-200: #3A3A3A;
     --base-gray-300: #DEE2E6;
-    --base-gray-700: #495057;
-    --base-black: #212529;
+    --base-gray-700: rgba(255, 255, 255, 0.89);
+    --base-black: rgba(255, 255, 255, 0.89);
 
     /* 强调色 */
     --primary-blue: #007BFF;
@@ -23,6 +23,11 @@
 /* 全局样式 */
 body {
     font-family: "Open Sans", sans-serif;
+    background-color: #121212;
+}
+
+.img {
+	filter: invert(1);
 }
 
 .top-bar {
@@ -60,7 +65,7 @@ body {
     display: none;
     box-sizing: border-box;
     position: absolute;
-    background: var(--base-white);
+    background: #121212;
     backdrop-filter: blur(10px);
     border: 1px solid var(--base-gray-200);
     /* min-width: auto; */
@@ -75,7 +80,7 @@ body {
     display: none;
     box-sizing: border-box;
     position: absolute;
-    background: var(--base-white);
+    background: #121212;
     backdrop-filter: blur(10px);
     border: 1px solid var(--base-gray-200);
     /* min-width: auto; */
@@ -87,7 +92,7 @@ body {
     box-sizing: border-box;
     display: block;
     width: 100%;
-    background-color: var(--base-white);
+/*    background-color: var(--base-white);*/
     padding: 6px 12px;
     border: none;
     text-align: left;
@@ -203,7 +208,7 @@ body {
 
 .input-group label {
     font-weight: 600;
-    color: #2d3436;
+    color: rgba(255, 255, 255, 0.89);
     font-size: 14px;
 }
 
@@ -215,6 +220,7 @@ body {
     border: 2px solid var(--base-gray-200);
     border-radius: 8px;
     font-size: 14px;
+    color: rgba(255, 255, 255, 0.89);
     transition: all 0.3s ease;
     background: var(--base-white);
 }
@@ -236,13 +242,15 @@ body {
 
 .add-card-button,
 .cancel-button,
-.add-comment-button {
+.add-comment-button{
     flex: 1;
     padding: 12px 20px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
     font-weight: 600;
+    background: var(--base-gray-200);
+    color: var(--base-black);
     transition: all 0.2s ease;
 }
 
@@ -275,6 +283,7 @@ body {
 .bottom-div {
     padding: 10px;
     font-size: 14px;
+    color: rgba(255, 255, 255, 0.80);
 }
 
 .post-card-header {

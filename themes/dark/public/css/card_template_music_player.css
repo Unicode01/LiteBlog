@@ -1,0 +1,167 @@
+.card-music-player {
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin: 41px;
+    transition: all 0.2s ease-in-out;
+    background-size: 100% 100%;
+    border-radius: 10px;
+    display: grid;
+    grid-template-areas: "stack";
+    overflow: hidden;
+}
+
+.card-music-player #image-container {
+    position: static;
+    width: 100%;
+    height: 100%;
+    grid-area: stack;
+    background-size: cover;
+    border-radius: 10px;
+    z-index: 1;
+    transition: all 0.4s ease-in-out;
+}
+
+.card-music-player .player-container {
+    padding: 20px;
+    position: static;
+    grid-area: stack;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-direction: column;
+    z-index: 3;
+    transition: all 0.4s ease-in-out;
+}
+
+.card-music-player .player-shift-container {
+    position: static;
+    grid-area: stack;
+    width: 100%;
+    height: 100%;
+    z-index: 4;
+    transform: translateY(100%);
+    transition: all 0.4s ease-in-out;
+}
+
+.card-music-player .player-hover-line {
+    position: static;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    grid-area: stack;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    transition: all 0.4s ease-in-out;
+    opacity: 0;
+}
+
+.card-music-player .player-hover-line-bottom {
+    opacity: 0.3;
+    background-color: #D0D0D0;
+    margin-bottom: 10px;
+    width: 40%;
+    height: 2px;
+}
+
+.card-music-player .player-header {
+    display: flex;
+    flex-direction: column;
+}
+
+.card-music-player .player-title {
+    font-size: 24px;
+
+}
+
+.card-music-player .player-artist {
+    font-size: 18px;
+    color: #999;
+}
+
+.card-music-player .music-info-container {
+    display: none;
+}
+
+.card-music-player .player-progress {
+    width: 80%;
+    padding-top: 12px;
+    border-radius: 2px;
+    transition: width 0.1s linear;
+}
+
+.card-music-player .player-time {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.card-music-player .player-progress-bar {
+    width: 100%;
+    height: 5px;
+    background: white;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+    border-radius: 2px;
+    transition: width 0.1s linear;
+    cursor: pointer;
+}
+
+.card-music-player .player-prev {
+    display: inline-block;
+    margin: 0 20px;
+    font-size: 24px;
+    color: #999;
+    cursor: pointer;
+}
+
+.card-music-player .player-next {
+    display: inline-block;
+    margin: 0 20px;
+    font-size: 24px;
+    color: #999;
+    cursor: pointer;
+}
+
+.card-music-player .player-pause {
+    display: inline-block;
+    font-size: 36px;
+    color: #000;
+    cursor: pointer;
+}
+
+
+.card-music-player .player-shift-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    transition: all 0.4s ease-in-out;
+}
+
+.card-music-player .player-lyric-pre {
+    padding: 20px;
+    font-size: 10px;
+    max-height: 30px;
+    color: #999;
+    text-align: center;
+    transition: all 0.4s ease-in-out;
+}
+
+.card-music-player .player-lyric-current {
+    font-size: 16px;
+    max-height: 40px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.4s ease-in-out;
+}
+
+.card-music-player .player-lyric-next {
+    padding: 20px;
+    font-size: 10px;
+    max-height: 30px;
+    color: #999;
+    text-align: center;
+    transition: all 0.4s ease-in-out;
+}

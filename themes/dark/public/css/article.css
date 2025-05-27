@@ -17,7 +17,7 @@
     font-size: 2.5rem;
     line-height: 1.2;
     margin-bottom: 1rem;
-    color: #2d3748;
+    color: rgba(255, 255, 255, 0.89);
     font-weight: 700;
 }
 
@@ -56,7 +56,7 @@
     margin: 0 auto;
     line-height: 1.7;
     font-size: 1.1rem;
-    color: #4a5568;
+    color: rgba(255, 255, 255, 0.89);
 }
 
 /* 评论区域 */
@@ -67,7 +67,7 @@
 }
 
 #article-comment {
-    background: #f7fafc;
+    background: #1A1A1A;
     padding: 1.5rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
@@ -76,7 +76,7 @@
 
 #comment-Author {
     font-weight: 600;
-    color: #2d3748;
+    color: rgba(255, 255, 255, 0.89);
     margin-bottom: 0.5rem;
 }
 
@@ -87,7 +87,7 @@
 }
 
 #comment-Content {
-    color: #4a5568;
+    color: rgba(255, 255, 255, 0.89);
     line-height: 1.6;
 }
 
@@ -151,23 +151,23 @@
 /* 标题层级 */
 .article-content h1 {
     font-size: 1.8rem;
-    color: #2d3748;
-    border-bottom: 2px solid #e2e8f0;
+    color: rgba(255, 255, 255, 0.89);
+    border-bottom: 2px solid #3A3A3A;
     padding-bottom: 0.5rem;
     margin: 2rem 0 1.5rem;
 }
 
 .article-content h2 {
     font-size: 1.6rem;
-    color: #2d3748;
+    color: rgba(255, 255, 255, 0.89);
     margin: 1.8rem 0 1.2rem;
     padding-bottom: 0.3rem;
-    border-bottom: 1px solid #edf2f7;
+    border-bottom: 1px solid #3A3A3A;
 }
 
 .article-content h3 {
     font-size: 1.4rem;
-    color: #3c4858;
+    color: rgba(255, 255, 255, 0.89);
     margin: 1.5rem 0 1rem;
 }
 
@@ -193,8 +193,9 @@
 
 /* 代码块 */
 .article-content pre {
-    background-color: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background-color: #1A1A1A;
+    border: 1px solid #3A3A3A;
+    color: #E0E0E0;
     border-radius: 6px;
     padding: 1.2em;
     margin: 1.5rem 0;
@@ -203,27 +204,27 @@
 }
 
 .article-content code {
-    background-color: #f8fafc;
+    background-color: #424242;
     padding: 0.2em 0.4em;
     border-radius: 4px;
-    color: #dd4b78;
+    color: #4A90E2;
     font-family: Menlo, Monaco, Consolas, monospace;
 }
 
 .article-content pre code {
     background: transparent;
     padding: 0;
-    color: #4a5568;
+    color: #E0E0E0;
     font-size: 0.95em;
 }
 
 /* 引用块 */
 .article-content blockquote {
-    border-left: 4px solid #e2e8f0;
+    border-left: 4px solid #4A90E2;
     margin: 1.5rem 0;
     padding: 0.8rem 1.2rem;
-    background-color: #f8fafc;
-    color: #718096;
+    background-color: #1A1A1A;
+    color: #A0A0A0;
     /* font-style: italic; */
 }
 
@@ -242,13 +243,13 @@
 .article-content th,
 .article-content td {
     padding: 0.8rem;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #3A3A3A;
     text-align: left;
 }
 
 .article-content th {
-    background-color: #f8fafc;
-    color: #2d3748;
+    background-color: #1A1A1A;
+    color: rgba(255, 255, 255, 0.89);
     font-weight: 600;
 }
 
@@ -259,30 +260,32 @@
     display: block;
     margin: 1.5rem auto;
     border-radius: 6px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 /* 链接 */
 .article-content a {
-    color: #4299e1;
+    color: #4A90E2;
     text-decoration: underline;
     text-underline-offset: 0.2em;
 }
 
 .article-content a:hover {
-    color: #3182ce;
+    color: #66BB6A;
 }
 
 /* 分割线 */
 .article-content hr {
     border: 0;
     height: 1px;
-    background: #e2e8f0;
+    background: #3A3A3A;
     margin: 2.5rem 0;
 }
 
 /* 数学公式对齐 */
 .article-content .math-display {
+    background-color: #1A1A1A;
+    border: 1px solid #3A3A3A;
     overflow-x: auto;
     margin: 1.5rem 0;
     padding: 1rem;
