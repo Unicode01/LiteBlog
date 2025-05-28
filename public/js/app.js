@@ -405,6 +405,12 @@ function OnHistoryButtonClick() {
         menu_doc.classList.remove("context-menu")
         menu_doc.classList.add("history-menu")
         historyItems = JSON.parse(historyItems);
+        max = 7;
+        if (historyItems.length > max) {
+            historyItems = historyItems.slice(0, max);
+            // save
+            localStorage.setItem('history', JSON.stringify(historyItems));
+        }
         historyItems.forEach(function (item) {
             const menu_item = document.createElement('div');
             menu_item.classList.add('menu-item');

@@ -220,6 +220,10 @@
     list-style: none;
 }
 
+.outline-list ul {
+    padding-left: 20px;
+}
+
 .outline-list ul li::marker {
     content: "•";
     color: var(--base-black);
