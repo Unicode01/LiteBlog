@@ -1,10 +1,10 @@
 .card-modern {
-  background-color: #fff;
+  /* background-color: #fff; */
   border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 10px var(--base-gray-200);
   padding: 20px;
   margin-bottom: 20px;
-  background-image: linear-gradient(to bottom, #f2f2f2, #e6e6e6);
+  /* background-image: linear-gradient(to bottom, #f2f2f2, #e6e6e6); */
   transition: all 0.2s ease-in-out;
 }
 

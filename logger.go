@@ -103,7 +103,29 @@ func autoSync(ctx context.Context) {
 			if Config.LoggerCfg.FileSyncInterval < 1 {
 				Config.LoggerCfg.FileSyncInterval = 1
 			}
+			CheckLogFileSize()
 			time.Sleep(time.Duration(Config.LoggerCfg.FileSyncInterval) * time.Second)
+		}
+	}
+}
+
+func CheckLogFileSize() {
+	if Config.LoggerCfg.LogFile != "" && LoggedFileHandler != nil {
+		// check log file size
+		fileInfo, err := LoggedFileHandler.Stat()
+		if err != nil {
+			return
+		}
+		if fileInfo.Size() > int64(Config.LoggerCfg.MaxLogFileSize) {
+			// close old log file
+			LoggedFileHandler.Close()
+			// rename old log file
+			if _, err := os.Stat(Config.LoggerCfg.LogFile + ".old"); err == nil {
+				os.Remove(Config.LoggerCfg.LogFile + ".old")
+			}
+			os.Rename(Config.LoggerCfg.LogFile, Config.LoggerCfg.LogFile+".old")
+			// create new log file
+			LoggedFileHandler, _ = os.OpenFile(Config.LoggerCfg.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 		}
 	}
 }

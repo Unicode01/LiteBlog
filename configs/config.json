@@ -41,10 +41,11 @@
         "min_seconds_between_comments": 30
     },
     "logger_config": {
-        "//": "0: debug/all 1: info 2: warning 3: error 4: critical; file_sync_interval: the interval to sync the log file to disk, default is 10 seconds; disable_stdout: disable the output to stdout, default is false.",
+        "//": "0: debug/all 1: info 2: warning 3: error 4: critical; file_sync_interval: the interval to sync the log file to disk, default is 10 seconds; disable_stdout: disable the output to stdout, default is false.max_log_file_size: the max size of the log file, default is 512MB.",
         "level": 1,
         "log_file": "liteblog.log",
         "file_sync_interval": 10,
+        "max_log_file_size": 536870912,
         "disable_stdout": false
     },
     "contentAdvisor_config": {

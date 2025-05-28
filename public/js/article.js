@@ -355,3 +355,160 @@ function OnAddCommentButtonClick() {
         }
     });
 }
+
+function RenderOutline() {
+    const outlineTitle = document.querySelector('.outline-title');
+    const outlineList = document.querySelector('.outline-list');
+    const articleTitle = document.querySelector('.article-title');
+    const articleDom = document.querySelector('.article-content');
+    // console.log(outlineTitle, outlineList, articleTitle, articleDom);
+    if (!outlineTitle || !outlineList || !articleTitle || !articleDom) {
+        return;
+    }
+    generateOutline(articleDom,outlineList);
+    outlineTitle.textContent = "Outline";
+    window.addEventListener('scroll', function () {
+        const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+        const scrollReal = scrollTop + 60;
+        // console.log(scrollReal);
+        // check if scroll in article content
+        const headings = articleDom.querySelectorAll('h1, h2, h3')
+        for (let i = 0; i < headings.length; i++) {
+            const heading = headings[i];
+            const headingTop = heading.offsetTop;
+            const headingHeight = heading.offsetHeight;
+            if (scrollReal >= headingTop && scrollReal <= headingTop + headingHeight) {
+                // highlight outline item
+                heading.HighLightOutline();
+            }
+        }
+    });
+    document.body.addEventListener('mousemove', MouseMoveHandler);
+}
+
+function MouseMoveHandler(event) {
+    const mouseX = event.clientX;
+    const mouseY = event.clientY;
+    const windowWidth = window.innerWidth;
+    // const windowHeight = window.innerHeight;
+    const outlineContainer = document.querySelector('.outline-container');
+    const OutlineContainerX = outlineContainer.offsetLeft;
+    const OutlineContainerY = outlineContainer.offsetTop;
+    const OutlineContainerWidth = outlineContainer.offsetWidth;
+    const OutlineContainerHeight = outlineContainer.offsetHeight;
+    // console.log(mouseX, mouseY, windowWidth, windowHeight)
+    if (mouseX > windowWidth - 50) {
+        // console.log('right');
+        outlineContainer.style.transform = `translateX(0%)`;
+    } else if (mouseX > OutlineContainerX && mouseX < OutlineContainerX + OutlineContainerWidth && mouseY > OutlineContainerY && mouseY < OutlineContainerY + OutlineContainerHeight) {
+        // console.log(mouseX, mouseY,  OutlineContainerX + OutlineContainerWidth, OutlineContainerY+ OutlineContainerHeight)
+        
+    } else {
+        outlineContainer.style.transform = `translateX(150%)`;
+    }
+}
+
+function generateOutline(articleDom,outlineList) {
+    // 获取所有标题元素
+    const headings = articleDom.querySelectorAll('h1, h2, h3');
+    
+    // 清空现有内容
+    outlineList.innerHTML = '';
+    
+    // 创建根列表
+    const rootList = document.createElement('ul');
+    rootList.classList.add('root-list');
+    outlineList.appendChild(rootList);
+    
+    // 用于存储各级别的当前列表
+    const listStack = [rootList];
+    const levelStack = [0]; // 记录当前层级
+    
+    // 遍历所有标题
+    headings.forEach(heading => {
+        const level = parseInt(heading.tagName.substring(1));
+        
+        // 如果当前级别比栈顶级别小，需要回退
+        while (level <= levelStack[levelStack.length - 1]) {
+            listStack.pop();
+            levelStack.pop();
+        }
+        
+        // 创建列表项
+        const listItem = document.createElement('li');
+        listItem.classList.add(`level-${levelStack.length - 1}`);
+        
+        const itemDiv = document.createElement('div');
+        itemDiv.classList.add('list-item');
+        
+        // // 创建切换按钮（如果有子项）
+        // const toggleBtn = document.createElement('div');
+        // toggleBtn.classList.add('toggle-btn');
+        // toggleBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+        
+        // 创建内容区域
+        const contentDiv = document.createElement('div');
+        contentDiv.classList.add('item-content');
+        
+        // const iconSpan = document.createElement('span');
+        // iconSpan.classList.add('item-icon');
+        // iconSpan.innerHTML = '<i class="far fa-file-alt"></i>';
+        
+        const textSpan = document.createElement('span');
+        textSpan.classList.add('item-text');
+        textSpan.textContent = heading.textContent;
+        
+        // 组装元素
+        // contentDiv.appendChild(iconSpan);
+        contentDiv.appendChild(textSpan);
+        // itemDiv.appendChild(toggleBtn);
+        itemDiv.appendChild(contentDiv);
+        listItem.appendChild(itemDiv);
+        
+        // 添加到当前列表
+        const currentList = listStack[listStack.length - 1];
+        currentList.appendChild(listItem);
+        
+        // 创建子列表（如果有下一级）
+        const subList = document.createElement('ul');
+        listItem.appendChild(subList);
+        
+        // 更新栈
+        listStack.push(subList);
+        levelStack.push(level);
+        
+        // 添加点击事件
+        itemDiv.addEventListener('click', function() {
+            heading.style.scrollMarginTop = '50px';
+            // 滚动到对应标题
+            heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // 高亮显示
+            // document.querySelectorAll('.list-item').forEach(el => {
+            //     // el.style.background = 'none';
+            //     el.classList.remove('active');
+            // });
+            // listItem.querySelector('.list-item').classList.add('active');
+            // this.style.background = '#e3f2fd';
+        });
+        
+        // // 添加展开/折叠事件
+        // toggleBtn.addEventListener('click', function(e) {
+        //     e.stopPropagation();
+        //     listItem.classList.toggle('collapsed');
+        // });
+
+        // 添加HighLightOutline函数, 用于高亮显示当前标题的Outline
+        heading.HighLightOutline = function() {
+            // 高亮显示
+            document.querySelectorAll('.list-item').forEach(el => {
+                el.classList.remove('active');
+            });
+            listItem.querySelector('.list-item').classList.add('active');
+        }
+    });
+}
+
+window.addEventListener('load', function () {
+    RenderOutline();
+});
