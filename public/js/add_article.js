@@ -4,7 +4,12 @@ function AddMarkdownEditorListener() {
     const editor_content = document.querySelector('.markdown-textarea');
     editor_title.addEventListener('input', renderMarkdown);
     author_input.addEventListener('input', renderMarkdown);
-    editor_content.addEventListener('input', renderMarkdown);
+    editor_content.addEventListener('input', function(){
+        renderMarkdown();
+        const articleDom = document.querySelector('.article-content');
+        const outlineList = document.querySelector('.outline-list');
+        generateOutline(articleDom,outlineList)
+    });
 }
 
 function renderMarkdown() {
@@ -50,6 +55,9 @@ function RenderLocalData() {
                 author_input.value = storageAuthor;
                 editor_content.value = storageContent;
                 renderMarkdown();
+                const articleDom = document.querySelector('.article-content');
+                const outlineList = document.querySelector('.outline-list');
+                generateOutline(articleDom,outlineList)
             }
         }
     } else if (location.pathname === "/editarticle.html") {
@@ -65,6 +73,9 @@ function RenderLocalData() {
                     author_input.value = storageAuthor;
                     editor_content.value = storageContent;
                     renderMarkdown();
+                    const articleDom = document.querySelector('.article-content');
+                    const outlineList = document.querySelector('.outline-list');
+                    generateOutline(articleDom,outlineList)
                 }
             }
         })

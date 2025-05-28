@@ -75,6 +75,7 @@ type LoggerConfig struct {
 	LogFile          string `json:"log_file"`
 	FileSyncInterval int    `json:"file_sync_interval"`
 	DisableStdout    bool   `json:"disable_stdout"`
+	MaxLogFileSize   int    `json:"max_log_file_size"`
 }
 
 type ContentAdvisorConfig struct {

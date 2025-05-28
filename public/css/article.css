@@ -53,6 +53,7 @@
 
 /* 文章正文 */
 .article-content {
+    overflow: hidden;
     margin: 0 auto;
     line-height: 1.7;
     font-size: 1.1rem;
@@ -71,7 +72,7 @@
     padding: 1.5rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 #comment-Author {
@@ -96,16 +97,16 @@
     .article-title {
         font-size: 1.8rem;
     }
-    
+
     .article-info {
         flex-direction: column;
         gap: 0.5rem;
     }
-    
+
     .article-author::after {
         display: none;
     }
-    
+
     .article-content {
         font-size: 1rem;
         padding: 0 1rem;
@@ -116,7 +117,7 @@
     .article-title {
         font-size: 1.5rem;
     }
-    
+
     .article-content {
         line-height: 1.6;
     }
@@ -136,8 +137,102 @@
     padding: 25px;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    
+
     z-index: 1000;
+}
+
+/* 大纲容器样式 */
+.outline-container {
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    width: 250px;
+    max-height: 70vh;
+    overflow: auto;
+    background: var(--base-white);
+    box-shadow: 0 4px 12px var(--base-gray-200);
+    border-radius: 12px;
+    padding: 16px;
+    z-index: 100;
+    transition: all 0.3s ease;
+    transform: translateX(150%);
+}
+
+/* 大纲内容区域 */
+.outline-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 大纲标题 */
+.outline-title {
+    font-weight: 600;
+    font-size: 1.2rem;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--base-gray-200);
+    margin-bottom: 8px;
+    color: var(--base-black);
+}
+
+/* 大纲列表 */
+.outline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-left: 8px;
+}
+
+.root-list {
+    padding-left: 20px;
+}
+
+/* 大纲条目 */
+.list-item {
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    color: var(--base-black);
+    line-height: 1.4;
+    overflow: hidden;
+}
+
+/* 不同层级缩进 */
+.outline-item.h2 {
+    margin-left: 0;
+}
+
+.outline-item.h3 {
+    margin-left: 16px;
+}
+
+.outline-item.h4 {
+    margin-left: 32px;
+}
+
+.outline-item.h5 {
+    margin-left: 48px;
+}
+
+.outline-list ul li {
+    list-style: none;
+}
+
+.outline-list ul li::marker {
+    content: "•";
+    color: var(--base-black);
+    font-size: 0.8rem;
+    margin-right: 0.5rem;
+}
+
+/* 当前阅读位置高亮 */
+.list-item.active {
+    background: var(--base-white);
+    color: var(--base-gray-700);
+    font-weight: 500;
+    border-left: 3px solid var(--base-gray-700);
 }
 
 /* 以下为文章内容的样式 */
@@ -207,7 +302,7 @@
     padding: 0.2em 0.4em;
     border-radius: 4px;
     color: #dd4b78;
-    font-family: Menlo, Monaco, Consolas, monospace;
+    /* font-family: Menlo, Monaco, Consolas, monospace; */
 }
 
 .article-content pre code {
@@ -236,7 +331,7 @@
     width: 100%;
     border-collapse: collapse;
     margin: 1.5rem 0;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .article-content th,
@@ -259,7 +354,7 @@
     display: block;
     margin: 1.5rem auto;
     border-radius: 6px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 /* 链接 */

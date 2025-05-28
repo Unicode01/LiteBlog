@@ -1,1 +1,11 @@
-// This file is used to inject the content of the blog post into the page.
+// here is a switch theme listener example
+addThemeSwitchBroadcastListener(function(theme){
+    console.log(theme);
+});
+// here is a context menu example
+addContextMenuItem(function(event){
+console.log("dicision function called",event)
+return true;
+},"test",function(event){
+console.log("contextmenu called,event",event);
+})

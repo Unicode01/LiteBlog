@@ -47,7 +47,7 @@
 }
 
 .markdown-textarea {
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    /* font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; */
     font-size: 14px;
     line-height: 1.6;
     border: none;

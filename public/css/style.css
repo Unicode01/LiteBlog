@@ -23,6 +23,16 @@
 /* 全局样式 */
 body {
     font-family: "Open Sans", sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--base-gray-300);
+    border-radius: 3px;
 }
 
 .top-bar {
@@ -275,6 +285,9 @@ body {
 .bottom-div {
     padding: 10px;
     font-size: 14px;
+    display: flex;
+    /* justify-content: center; */
+    align-items: center;
 }
 
 .post-card-header {
