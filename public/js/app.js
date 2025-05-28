@@ -3,7 +3,7 @@ var Card_max_width = {{global:card_max_width}}; //w
 var Card_max_height = {{global:card_max_height}};
 var Card_min_width = {{global:card_min_width}}; //w
 var Card_min_height = {{global:card_min_height}};
-var Context_menu_html = `{{rendered:context_menu_html}}`
+var Context_menu_html = `{{file:context_menu}}`
 // end render
 var switchThemeListeners = [];
 var contextMenuList = [];
@@ -378,7 +378,8 @@ function AddEventListener() {
     });
     // add click event listener to history button
     const history_button = document.getElementById('history-button');
-    history_button?.addEventListener('click', function () {
+    history_button?.addEventListener('click', function (e) {
+        e.preventDefault();
         OnHistoryButtonClick();
     });
     // add click event listener to theme switch button

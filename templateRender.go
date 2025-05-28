@@ -97,12 +97,6 @@ func autoRender(ctx context.Context) {
 			// render top tag
 			RenderedMap["top_tag"] = renderTopBarTags()
 
-			// render context menu
-			RenderedMap["context_menu_html"] = RenderPageTemplate("context_menu", map[string][]byte{})
-
-			// render bottom bar
-			RenderedMap["bottom_bar"] = RenderPageTemplate("bottom_bar", map[string][]byte{})
-
 			// render RSS
 			RenderedMap["rss_feed"] = renderRSSFeed()
 
