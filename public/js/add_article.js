@@ -6,6 +6,7 @@ function AddMarkdownEditorListener() {
     author_input.addEventListener('input', renderMarkdown);
     editor_content.addEventListener('input', function(){
         renderMarkdown();
+        RenderHighlight();
         const articleDom = document.querySelector('.article-content');
         const outlineList = document.querySelector('.outline-list');
         generateOutline(articleDom,outlineList)

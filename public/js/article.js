@@ -625,6 +625,50 @@ function generateOutline(articleDom, outlineList) {
     });
 }
 
+function RenderHighlight() {
+    // check if highlight.min.js has been loaded
+    if (typeof hljs === 'undefined') {
+        // load highlight.min.css
+        if (!document.getElementById("article-code-viewer-style")) {
+            const highlight_style = document.createElement("link");
+            highlight_style.id = "article-code-viewer-style";
+            highlight_style.href = "/css/light.highlight.css";
+            highlight_style.rel = "stylesheet";
+            document.head.appendChild(highlight_style);
+        }
+        // load highlight.min.js
+        const highlight_script = document.createElement("script");
+        highlight_script.src = "/js/highlight.min.js";
+        document.body.appendChild(highlight_script);
+        // add highlight event listener
+        highlight_script.addEventListener('load', function () {
+            RenderHighlight();
+        });
+        return;
+    }
+    // select all code blocks
+    document.querySelectorAll('pre code').forEach((el) => {
+        hljs.highlightElement(el);
+    });
+}
+
 window.addEventListener('load', function () {
     RenderOutline();
 });
+
+window.addEventListener('DOMContentLoaded', function () {
+    RenderHighlight();
+});
+
+addThemeSwitchBroadcastListener(function (theme) {
+    const styleDom = document.querySelector('#article-code-viewer-style');
+    if (styleDom) {
+        styleDom.href = `/css/${theme}.highlight.css`;
+    } else {
+        const style = document.createElement('link');
+        style.id = 'article-code-viewer-style';
+        style.rel = 'stylesheet';
+        style.href = `/css/${theme}.highlight.css`;
+        document.head.appendChild(style);
+    }
+})

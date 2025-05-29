@@ -611,7 +611,7 @@ function onImportButtonClick() {
     // require user to enter the codes of base64 encoded json data
     const input = prompt("Enter the base64 encoded json data:");
     if (input === null) return;
-    const jsonData = JSON.parse(atob(input));
+    const jsonData = JSON.parse(decodeURIComponent(atob(input)));
     console.log(jsonData);
     const customFields = {};
     const card_title = document.getElementById('add-card-title')
@@ -713,7 +713,7 @@ function onExportButtonClick() {
     }
     const jsondata = JSON.stringify(GetCardJson())
     console.log(jsondata);
-    copyText(btoa(jsondata));
+    copyText(btoa(encodeURIComponent(jsondata)));
     
 }
 
@@ -787,8 +787,13 @@ function GetAccessPathAndToken() {
 }
 
 function generateEncryptToken(token) {
-    const encryptKey = `{{rendered:token_encrypt_key}}`;
-
+    var encryptKey = `{{rendered:token_encrypt_key}}`;
+    const timestamp = parseInt((new Date().getTime())/10000); // 时间梯度10s
+    // console.log(timestamp);
+    const timestampB64 = btoa(timestamp.toString());
+    // console.log(timestampB64);
+    encryptKey = encryptKey + timestampB64;
+    console.log(token + "|" + encryptKey)
     let tokenArray = Array.from(btoa(token + "|" + encryptKey));
 
     const getRandomChar = (seed) => String.fromCharCode(33 + (seed % 94));
