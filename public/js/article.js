@@ -3,6 +3,7 @@ var NewCommentInputBoxHTML = `
 {{file:new_comment_input_box}}
 `
 var CF_Site_key = "{{global:cf_site_key}}"
+var Goole_reCaptcha_Site_key = "{{global:google_site_key}}"
 var comment_check_type = "{{global:comment_check_type}}"
 // end of render variable
 
@@ -133,7 +134,7 @@ function GetArticleAPI(article_id, callback) {
         });
 }
 
-function AddCommentAPI(article_id, author, content, callback) {
+function AddCommentAPI(article_id, author, email, content, callback) {
     path = "api/v1"
     const api_dic = window.location.origin + "/" + path;
     const api_add_comment = api_dic + "/add_comment";
@@ -141,6 +142,7 @@ function AddCommentAPI(article_id, author, content, callback) {
         verify_token: window.comment_token,
         article_id: article_id,
         author: author,
+        email: email,
         content: content
     }
     console.log(data);
@@ -305,9 +307,12 @@ function ShowCommentInputBox() {
     if (!CommentInputBoxDoc || !article_id) {
         return;
     }
-    if (comment_check_type === "cloudflare_turnstile") {
+    if (comment_check_type == "cloudflare_turnstile") {
         const CommentBoxPre = document.querySelector(".comment-input-box");
         CommentBoxPre?.remove()
+        // set validator class to `inner-cf-turnstile`
+        const validator = CommentInputBoxDoc.querySelector("#comment-validator")
+        validator.classList.add("inner-cf-turnstile");
         CommentInputBoxDoc.querySelector(".inner-cf-turnstile").setAttribute("data-sitekey", CF_Site_key);
         window.onloadTurnstileCallback = function () {
             turnstile.render(".inner-cf-turnstile", {
@@ -323,6 +328,14 @@ function ShowCommentInputBox() {
         const turnstile_script = document.createElement("script");
         turnstile_script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback";
         document.body.appendChild(turnstile_script);
+    } else if (comment_check_type == "google_recaptcha") {
+        const CommentBoxPre = document.querySelector(".comment-input-box");
+        CommentBoxPre?.remove()
+        // append recaptcha script
+        const recaptcha_script = document.createElement("script");
+        recaptcha_script.src = "https://www.google.com/recaptcha/api.js?render=" + Goole_reCaptcha_Site_key;
+        document.body.appendChild(CommentInputBoxDoc);
+        CommentInputBoxDoc.appendChild(recaptcha_script);
     } else {
         alert("Comment system has been disabled.")
     }
@@ -336,24 +349,123 @@ function CancleCommentInputBox() {
 function OnAddCommentButtonClick() {
     const article_id = getQueryVariable("article_id");
     const author_input = document.querySelector('#add-comment-author').value;
+    const email_address = document.querySelector('#add-comment-emailaddress').value;
     const content_input = document.querySelector('#add-comment-text').value;
-    if (!article_id || !author_input || !content_input || !window.comment_token) {
-        console.log("Article id, author, content and token are required.");
-        alert("Please fill in all required fields.");
+    if (!isAvailableEmailAddress(email_address)) {
+        alert("Invalid email address.");
         return;
     }
-    AddCommentAPI(article_id, author_input, content_input, function (result) {
-        if (result != "") {
-            console.log(result);
-            alert("Comment added successfully!");
-            // remove comment input box
-            CancleCommentInputBox();
-            // reload page
-            location.reload();
-        } else {
-            alert("Failed to add comment.");
+    // check if google recaptcha
+    if (comment_check_type == "google_recaptcha") {
+
+        grecaptcha.ready(function () {
+            grecaptcha.execute(Goole_reCaptcha_Site_key, { action: 'submit' }).then(function (token) {
+                // Add your logic to submit to your backend server here.
+                if (!article_id || !author_input || !content_input || !token) {
+                    console.log("Article id, author, content and token are required.");
+                    alert("Please fill in all required fields.");
+                    return;
+                }
+                window.comment_token = token;
+                AddCommentAPI(article_id, author_input, email_address, content_input, function (result) {
+                    if (result != "") {
+                        console.log(result);
+                        alert("Comment added successfully!");
+                        // remove comment input box
+                        CancleCommentInputBox();
+                        // reload page
+                        location.reload();
+                    } else {
+                        alert("Failed to add comment.");
+                    }
+                });
+            });
+        });
+        return;
+    } else if (comment_check_type == "cloudflare_turnstile") {
+        if (!article_id || !author_input || !content_input || !window.comment_token) {
+            console.log("Article id, author, content and token are required.");
+            alert("Please fill in all required fields.");
+            return;
         }
-    });
+        AddCommentAPI(article_id, author_input, email_address, content_input, function (result) {
+            if (result != "") {
+                console.log(result);
+                alert("Comment added successfully!");
+                // remove comment input box
+                CancleCommentInputBox();
+                // reload page
+                location.reload();
+            } else {
+                alert("Failed to add comment.");
+            }
+        });
+    }
+}
+
+function isAvailableEmailAddress(email) {
+    // 基础检查：非字符串、空值、无@符号直接返回false
+    if (typeof email !== 'string' || !email) return false;
+    if (email.indexOf('@') === -1) return false;
+
+    // 分割本地部分和域名部分
+    const parts = email.split('@');
+    const localPart = parts[0];
+    const domainPart = parts[1];
+
+    // 检查分割结果有效性
+    if (parts.length !== 2 || !localPart || !domainPart) return false;
+
+    // 1. 本地部分验证
+    const localRegex = /^[a-zA-Z0-9!#$%&'*+\-\/=?^_`{|}~]+(\.[a-zA-Z0-9!#$%&'*+\-\/=?^_`{|}~]+)*$/;
+    if (
+        // 长度检查 (1-64字符)
+        localPart.length < 1 || localPart.length > 64 ||
+        // 开头/结尾不能是点
+        localPart.startsWith('.') || localPart.endsWith('.') ||
+        // 连续点检查
+        localPart.includes('..') ||
+        // 字符有效性
+        !localRegex.test(localPart)
+    ) {
+        return false;
+    }
+
+    // 2. 域名部分验证
+    if (
+        // 长度检查 (1-255字符)
+        domainPart.length < 1 || domainPart.length > 255 ||
+        // 开头/结尾不能是连字符或点
+        domainPart.startsWith('-') || domainPart.endsWith('-') ||
+        domainPart.startsWith('.') || domainPart.endsWith('.') ||
+        // 连续点检查
+        domainPart.includes('..')
+    ) {
+        return false;
+    }
+
+    // 域名标签分割验证
+    const domainLabels = domainPart.split('.');
+    const labelRegex = /^[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?$/;
+
+    for (const label of domainLabels) {
+        if (
+            // 标签长度检查 (1-63字符)
+            label.length < 1 || label.length > 63 ||
+            // 标签格式检查
+            !labelRegex.test(label)
+        ) {
+            return false;
+        }
+    }
+
+    // 顶级域名检查 (至少2个字母)
+    const tld = domainLabels[domainLabels.length - 1];
+    if (!/^[a-zA-Z]{2,}$/.test(tld)) {
+        return false;
+    }
+
+    return true;
 }
 
 function RenderOutline() {

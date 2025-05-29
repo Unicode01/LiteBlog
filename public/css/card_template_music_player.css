@@ -33,6 +33,10 @@
 }
 
 .card-music-player .player-shift-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
     position: static;
     grid-area: stack;
     width: 100%;
@@ -123,21 +127,16 @@
 }
 
 .card-music-player .player-pause {
-    display: inline-block;
+    display: grid;
+    place-items: center;
+    line-height: 50px;
     font-size: 36px;
+    padding-left: 20px;
+    padding-right: 20px;
+    width: 50px;
+    height: 50px;
     color: #000;
     cursor: pointer;
-}
-
-
-.card-music-player .player-shift-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    transition: all 0.4s ease-in-out;
 }
 
 .card-music-player .player-lyric-pre {

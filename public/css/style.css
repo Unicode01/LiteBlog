@@ -215,6 +215,18 @@ body {
     font-weight: 600;
     color: #2d3436;
     font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.import-export-buttons button {
+    background: var(--base-gray-200);
+    border: none;
+    cursor: pointer;
+    color: var(--base-black);
+    border-radius: 4px;
+    font-size: 12px;
+    padding: 4px 8px;
 }
 
 .input-group input,

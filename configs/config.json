@@ -1,14 +1,14 @@
 {
-    "server_config" : {
-        "host" : "0.0.0.0",
-        "port" : 80,
+    "server_config": {
+        "host": "0.0.0.0",
+        "port": 80,
         "tls_config": {
             "enabled": false,
             "cert_file": "fullchain.crt",
             "key_file": "private.key"
         }
     },
-    "access_config" : {
+    "access_config": {
         "enable_backend": true,
         "backend_path": "yourbackendPath",
         "access_token": "yourAccessToken"
@@ -21,7 +21,7 @@
         "expire_time": 3600
     },
     "deliver_config": {
-        "//":"this used to using deliver to avoid cache caused delay",
+        "//": "this used to using deliver to avoid cache caused delay",
         "buffer": 1024,
         "threads": 2
     },
@@ -34,10 +34,13 @@
         "max_backups_survival_time": 86400
     },
     "comment_config": {
+        "//": "types:cloudflare_turnstile|google_recaptcha",
         "enabled": false,
         "type": "cloudflare_turnstile",
         "cf_secret_key": "your_secret_key",
         "cf_site_key": "your_site_key",
+        "google_site_key": "your_site_key",
+        "google_secret_key": "your_secret_key",
         "min_seconds_between_comments": 30
     },
     "logger_config": {

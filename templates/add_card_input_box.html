@@ -1,6 +1,11 @@
 <div class="card-input-box">
     <div class="input-group">
-        <label for="add-card-title">Title</label>
+        <label for="add-card-title">Title
+            <div class="import-export-buttons">
+                <button type="button" title="Import from base64 json" onclick="onImportButtonClick()">↓</button>
+                <button type="button" title="Export to clipboard" onclick="onExportButtonClick()">↑</button>
+            </div>
+        </label>
         <input type="text" id="add-card-title" required>
     </div>
 
@@ -33,7 +38,7 @@
     </div>
 
     <div class="button-group">
-        <button type="button" class="add-card-button" onclick="OnAddCardButtonClick(true)">Edit Card</button>
+        <button type="button" class="add-card-button" onclick="OnAddCardButtonClick()">Add Card</button>
         <button type="button" class="cancel-button" onclick="CancleInputBox()">Cancel</button>
     </div>
 </div>
