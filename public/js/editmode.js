@@ -211,7 +211,7 @@ function AddCard() {
     }
     // this func is called to generate the card json and add it to the backend
     const add_card_input_box_html = `
-        {{file:edit_card_input_box}}
+        {{file:add_card_input_box}}
     `;
     domP = new DOMParser();
     const add_card_box_doc = domP.parseFromString(add_card_input_box_html, "text/html").body.firstChild;
@@ -440,7 +440,7 @@ function EditCard(cardId) {
             }
             // this func is called to generate the card json and add it to the backend
             const add_card_input_box_html = `
-            {{file:add_card_input_box}}
+            {{file:edit_card_input_box}}
             `;
             domP = new DOMParser();
             const add_card_box_doc = domP.parseFromString(add_card_input_box_html, "text/html").body.firstChild;
@@ -605,6 +605,116 @@ function OnEditSettingsButtonClick() {
         CancleInputBox();
     });
 
+}
+
+function onImportButtonClick() {
+    // require user to enter the codes of base64 encoded json data
+    const input = prompt("Enter the base64 encoded json data:");
+    if (input === null) return;
+    const jsonData = JSON.parse(atob(input));
+    console.log(jsonData);
+    const customFields = {};
+    const card_title = document.getElementById('add-card-title')
+    const card_description = document.getElementById('add-card-description')
+    const card_link = document.getElementById('add-card-link')
+    const template = document.getElementById('add-card-template')
+    const tags = document.getElementById('add-card-tags')
+    for (const key in jsonData) {
+        switch (key) {
+            case "card_title":
+                card_title.value = jsonData[key];
+                break;
+            case "card_description":
+                card_description.value = jsonData[key];
+                break;
+            case "card_link":
+                card_link.value = jsonData[key];
+                break;
+            case "template":
+                template.value = jsonData[key];
+                break;
+            case "tags":
+                tags.value = jsonData[key];
+                break;
+            default:
+                customFields[key] = jsonData[key];
+                break;
+        }
+    }
+    for (const key in customFields) {
+        if (key == "id" || key == "order") continue;
+        // check if key already exists
+        const existingField = document.querySelectorAll(`.field-name`);
+        let keyExist = false;
+        existingField.forEach(field => {
+            if (field.value == key) {
+                console.log("Key already exists: " + key)
+                keyExist = true;
+            }
+        });
+        if (keyExist) continue;
+        
+        
+        const customFieldGroup = document.createElement('div');
+        customFieldGroup.className = 'custom-field-group';
+
+        // 字段名称输入框
+        const nameInput = document.createElement('input');
+        nameInput.type = "text";
+        nameInput.placeholder = "Field Name (e.g.: link)";
+        nameInput.className = "field-name";
+        nameInput.value = key;
+
+        // 字段值输入框
+        const valueInput = document.createElement('input');
+        valueInput.type = "text";
+        valueInput.placeholder = "field value";
+        valueInput.className = "field-value";
+        valueInput.value = customFields[key];
+
+        // 删除按钮
+        const removeBtn = document.createElement('button');
+        removeBtn.type = "button";
+        removeBtn.textContent = "×";
+        removeBtn.onclick = () => customFieldGroup.remove();
+
+        customFieldGroup.appendChild(nameInput);
+        customFieldGroup.appendChild(valueInput);
+        customFieldGroup.appendChild(removeBtn);
+        document.querySelector("#custom-fields-container").appendChild(customFieldGroup);
+    }
+}
+
+function onExportButtonClick() {
+    function GetCardJson() {
+        const customFields = {};
+
+        // 获取所有自定义字段
+        document.querySelectorAll('.custom-field-group').forEach(group => {
+            const name = group.querySelector('.field-name').value;
+            const value = group.querySelector('.field-value').value;
+            if (name && value) {
+                customFields[name] = value;
+            }
+        });
+        json = {
+            card_title: document.getElementById('add-card-title').value.toString(),
+            card_description: document.getElementById('add-card-description').value.toString(),
+            card_link: document.getElementById('add-card-link').value.toString(),
+            template: document.getElementById('add-card-template').value.toString(),
+            tags: document.getElementById('add-card-tags').value.toString(),
+            order: document.querySelectorAll('.card-container').length.toString(),
+            id: window._edittingCardID.toString()
+        };
+        for (const key in customFields) {
+            json[key] = customFields[key].toString();
+        }
+        return json;
+    }
+    const jsondata = JSON.stringify(GetCardJson())
+    console.log(jsondata);
+    copyText(btoa(jsondata));
+    
 }
 
 function CancleInputBox() {

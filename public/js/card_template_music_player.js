@@ -50,7 +50,6 @@ function card_music_player_init() {
             const prevLyricDom = card.querySelector(".player-lyric-pre");
             const currentLyricDom = card.querySelector(".player-lyric-current");
             const nextLyricDom = card.querySelector(".player-lyric-next");
-            var player_hover_line = card.querySelector(".player-hover-line");
             if (currentLyricIndex != -1) {
                 if (currentLyricIndex > 0) {
                     prevLyricDom.textContent = music_player.lyrics[currentLyricIndex - 1].text;
@@ -60,9 +59,6 @@ function card_music_player_init() {
                 currentLyricDom.textContent = music_player.lyrics[currentLyricIndex].text;
                 if (currentLyricIndex < music_player.lyrics.length - 1) {
                     nextLyricDom.textContent = music_player.lyrics[currentLyricIndex + 1].text;
-                    if (player_hover_line.style.opacity === "0") {
-                        player_hover_line.style.opacity = "1";
-                    }
                 } else {
                     nextLyricDom.textContent = "";
                 }
@@ -80,6 +76,11 @@ function card_music_player_init() {
             // update player-duration
             const progress_bar_duration = card.querySelector(".player-duration");
             progress_bar_duration.textContent = format_time(music_player.getDuration());
+            
+            var player_hover_line = card.querySelector(".player-hover-line");
+            if (music_player.loadLyrics) {
+                player_hover_line.style.opacity = 1;
+            }
         });
         // add ended event listener
         music_player.addEventListener("ended", function () {
@@ -106,7 +107,7 @@ function card_music_player_init() {
         player_play_button.addEventListener("click", function () {
             if (music_player.isPaused()) {
                 music_player.play();
-                player_play_button.innerHTML = "⏸"
+                player_play_button.innerHTML = "⏸︎"
             } else {
                 music_player.pause();
                 player_play_button.innerHTML = "▶"

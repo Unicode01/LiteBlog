@@ -41,6 +41,7 @@ type articleJsonStruct struct {
 	Pub_Date    string `json:"pub_date"`
 	Comments    []struct {
 		Author   string `json:"author"`
+		Email    string `json:"email"`
 		Content  string `json:"content"`
 		Pub_Date string `json:"pub_date"`
 		ID       string `json:"id"`
@@ -748,6 +749,7 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 		Pub_Date:    time.Now().Format("2006-01-02 15:04:05"),
 		Comments: make([]struct {
 			Author   string `json:"author"`
+			Email    string `json:"email"`
 			Content  string `json:"content"`
 			Pub_Date string `json:"pub_date"`
 			ID       string `json:"id"`
@@ -1172,20 +1174,26 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 		Article_id   string `json:"article_id"`
 		Content      string `json:"content"`
 		Author       string `json:"author"`
+		Email        string `json:"email"`
 	}
 	var req commentRequest
 	err = json.Unmarshal(bodyBin, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
-
-	// check verify token
+	// check the email address
+	if !isAvailableEmailAddress(req.Email) {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	// check if the verify token is correct
 	pass := false
 	switch Config.CommentCfg.Type {
 	case "cloudflare_turnstile":
 		pass = CFVerifyCheck(req.Verify_token, getRequestIP(r))
+	case "google_recaptcha":
+		pass = GoogleVerifyCheck(req.Verify_token, getRequestIP(r))
 	}
 	if !pass {
 		w.WriteHeader(http.StatusForbidden)
@@ -1215,11 +1223,13 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 	}
 	articleJson.Comments = append(articleJson.Comments, struct {
 		Author   string `json:"author"`
+		Email    string `json:"email"`
 		Content  string `json:"content"`
 		Pub_Date string `json:"pub_date"`
 		ID       string `json:"id"`
 	}{
 		Author:   req.Author,
+		Email:    req.Email,
 		Content:  req.Content,
 		ID:       generateTraceID(),
 		Pub_Date: time.Now().Format("2006-01-02 15:04:05"),
@@ -1275,6 +1285,35 @@ func CFVerifyCheck(responseToken, userIP string) bool {
 	return cf_response.Success
 }
 
+func GoogleVerifyCheck(responseToken, userIP string) bool {
+	verifyUrl := "https://www.google.com/recaptcha/api/siteverify"
+	data := url.Values{
+		"secret":   {Config.CommentCfg.GoogleSecretKey},
+		"response": {responseToken},
+		"remoteip": {userIP},
+	}
+	resp, err := http.PostForm(verifyUrl, data)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false
+	}
+	var google_response struct {
+		Success     bool     `json:"success"`
+		ChallengeTS string   `json:"challenge_ts"`
+		Hostname    string   `json:"hostname"`
+		ErrorCodes  []string `json:"error-codes"`
+	}
+	err = json.Unmarshal(body, &google_response)
+	if err != nil {
+		return false
+	}
+	return google_response.Success
+}
+
 func GetContentType(filename string) string {
 	var contentTypeMap = map[string]string{
 		".md":       "text/markdown; charset=utf-8",
@@ -1322,4 +1361,57 @@ func generateTraceID() string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 	return fmt.Sprintf("%x", b)
+}
+
+func isAvailableEmailAddress(email string) bool {
+	// 基础检查：空值、无@符号
+	if email == "" || !strings.Contains(email, "@") {
+		return false
+	}
+
+	// 分割本地部分和域名部分
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return false
+	}
+
+	localPart := parts[0]
+	domainPart := parts[1]
+
+	// 1. 本地部分验证
+	if len(localPart) < 1 || len(localPart) > 64 ||
+		localPart[0] == '.' || localPart[len(localPart)-1] == '.' ||
+		strings.Contains(localPart, "..") {
+		return false
+	}
+
+	// 本地部分字符集验证
+	localRegex := regexp.MustCompile(`^[a-zA-Z0-9!#$%&'*+\-\/=?^_{|}~]+(\.[a-zA-Z0-9!#$%&'*+\-\/=?^_{|}~]+)*$`)
+	if !localRegex.MatchString(localPart) {
+		return false
+	}
+
+	// 2. 域名部分验证
+	if len(domainPart) < 1 || len(domainPart) > 255 ||
+		domainPart[0] == '-' || domainPart[len(domainPart)-1] == '-' ||
+		domainPart[0] == '.' || domainPart[len(domainPart)-1] == '.' ||
+		strings.Contains(domainPart, "..") {
+		return false
+	}
+
+	// 域名标签分割验证
+	domainLabels := strings.Split(domainPart, ".")
+	labelRegex := regexp.MustCompile(`^[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?$`)
+
+	for _, label := range domainLabels {
+		if len(label) < 1 || len(label) > 63 ||
+			!labelRegex.MatchString(label) {
+			return false
+		}
+	}
+
+	// 顶级域名检查 (至少2个字母)
+	tld := domainLabels[len(domainLabels)-1]
+	tldRegex := regexp.MustCompile(`^[a-zA-Z]{2,}$`)
+	return tldRegex.MatchString(tld)
 }

@@ -1,7 +1,7 @@
 {
     "IndexPageTitle": "Welcome to LiteBlog",
     "RSSChannelDescription": "Latest posts from LiteBlog",
-    "RSSChannelLink": "https://example.com/rss.xml",
+    "RSSChannelLink": "https://example.com/feed/rss.xml",
     "RSSChannelTitle": "LiteBlog RSS Feed",
     "RSSLinkHead": "https://example.com",
     "TopBarTags": "go tag1",

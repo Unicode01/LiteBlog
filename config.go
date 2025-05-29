@@ -67,6 +67,8 @@ type CommentConfig struct {
 	Type                      string `json:"type"`
 	CFSecretKey               string `json:"cf_secret_key"`
 	CFSiteKey                 string `json:"cf_site_key"`
+	GoogleSecretKey           string `json:"google_secret_key"`
+	GoogleSiteKey             string `json:"google_site_key"`
 	MinSecondsBetweenComments int    `json:"min_seconds_between_comments"`
 }
 
@@ -198,6 +200,11 @@ func SetVarToGlobalMap() {
 		case "cloudflare_turnstile":
 			GlobalMapLocker.Lock()
 			GlobalMap["cf_site_key"] = []byte(Config.CommentCfg.CFSiteKey)
+			GlobalMap["comment_check_type"] = []byte(Config.CommentCfg.Type)
+			GlobalMapLocker.Unlock()
+		case "google_recaptcha":
+			GlobalMapLocker.Lock()
+			GlobalMap["google_site_key"] = []byte(Config.CommentCfg.GoogleSiteKey)
 			GlobalMap["comment_check_type"] = []byte(Config.CommentCfg.Type)
 			GlobalMapLocker.Unlock()
 		}
