@@ -103,7 +103,8 @@ func autoRender(ctx context.Context) {
 			// generate token encrypt key
 			newToken := sha256.Sum256([]byte(Config.AccessCfg.BackendPath + Config.AccessCfg.AccessToken))
 			RenderedMap["token_encrypt_key"] = []byte(fmt.Sprintf("%x", newToken))
-			EncryptToken = generateEncryptToken(Config.AccessCfg.AccessToken, fmt.Sprintf("%x", newToken))
+			EncryptTokenKey = fmt.Sprintf("%x", newToken)
+			// EncryptToken = generateEncryptToken(Config.AccessCfg.AccessToken, fmt.Sprintf("%x", newToken))
 
 			// fmt.Printf("card rendered\n")
 			render_end_time := time.Now()
@@ -274,9 +275,11 @@ func renderarticle(articleID string) []byte {
 	return rendered_article_html
 }
 
-func generateEncryptToken(token, encryptKey string) string {
+func generateEncryptToken(token, encryptKey string, timestampBase64 string) string {
+	encryptKey = encryptKey + timestampBase64
 	data := []byte(token + "|" + encryptKey)
 	encoded := base64.StdEncoding.EncodeToString(data)
+	// fmt.Printf("encoded: %s\n", encoded)
 	tokenArray := []byte(encoded)
 
 	getRandomChar := func(seed int) byte {

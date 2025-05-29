@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -29,7 +30,7 @@ var (
 	deliverManager     *DeliverManager
 	pathTraversalRegex = regexp.MustCompile(`(?i)(\.\./|\.\.\\)|(/etc/passwd|/bin/sh|/bin/bash)`)
 	LastCommentTime    time.Time
-	EncryptToken       string
+	EncryptTokenKey    string
 )
 
 type articleJsonStruct struct {
@@ -370,7 +371,7 @@ func backendHandler_edit_order(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != EncryptToken {
+	if !checkToken(req.Token) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -442,7 +443,7 @@ func backendHandler_delete_card(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != EncryptToken {
+	if !checkToken(req.Token) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -511,7 +512,7 @@ func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != EncryptToken {
+	if !checkToken(req.Token) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -584,7 +585,7 @@ func backendHandler_get_card(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != EncryptToken {
+	if !checkToken(req.Token) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -642,7 +643,7 @@ func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != EncryptToken {
+	if !checkToken(req.Token) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -723,7 +724,7 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != EncryptToken {
+	if !checkToken(req.Token) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -811,7 +812,7 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != EncryptToken {
+	if !checkToken(req.Token) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -885,7 +886,7 @@ func backendHandler_delete_article(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != EncryptToken {
+	if !checkToken(req.Token) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -929,7 +930,7 @@ func backendHandler_get_article(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != EncryptToken {
+	if !checkToken(req.Token) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -968,7 +969,7 @@ func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check token
-	if req.Token != EncryptToken {
+	if !checkToken(req.Token) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -1039,14 +1040,14 @@ func backendHandler_get_custom_settings(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	// check token
-	if req.Token != EncryptToken {
+	if !checkToken(req.Token) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 	Output := make(map[string]interface{})
 	// get global settings
 	NewMap := make(map[string]interface{})
-	blackList := []string{"cf_site_key", "comment_check_type"}
+	blackList := []string{"cf_site_key", "comment_check_type", "google_site_key"}
 	for k, v := range GlobalMap {
 		inBlackList := false
 		// check if the key is in the black list
@@ -1112,7 +1113,7 @@ func backendHandler_edit_custom_settings(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	// check token
-	if req.Token != EncryptToken {
+	if !checkToken(req.Token) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -1414,4 +1415,32 @@ func isAvailableEmailAddress(email string) bool {
 	tld := domainLabels[len(domainLabels)-1]
 	tldRegex := regexp.MustCompile(`^[a-zA-Z]{2,}$`)
 	return tldRegex.MatchString(tld)
+}
+
+func checkToken(token string) bool {
+	// generate 5 tokens for check ( allow now ± 20s token expired )
+	nowTimestamp := (time.Now().Unix() / 10)
+	befTs1 := nowTimestamp - 1
+	befTs2 := nowTimestamp - 2
+	aftTs1 := nowTimestamp + 1
+	aftTs2 := nowTimestamp + 2
+	befTs1Base64 := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%d", befTs1)))
+	befTs2Base64 := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%d", befTs2)))
+	aftTs1Base64 := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%d", aftTs1)))
+	aftTs2Base64 := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%d", aftTs2)))
+	nowTsBase64 := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%d", nowTimestamp)))
+	var tokens []string
+	tokens = append(tokens, generateEncryptToken(Config.AccessCfg.AccessToken, EncryptTokenKey, nowTsBase64))
+	tokens = append(tokens, generateEncryptToken(Config.AccessCfg.AccessToken, EncryptTokenKey, befTs1Base64))
+	tokens = append(tokens, generateEncryptToken(Config.AccessCfg.AccessToken, EncryptTokenKey, aftTs1Base64))
+	tokens = append(tokens, generateEncryptToken(Config.AccessCfg.AccessToken, EncryptTokenKey, befTs2Base64))
+	tokens = append(tokens, generateEncryptToken(Config.AccessCfg.AccessToken, EncryptTokenKey, aftTs2Base64))
+	// fmt.Printf("token: %v\n", token)
+	for _, t := range tokens {
+		// fmt.Printf("check token: %s|%s\n", t, token)
+		if t == token {
+			return true
+		}
+	}
+	return false
 }
