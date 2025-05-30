@@ -7,6 +7,14 @@
   transition: all 0.2s ease-in-out;
 }
 
+.card-classical .post-card-header {
+  color: var(--base-black);
+}
+
+.card-classical .card-description  {
+  color: var(--base-gray-700);
+}
+
 .card-classical .card-description {
   margin: 10px 12px 0 12px;
 }

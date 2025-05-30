@@ -22,7 +22,7 @@ cd LiteBlog
 go run LiteBlog
 ```
 ### From Binary
-Download the latest binary from [release page](https://github.com/Unicode01/LiteBlog/releases) and run it.
+Download the latest binary from [release page](https://github.com/Unicode01/LiteBlog/releases) and run it.Or you can build the binary from source.
 - Before compile the binary, you should run following command to install the dependencies.
 ```bash
 apt update && apt install -y golang git
