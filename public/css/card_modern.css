@@ -8,6 +8,14 @@
   transition: all 0.2s ease-in-out;
 }
 
+.card-modern .post-card-header {
+  color: var(--base-black);
+}
+
+.card-modern .card-description  {
+  color: var(--base-gray-700);
+}
+
 .card-modern .card-description {
   margin: 10px 10px 0 10px;
 }
