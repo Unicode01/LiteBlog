@@ -44,17 +44,16 @@ func RenderTemplate(template []byte, ReplaceMap map[string][]byte) []byte {
 		value := []byte("")
 		if l2Index != -1 {
 			l2key := key[:l2Index]
-			if string(l2key) == "global" {
+			switch string(l2key) {
+			case "global":
 				GlobalMapLocker.RLock()
 				value = GlobalMap[string(key[l2Index+1:])]
 				GlobalMapLocker.RUnlock()
-			}
-			if string(l2key) == "rendered" {
+			case "rendered":
 				RenderedMapLocker.RLock()
 				value = RenderedMap[string(key[l2Index+1:])]
 				RenderedMapLocker.RUnlock()
-			}
-			if string(l2key) == "file" {
+			case "file":
 				valueRead, err := os.ReadFile("templates/" + string(key[l2Index+1:]) + ".html")
 				if err != nil {
 					Log(3, "error reading file: "+err.Error())
