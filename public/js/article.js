@@ -251,7 +251,15 @@ function DeleteArticleAPI(article_id, callback) {
 function SaveArticle() {
     const editor_title = document.querySelector('.title-input').value;
     const author_input = document.querySelector('.author-input').value;
-    const rendered_content = document.querySelector('.article-content').innerHTML;
+    var rendered_content = "";
+    if (marked) {
+        // reder markdown content
+        const editor_content = document.querySelector('.markdown-textarea');
+        const content_value = editor_content.value;
+        rendered_content = marked.parse(content_value);
+    } else {
+        rendered_content = document.querySelector('.article-content').innerHTML;
+    }
     const markdown_input = document.querySelector('#markdown-input').value;
     // check if in /addarticle.html
     if (location.pathname === "/addarticle.html") {
