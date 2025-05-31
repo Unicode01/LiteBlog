@@ -215,6 +215,8 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	renderList := []string{".js", ".css", ".html", ".xml"}
 	// check if file is renderable
 	if file_ext == "" || !strings.Contains(strings.Join(renderList, "|"), file_ext) { // not render file
+		content_type := GetContentType(r.URL.Path)
+		w.Header().Set("Content-Type", content_type)
 		file, err := os.OpenFile("public"+r.URL.Path, os.O_RDONLY, 0) // check file exist
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)

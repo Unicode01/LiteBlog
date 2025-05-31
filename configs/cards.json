@@ -5,7 +5,7 @@
             "card_link": "/articles/firstArticle",
             "card_title": "Card 1",
             "id": "1",
-            "order": "0",
+            "order": "1",
             "tags": "go tag1 tag2",
             "template": "card_template_classical"
         },
@@ -14,7 +14,7 @@
             "card_link": "https://www.google.com",
             "card_title": "Card 2",
             "id": "2",
-            "order": "1",
+            "order": "2",
             "tags": "go tag1 tag2",
             "template": "card_template_modern"
         },
@@ -32,7 +32,7 @@
             "card_link": "",
             "card_title": "Players",
             "id": "5",
-            "order": "2",
+            "order": "3",
             "tags": "",
             "template": "card_template_split_line"
         },
@@ -48,9 +48,22 @@
             "music_link": "your music link",
             "music_lyric_link": "your lyric link",
             "music_title": "music title",
-            "order": "3",
+            "order": "4",
             "tags": "go tag1 tag2",
             "template": "card_template_music_player_test"
+        },
+        {
+            "blogger_avatar": "localhost/1",
+            "blogger_bio": "my blog",
+            "blogger_contact_info": "[github](https://github.com)|[bilibili](https://bilibili.com)|[x](https://x.com/)|[telegram](https://telegram.org)|[youtube](https://youtube.com)|[facebook](https://facebook.com/)|[instagram](a)|[email](b)|[steam](c)",
+            "blogger_name": "UN1C0DE",
+            "card_description": "",
+            "card_link": "",
+            "card_title": "",
+            "id": "f12b2f9b0f54838579d280a864f0826c",
+            "order": "0",
+            "tags": "mytag1 mytag2",
+            "template": "card_template_blogger_info"
         }
     ]
 }

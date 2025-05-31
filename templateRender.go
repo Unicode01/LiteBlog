@@ -40,6 +40,10 @@ func RenderTemplate(template []byte, ReplaceMap map[string][]byte) []byte {
 			break
 		}
 		key := template[start : start+index]
+		// clean key
+		key = bytes.TrimSpace(key)
+		key = bytes.ReplaceAll(key, []byte(" "), []byte(""))
+		key = bytes.ReplaceAll(key, []byte("\n"), []byte(""))
 		l2Index := bytes.Index(key, []byte(":"))
 		value := []byte("")
 		if l2Index != -1 {
