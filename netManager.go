@@ -310,11 +310,17 @@ func serveBackend(w http.ResponseWriter, r *http.Request) {
 	case "/get_article":
 		backendHandler_get_article(w, r)
 		return
+	case "/get_all_article_id":
+		backendHandler_get_all_article_id(w, r)
+		return
 	case "/delete_article":
 		backendHandler_delete_article(w, r)
 		return
 	case "/get_card":
 		backendHandler_get_card(w, r)
+		return
+	case "/get_all_cards":
+		backendHandler_get_all_cards(w, r)
 		return
 	case "/edit_card":
 		backendHandler_edit_card(w, r)
@@ -369,7 +375,7 @@ func backendHandler_edit_order(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bodyBin, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("Failed to parse request body, %s\n", err)
+		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
@@ -441,7 +447,7 @@ func backendHandler_delete_card(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bodyBin, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("Failed to parse request body, %s\n", err)
+		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
@@ -510,7 +516,7 @@ func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bodyBin, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("Failed to parse request body, %s\n", err)
+		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
@@ -543,6 +549,23 @@ func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
 	}
 	newCard := req.CardJson
 	newCard["id"] = generateTraceID()
+	for {
+		isUnique := true
+		// 检查整个列表
+		for _, card := range cardsData.Cards {
+			if card["id"] == newCard["id"] {
+				isUnique = false
+				break // 发现重复立即跳出
+			}
+		}
+
+		if isUnique {
+			break // 唯一则退出
+		}
+		// 不唯一时生成新ID
+		newCard["id"] = generateTraceID()
+	}
+
 	cardsData.Cards = append(cardsData.Cards, newCard)
 	cardsDataBin, err = json.MarshalIndent(cardsData, "", "    ")
 	if err != nil {
@@ -583,7 +606,7 @@ func backendHandler_get_card(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bodyBin, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("Failed to parse request body, %s\n", err)
+		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
@@ -623,6 +646,56 @@ func backendHandler_get_card(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Card not found"))
 }
 
+func backendHandler_get_all_cards(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	bodyBin, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	type cardrequest struct {
+		Token string `json:"token"`
+	}
+	var req cardrequest
+	err = json.Unmarshal(bodyBin, &req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		// fmt.Printf("Failed to parse request body, %s\n", err)
+		return
+	}
+	// check token
+	if !checkToken(req.Token) {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	// get card
+	type cards struct {
+		Cards []map[string]string `json:"cards"`
+	}
+	var cardsData cards
+	cardsDataBin, err := os.ReadFile("configs/cards.json")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = json.Unmarshal(cardsDataBin, &cardsData)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	cardsDataBin, err = json.Marshal(cardsData.Cards)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(cardsDataBin)
+}
+
 func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -641,7 +714,7 @@ func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bodyBin, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("Failed to parse request body, %s\n", err)
+		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
@@ -722,7 +795,7 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bodyBin, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("Failed to parse request body, %s\n", err)
+		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
@@ -742,6 +815,35 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 	// add article
 	// generate article id
 	articleID := generateTraceID()
+	// check if article id is unique
+	// get all article ids
+	articleDir, err := os.ReadDir("configs/articles")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	articleIDList := make([]string, 0)
+	for _, file := range articleDir {
+		if !file.IsDir() {
+			articleID := file.Name()[:len(file.Name())-5] // remove ".json"
+			articleIDList = append(articleIDList, articleID)
+		}
+	}
+	for {
+		isUnique := true
+		for _, article := range articleIDList {
+			if article == articleID {
+				isUnique = false
+				break // 发现重复立即跳出
+			}
+		}
+
+		if isUnique {
+			break // 唯一则退出
+		}
+		// 不唯一时生成新ID
+		articleID = generateTraceID()
+	}
 	articleJsonPath := "configs/articles/" + articleID + ".json"
 	articleJson := articleJsonStruct{
 		Title:       req.Article.Title,
@@ -810,7 +912,7 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bodyBin, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("Failed to parse request body, %s\n", err)
+		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
@@ -884,7 +986,7 @@ func backendHandler_delete_article(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bodyBin, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("Failed to parse request body, %s\n", err)
+		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
@@ -928,7 +1030,7 @@ func backendHandler_get_article(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bodyBin, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("Failed to parse request body, %s\n", err)
+		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
@@ -946,6 +1048,54 @@ func backendHandler_get_article(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(articleJsonBin)
+}
+
+func backendHandler_get_all_article_id(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	bodyBin, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	type articlerequest struct {
+		Token string `json:"token"`
+	}
+	var req articlerequest
+	err = json.Unmarshal(bodyBin, &req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		// fmt.Printf("Failed to parse request body, %s\n", err)
+		return
+	}
+	// check token
+	if !checkToken(req.Token) {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	// get all articles
+	articleDir, err := os.ReadDir("configs/articles")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	articleIDs := make([]string, 0)
+	for _, file := range articleDir {
+		if !file.IsDir() {
+			articleID := file.Name()[:len(file.Name())-5] // remove ".json"
+			articleIDs = append(articleIDs, articleID)
+		}
+	}
+	articleIDsJsonBin, err := json.Marshal(articleIDs)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(articleIDsJsonBin)
 }
 
 func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
@@ -967,7 +1117,7 @@ func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bodyBin, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("Failed to parse request body, %s\n", err)
+		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
@@ -1038,7 +1188,7 @@ func backendHandler_get_custom_settings(w http.ResponseWriter, r *http.Request) 
 	err = json.Unmarshal(bodyBin, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("Failed to parse request body, %s\n", err)
+		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
@@ -1111,7 +1261,7 @@ func backendHandler_edit_custom_settings(w http.ResponseWriter, r *http.Request)
 	err = json.Unmarshal(bodyBin, &req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("Failed to parse request body, %s\n", err)
+		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
@@ -1224,6 +1374,23 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	commentID := generateTraceID()
+	for {
+		isUnique := true
+		// 检查整个列表
+		for _, comment := range articleJson.Comments {
+			if comment.ID == commentID {
+				isUnique = false
+				break // 发现重复立即跳出
+			}
+		}
+
+		if isUnique {
+			break // 唯一则退出
+		}
+		// 不唯一时生成新ID
+		commentID = generateTraceID()
+	}
 	articleJson.Comments = append(articleJson.Comments, struct {
 		Author   string `json:"author"`
 		Email    string `json:"email"`
@@ -1234,7 +1401,7 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 		Author:   req.Author,
 		Email:    req.Email,
 		Content:  req.Content,
-		ID:       generateTraceID(),
+		ID:       commentID,
 		Pub_Date: time.Now().Format("2006-01-02 15:04:05"),
 	})
 	articleJsonBin, err = json.MarshalIndent(articleJson, "", "    ")
