@@ -57,5 +57,24 @@
         "filter_comment": true,
         "filter_article": true,
         "filter_card": true
+    },
+    "notify_config": {
+        "//": "this is the notify config, if enabled is true, it will send the notification to the receiver.Avaliable types: smtp|telegrambot,available triggers: receive_comment",
+        "enabled": false,
+        "type": "telegrambot",
+        "trigger": [
+            "receive_comment"
+        ],
+        "smtp_config": {
+            "host": "smtp.gmail.com:587",
+            "username": "your_username",
+            "password": "your_password",
+            "from_addr": "your_email",
+            "to_addrs": ["receiver1_email", "receiver2_email"]
+        },
+        "telegrambot_config": {
+            "token": "yourbot_token",
+            "chat_id": "your_chat_id"
+        }
     }
 }

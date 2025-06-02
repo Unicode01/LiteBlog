@@ -251,6 +251,14 @@ func renderarticle(articleID string) []byte {
 	// render article comments
 	comments_html := []byte("")
 	for _, comment := range articlecfg.Comments {
+		if comment.ReplyTo != "" {
+			for _, c := range articlecfg.Comments {
+				if c.ID == comment.ReplyTo {
+					comment.Author = comment.Author + " (@" + c.Author + ")"
+					break
+				}
+			}
+		}
 		comment_html := RenderPageTemplate("comment", map[string][]byte{
 			"comment_author":  []byte(comment.Author),
 			"comment_content": []byte(comment.Content),

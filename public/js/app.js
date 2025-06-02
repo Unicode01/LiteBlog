@@ -48,13 +48,13 @@ function OnContextMenu(event) {
     // ---add copy option
     // ---check selection then add copy option
     if (window.getSelection().toString() != '') {
+        const string = window.getSelection().toString();
         var menu_copy = document.createElement('div');
         menu_copy.classList.add('menu-item');
         menu_copy.innerHTML = '<a class="link" href="#">Copy</a>';
         menu_copy.addEventListener('click', function (event) {
             event.preventDefault();
-            selection = window.getSelection();
-            copyText(selection.toString());
+            copyText(string);
         });
         context_menu_doc.appendChild(menu_copy);
         // add item line
@@ -277,6 +277,7 @@ function OnContextMenu(event) {
         menu_addcomment.innerHTML = '<a class="link" href="#">Add Comment</a>';
         menu_addcomment.addEventListener('click', function (event) {
             event.preventDefault();
+            window.CommentReplyTo = "";
             ShowCommentInputBox();
         });
         context_menu_doc.appendChild(menu_addcomment);

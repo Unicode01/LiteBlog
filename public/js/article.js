@@ -134,7 +134,7 @@ function GetArticleAPI(article_id, callback) {
         });
 }
 
-function AddCommentAPI(article_id, author, email, content, callback) {
+function AddCommentAPI(article_id,reply_to, author, email, content, callback) {
     path = "api/v1"
     const api_dic = window.location.origin + "/" + path;
     const api_add_comment = api_dic + "/add_comment";
@@ -143,6 +143,7 @@ function AddCommentAPI(article_id, author, email, content, callback) {
         article_id: article_id,
         author: author,
         email: email,
+        reply_to: reply_to,
         content: content
     }
     console.log(data);
@@ -352,6 +353,7 @@ function ShowCommentInputBox() {
 function CancleCommentInputBox() {
     const CommentBoxPre = document.querySelector(".comment-input-box");
     CommentBoxPre?.remove()
+    window.CommentReplyTo = "";
 }
 
 function OnAddCommentButtonClick() {
@@ -375,9 +377,10 @@ function OnAddCommentButtonClick() {
                     return;
                 }
                 window.comment_token = token;
-                AddCommentAPI(article_id, author_input, email_address, content_input, function (result) {
+                AddCommentAPI(article_id,window.CommentReplyTo, author_input, email_address, content_input, function (result) {
                     if (result != "") {
                         console.log(result);
+                        window.CommentReplyTo = "";
                         alert("Comment added successfully!");
                         // remove comment input box
                         CancleCommentInputBox();
@@ -396,9 +399,10 @@ function OnAddCommentButtonClick() {
             alert("Please fill in all required fields.");
             return;
         }
-        AddCommentAPI(article_id, author_input, email_address, content_input, function (result) {
+        AddCommentAPI(article_id,window.CommentReplyTo, author_input, email_address, content_input, function (result) {
             if (result != "") {
                 console.log(result);
+                window.CommentReplyTo = "";
                 alert("Comment added successfully!");
                 // remove comment input box
                 CancleCommentInputBox();
@@ -409,6 +413,12 @@ function OnAddCommentButtonClick() {
             }
         });
     }
+}
+
+function OnReplyButtonClick(comment_id) {
+    console.log(comment_id);
+    window.CommentReplyTo = comment_id;
+    ShowCommentInputBox();
 }
 
 function isAvailableEmailAddress(email) {

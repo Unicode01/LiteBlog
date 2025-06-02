@@ -83,6 +83,30 @@ This is the content advisor configuration. It may used to avoid the XSS attack.
 - `filter_article`: This is a boolean value to enable or disable the article filter. Affect the `edit_article` `add_article` api.
 - `filter_comment`: This is a boolean value to enable or disable the comment filter. Affect the `add_comment` public api.
 - `filter_card`: This is a boolean value to enable or disable the card filter. Affect the `edit_card` `add_card` api.
+##### notify_config
+This is the notify configuration. It will send the notification to the target.
+- `enabled`: This is a boolean value to enable or disable the notify system.
+- `type`: This is the notify system type. Currently only support `smtp` `telegrambot`.
+- `trigger`: This is the trigger of the notify system. Currently only support `receive_comment`.
+- `smtp_config`: This is the smtp configuration.
+e.g.
+``` json
+{
+    "host": "smtp.gmail.com:587",
+    "username": "your_username",
+    "password": "your_password",
+    "from_addr": "your_email",
+    "to_addrs": ["receiver1_email", "receiver2_email"]
+}
+```
+- `telegrambot_config`: This is the telegrambot configuration.
+e.g.
+``` json
+{
+    "token": "your_token",
+    "chat_id": "your_chat_id"
+}
+```
 #### configs/global.json
 This configs are used to customize the front-end.
 #### configs/articles/*.json
@@ -153,7 +177,7 @@ Yes, Here is some example of the firewall rules:
 # Full static
 If you want to use it in full static mode, you can use `-static` flag to start the server. It will create a `static/public` directory and render all the pages to the directory. You can use nginx or other web server to serve the static files.
 - this will use your configs to generate the static file. So before generate static file. Make sure your configs are made for static mode.
-## Demo
+# Demo
 [Unicode LiteBlog](https://un1c0de.com)
-## License
+# License
 MIT

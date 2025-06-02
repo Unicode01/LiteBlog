@@ -1,5 +1,7 @@
 <div id="article-comment" class="article-comment" comment-id="{{comment_id}}">
-    <div id="comment-Author" class="comment-author">{{comment_author}}</div>
+    <div id="comment-Author" class="comment-author">{{comment_author}}
+        <button id="comment-Reply" class="comment-reply" onclick='OnReplyButtonClick("{{comment_id}}")'>Reply</button>
+    </div>
     <div id="comment-Date" class="comment-date">{{comment_date}}</div>
     <div id="comment-Content" class="comment-content">{{comment_content}}</div>
 </div>
