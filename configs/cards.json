@@ -5,7 +5,7 @@
             "card_link": "/articles/firstArticle",
             "card_title": "Card 1",
             "id": "1",
-            "order": "1",
+            "order": "2",
             "tags": "go tag1 tag2",
             "template": "card_template_classical"
         },
@@ -14,7 +14,7 @@
             "card_link": "https://www.google.com",
             "card_title": "Card 2",
             "id": "2",
-            "order": "2",
+            "order": "3",
             "tags": "go tag1 tag2",
             "template": "card_template_modern"
         },
@@ -32,7 +32,7 @@
             "card_link": "",
             "card_title": "Players",
             "id": "5",
-            "order": "3",
+            "order": "4",
             "tags": "",
             "template": "card_template_split_line"
         },
@@ -48,7 +48,7 @@
             "music_link": "your music link",
             "music_lyric_link": "your lyric link",
             "music_title": "music title",
-            "order": "4",
+            "order": "5",
             "tags": "go tag1 tag2",
             "template": "card_template_music_player_test"
         },
@@ -64,6 +64,16 @@
             "order": "0",
             "tags": "mytag1 mytag2",
             "template": "card_template_blogger_info"
+        },
+        {
+            "card_description": "",
+            "card_link": "",
+            "card_title": "Todo List",
+            "id": "9853217f6d6abf63194bcc994fbaf220",
+            "order": "1",
+            "tags": "",
+            "template": "card_template_todo_list",
+            "todo_list": "[2025.6.2](shanghai)|[2025.6.7](guangdong)|[](improve LiteBlog)|[2025.6.2](shanghai)|[2025.6.7](guangdong)|[](improve LiteBlog)|[2025.6.2](shanghai)|[2025.6.7](guangdong)|[](improve LiteBlog)|[2025.6.2](shanghai)|[2025.6.7](guangdong)|[](improve LiteBlog)"
         }
     ]
 }
