@@ -93,7 +93,7 @@ function logCardsDisplay() {
     });
 }
 
-window.onload = function() {
+window.addEventListener("DOMContentLoaded", function() {
     logCardsDisplay();
     AddTagListener();
     // get current tag and filter cards
@@ -101,4 +101,4 @@ window.onload = function() {
     if (currentTag) {
         CardsFliterTag(currentTag);
     };
-}
+});

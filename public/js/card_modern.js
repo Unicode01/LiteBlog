@@ -1,7 +1,7 @@
 if (!window._card_modern_loaded) {
     window._card_modern_loaded = true;
     
-    window.addEventListener("load", function() {
+    window.addEventListener("DOMContentLoaded", function() {
         card_modern_init();
     });
 }

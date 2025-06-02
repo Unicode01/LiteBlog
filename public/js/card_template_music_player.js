@@ -1,7 +1,7 @@
 if (!window._card_music_player_loaded) {
     window._card_music_player_loaded = true;
 
-    window.addEventListener("load", function () {
+    window.addEventListener("DOMContentLoaded", function () {
         window._cards_for_musics = [];
         card_music_player_init();
     });

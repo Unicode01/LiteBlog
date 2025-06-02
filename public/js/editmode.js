@@ -704,7 +704,7 @@ function onExportButtonClick() {
             template: document.getElementById('add-card-template').value.toString(),
             tags: document.getElementById('add-card-tags').value.toString(),
             order: document.querySelectorAll('.card-container').length.toString(),
-            id: window._edittingCardID.toString()
+            // id: window._edittingCardID.toString()
         };
         for (const key in customFields) {
             json[key] = customFields[key].toString();
