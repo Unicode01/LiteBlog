@@ -670,7 +670,7 @@ function RenderHighlight() {
     });
 }
 
-window.addEventListener('load', function () {
+window.addEventListener('DOMContentLoaded', function () {
     RenderOutline();
 });
 

@@ -1,7 +1,7 @@
 if (!window._card_classical_loaded) {
     window._card_classical_loaded = true;
     
-    window.addEventListener("load", function() {
+    window.addEventListener("DOMContentLoaded", function() {
         card_classical_init();
     });
 }
