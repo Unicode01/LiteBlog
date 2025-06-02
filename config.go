@@ -22,6 +22,7 @@ type AllConfig struct {
 	CommentCfg        CommentConfig        `json:"comment_config"`
 	LoggerCfg         LoggerConfig         `json:"logger_config"`
 	ContentAdvisorCfg ContentAdvisorConfig `json:"contentAdvisor_config"`
+	NotifyCfg         NotifyConfig         `json:"notify_config"`
 }
 
 type ServerConfig struct {
@@ -85,6 +86,23 @@ type ContentAdvisorConfig struct {
 	FilterComment bool `json:"filter_comment"`
 	FilterArticle bool `json:"filter_article"`
 	FilterCard    bool `json:"filter_card"`
+}
+
+type NotifyConfig struct {
+	Enabled    bool     `json:"enabled"`
+	Type       string   `json:"type"`
+	Trigger    []string `json:"trigger"`
+	SMTPConfig struct {
+		Host     string   `json:"host"`
+		UserName string   `json:"username"`
+		Password string   `json:"password"`
+		FromAddr string   `json:"from_addr"`
+		ToAddrs  []string `json:"to_addrs"`
+	} `json:"smtp_config"`
+	TelegramBotConfig struct {
+		Token  string `json:"token"`
+		ChatID string `json:"chat_id"`
+	} `json:"telegrambot_config"`
 }
 
 func ReadConfig() AllConfig {

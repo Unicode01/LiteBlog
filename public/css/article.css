@@ -79,6 +79,17 @@
     font-weight: 600;
     color: #2d3748;
     margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    #comment-Reply {
+        margin-left: 0.3rem;
+        font-size: 12px;
+        background: var(--base-gray-200);
+        color: var(--base-gray-700);
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
 }
 
 #comment-Date {

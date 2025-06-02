@@ -28,6 +28,8 @@ var (
 	fireWall           *firewall.Firewall
 	cacheManager       *CacheManager
 	deliverManager     *DeliverManager
+	notifyManager      *NotifyManager
+	notifyTriggerMap   = make(map[string]bool)
 	pathTraversalRegex = regexp.MustCompile(`(?i)(\.\./|\.\.\\)|(/etc/passwd|/bin/sh|/bin/bash)`)
 	LastCommentTime    time.Time
 	EncryptTokenKey    string
@@ -46,6 +48,7 @@ type articleJsonStruct struct {
 		Content  string `json:"content"`
 		Pub_Date string `json:"pub_date"`
 		ID       string `json:"id"`
+		ReplyTo  string `json:"reply_to"`
 	} `json:"comments"`
 }
 
@@ -58,6 +61,31 @@ func InitNetManager(config *ServerConfig) error {
 	cacheManager = NewCacheManager(Config.CacheCfg.MaxCacheSize, Config.CacheCfg.MaxCacheItems) // 2GB cache, 1 million cache item
 	// build deliver manager
 	deliverManager = NewDeliverManager(Config.DeliverCfg.Buffer, Config.DeliverCfg.Threads, context.Background())
+	// build notification manager
+	if Config.NotifyCfg.Enabled {
+		switch Config.NotifyCfg.Type {
+		case "smtp":
+			notifyManager = NewNotifyManager(
+				&NotifyTypeSMTP{
+					SmtpServer: Config.NotifyCfg.SMTPConfig.Host,
+					SmtpUser:   Config.NotifyCfg.SMTPConfig.UserName,
+					SmtpPass:   Config.NotifyCfg.SMTPConfig.Password,
+					FromEmail:  Config.NotifyCfg.SMTPConfig.FromAddr,
+					ToEmail:    Config.NotifyCfg.SMTPConfig.ToAddrs,
+				},
+			)
+		case "telegrambot":
+			notifyManager = NewNotifyManager(
+				&NotifyTypeTelegramBot{
+					BotToken: Config.NotifyCfg.TelegramBotConfig.Token,
+					ChatID:   Config.NotifyCfg.TelegramBotConfig.ChatID,
+				},
+			)
+		}
+		for _, trigger := range Config.NotifyCfg.Trigger {
+			notifyTriggerMap[trigger] = true
+		}
+	}
 	// init http server
 	if config.TlsConfig.Enabled {
 		// enable tls
@@ -858,6 +886,7 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 			Content  string `json:"content"`
 			Pub_Date string `json:"pub_date"`
 			ID       string `json:"id"`
+			ReplyTo  string `json:"reply_to"`
 		}, 0),
 	}
 	articleJsonBin, err := json.MarshalIndent(articleJson, "", "    ")
@@ -1328,6 +1357,7 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 		Content      string `json:"content"`
 		Author       string `json:"author"`
 		Email        string `json:"email"`
+		ReplyTo      string `json:"reply_to"`
 	}
 	var req commentRequest
 	err = json.Unmarshal(bodyBin, &req)
@@ -1397,12 +1427,14 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 		Content  string `json:"content"`
 		Pub_Date string `json:"pub_date"`
 		ID       string `json:"id"`
+		ReplyTo  string `json:"reply_to"`
 	}{
 		Author:   req.Author,
 		Email:    req.Email,
 		Content:  req.Content,
 		ID:       commentID,
 		Pub_Date: time.Now().Format("2006-01-02 15:04:05"),
+		ReplyTo:  req.ReplyTo,
 	})
 	articleJsonBin, err = json.MarshalIndent(articleJson, "", "    ")
 	if err != nil {
@@ -1425,6 +1457,25 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 			cacheManager.DelCacheItem("/articles/" + req.Article_id)
 		}
 	})
+	// check trigger
+	if Config.NotifyCfg.Enabled {
+		if notifyTriggerMap["receive_comment"] {
+			deliverManager.AddTask(func() {
+				// build message
+				message := "Article ID: " + req.Article_id + "\n"
+				message += "Article Title: " + articleJson.Title + "\n"
+				message += "Author: " + req.Author + "\n"
+				message += "Email: " + req.Email + "\n"
+				message += "Content: " + req.Content + "\n"
+				message += "Reply To: " + req.ReplyTo + "\n"
+				// send message
+				err := notifyManager.Notify("New Comment Received", message)
+				if err != nil {
+					fmt.Printf("Failed to send notification, %s\n", err)
+				}
+			})
+		}
+	}
 }
 
 func CFVerifyCheck(responseToken, userIP string) bool {

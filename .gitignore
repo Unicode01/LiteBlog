@@ -5,3 +5,4 @@ LiteBlog
 release
 static
 liteblog.log
+notificationManager_test.go
