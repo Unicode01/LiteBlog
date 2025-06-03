@@ -650,7 +650,7 @@ function RenderHighlight() {
         if (!document.getElementById("article-code-viewer-style")) {
             const highlight_style = document.createElement("link");
             highlight_style.id = "article-code-viewer-style";
-            highlight_style.href = "/css/light.highlight.css";
+            highlight_style.href = "/css/"+GetTheme()+".highlight.css";
             highlight_style.rel = "stylesheet";
             document.head.appendChild(highlight_style);
         }
