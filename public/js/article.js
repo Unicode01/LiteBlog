@@ -670,13 +670,35 @@ function RenderHighlight() {
     });
 }
 
-window.addEventListener('DOMContentLoaded', function () {
-    RenderOutline();
-});
+function SwitchToRemoveEditDate() {
+    // select article-date
+    const articleDate = document.querySelector('.article-date');
+    // select article-edit-date
+    const articleEditDate = document.querySelector('.article-edit-date');
+    // get article-edit-date text, remove 'ed. '
+    const articleEditDateText = articleEditDate.textContent.trim().slice(4);
+    // get article-date text, remove 'pub. '
+    const articleDateText = Array.from(articleDate.childNodes)
+    .filter(node => node.nodeType === 3)
+    .map(textNode => textNode.textContent.trim())
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .slice(5)
+    .slice(0,-1);
+    // compare article-edit-date and article-date
+    console.log(articleEditDateText, articleDateText);
+    if (articleEditDateText === articleDateText) {
+        // remove article-edit-date
+        articleEditDate.remove();
+    }
+}
 
 window.addEventListener('DOMContentLoaded', function () {
+    RenderOutline();
     RenderHighlight();
+    SwitchToRemoveEditDate();
 });
+
 
 addThemeSwitchBroadcastListener(function (theme) {
     const styleDom = document.querySelector('#article-code-viewer-style');
