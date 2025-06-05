@@ -49,6 +49,9 @@
 /* 日期样式 */
 .article-date {
     font-style: italic;
+    display: flex;
+    align-items: flex-end;
+    flex-direction: column;
 }
 
 /* 文章正文 */
