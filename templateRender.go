@@ -272,16 +272,15 @@ func renderarticle(articleID string) []byte {
 		bl := bluemonday.UGCPolicy()
 		article_html = bl.Sanitize(article_html)
 	}
-	if articlecfg.Edit_Date != articlecfg.Pub_Date {
-		articlecfg.Pub_Date = "ed. " + articlecfg.Edit_Date
-	}
+
 	// render article
 	rendered_article_html := RenderPageTemplate("article", map[string][]byte{
-		"article_title":   []byte(articlecfg.Title),
-		"article_author":  []byte(articlecfg.Author),
-		"article_content": []byte(article_html),
-		"article_date":    []byte(articlecfg.Pub_Date),
-		"comments":        comments_html,
+		"article_title":     []byte(articlecfg.Title),
+		"article_author":    []byte(articlecfg.Author),
+		"article_content":   []byte(article_html),
+		"article_date":      []byte(articlecfg.Pub_Date),
+		"article_edit_date": []byte(articlecfg.Edit_Date),
+		"comments":          comments_html,
 	})
 	return rendered_article_html
 }
