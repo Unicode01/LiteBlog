@@ -119,6 +119,10 @@ function OnContextMenu(event) {
                 menu_delete.innerHTML = '<a class="link" href="#">Delete Card</a>';
                 menu_delete.addEventListener('click', function (event) {
                     event.preventDefault();
+                    // show confirm dialog
+                    if (!confirm("Are you sure to delete this card?")) {
+                        return;
+                    }
                     if (DeleteCard(card.getAttribute("card-id"))) {
                         console.log("card deleted");
                         // reload window
@@ -257,6 +261,10 @@ function OnContextMenu(event) {
         menu_delete.innerHTML = '<a class="link" href="#">Delete Article</a>';
         menu_delete.addEventListener('click', function (event) {
             event.preventDefault();
+            // show confirm dialog
+            if (!confirm("Are you sure to delete this article?")) {
+                return;
+            }
             DeleteArticleAPI(location.pathname.split('/')[2], function (result) {
                 if (result) {
                     console.log("article deleted");
@@ -301,6 +309,10 @@ function OnContextMenu(event) {
                 menu_deletecomment.innerHTML = '<a class="link" href="#">Delete Comment</a>';
                 menu_deletecomment.addEventListener('click', function (event) {
                     event.preventDefault();
+                    // show confirm dialog
+                    if (!confirm("Are you sure to delete this comment?")) {
+                        return;
+                    }
                     const comment_id = comment_dom.getAttribute("comment-id");
                     DeleteCommentAPI(comment_id, function (result) {
                         if (result) {

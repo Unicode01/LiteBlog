@@ -2,7 +2,7 @@
 LiteBlog is a blog system written in Golang,html,css,js. Aim to provide a simple, easy-to-use, highly customizable and lightweight blog system.
 ## Features
 - Simple, Lightweight and easy-to-use interface
-- Markdown and HTML support (with [markedJS](https://github.com/markedjs/marked))
+- Markdown and HTML support (with [markedJS](https://github.com/markedjs/marked) and [highlightJS](https://github.com/highlightjs/highlight.js))
 - own script and style injection support
 - comment system support
 - specialized full caching system for blog and asynchronous caching mechanism
@@ -39,7 +39,7 @@ Here is a example to run liteblog with docker, and mount the `configs` directory
 If you want to change `public` or `templates` directory, you can mount it to the container using `-v` option.
 - Before build the docker image, you should run following command to install the dependencies.
 ```bash
-apt update && apt install -y golang git zip docker.io docker-compose
+apt update && apt install -y golang git zip docker.io
 ```
 ```bash
 git clone https://github.com/LiteBlog/LiteBlog.git
