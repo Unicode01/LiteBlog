@@ -1,0 +1,69 @@
+.card-container.card-photo-album {
+    --album-width: 500px;
+    --album-height: 300px;
+    margin: 41px;
+    width: var(--album-width);
+    height: var(--album-height);
+    border-radius: 10px;
+    box-shadow: 0 0 10px var(--base-gray-200);
+    overflow: hidden;
+    display: grid;
+    background-size: 100% 100%;
+    grid-template-areas: "stack";
+    z-index: 1;
+
+    .photo-container {
+        position: static;
+        width: 100%;
+        height: 100%;
+        grid-area: stack;
+        border-radius: 10px;
+        overflow: hidden;
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: column;
+
+        .photo {
+            width: 100%;
+            height: 100%;
+
+            img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+        }
+        .prev {
+            transform: scale(0.8);
+        }
+        .current {
+
+        }
+        .next {
+            transform: scale(0.8);
+        }
+    }
+
+    .controll-container {
+        position: static;
+        grid-area: stack;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 2;
+
+        .prev-btn {
+            width: 40px;
+            height: 100%;
+            color: var(--base-gray-200);
+            cursor: pointer;
+        }
+
+        .next-btn {
+            width: 40px;
+            height: 100%;
+            color: var(--base-gray-200);
+            cursor: pointer;
+        }
+    }
+}

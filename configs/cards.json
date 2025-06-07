@@ -5,7 +5,7 @@
             "card_link": "/articles/firstArticle",
             "card_title": "Card 1",
             "id": "1",
-            "order": "2",
+            "order": "3",
             "tags": "go tag1 tag2",
             "template": "card_template_classical"
         },
@@ -14,7 +14,7 @@
             "card_link": "https://www.google.com",
             "card_title": "Card 2",
             "id": "2",
-            "order": "3",
+            "order": "4",
             "tags": "go tag1 tag2",
             "template": "card_template_modern"
         },
@@ -32,7 +32,7 @@
             "card_link": "",
             "card_title": "Players",
             "id": "5",
-            "order": "4",
+            "order": "5",
             "tags": "",
             "template": "card_template_split_line"
         },
@@ -48,7 +48,7 @@
             "music_link": "your music link",
             "music_lyric_link": "your lyric link",
             "music_title": "music title",
-            "order": "5",
+            "order": "6",
             "tags": "go tag1 tag2",
             "template": "card_template_music_player_test"
         },
@@ -62,7 +62,7 @@
             "card_title": "",
             "id": "f12b2f9b0f54838579d280a864f0826c",
             "order": "0",
-            "tags": "mytag1 mytag2",
+            "tags": "",
             "template": "card_template_blogger_info"
         },
         {
@@ -74,6 +74,16 @@
             "tags": "",
             "template": "card_template_todo_list",
             "todo_list": "[2025.6.2](shanghai)|[2025.6.7](guangdong)|[](improve LiteBlog)|[2025.6.2](shanghai)|[2025.6.7](guangdong)|[](improve LiteBlog)|[2025.6.2](shanghai)|[2025.6.7](guangdong)|[](improve LiteBlog)|[2025.6.2](shanghai)|[2025.6.7](guangdong)|[](improve LiteBlog)"
+        },
+        {
+            "album": "https://cr.un1c0de.com/f/779tY/111063093_p0_compressed.webp|https://cr.un1c0de.com/f/1DCz/124634902_p0.png",
+            "card_description": "",
+            "card_link": "",
+            "card_title": "",
+            "id": "f36630a171f3d4365ea87904785fcac0",
+            "order": "2",
+            "tags": "",
+            "template": "card_template_photo_album"
         }
     ]
 }

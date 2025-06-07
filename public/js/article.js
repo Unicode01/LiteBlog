@@ -686,7 +686,7 @@ function SwitchToRemoveEditDate() {
     .slice(5)
     .slice(0,-1);
     // compare article-edit-date and article-date
-    console.log(articleEditDateText, articleDateText);
+    // console.log(articleEditDateText, articleDateText);
     if (articleEditDateText === articleDateText) {
         // remove article-edit-date
         articleEditDate.remove();
