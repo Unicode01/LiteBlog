@@ -30,7 +30,7 @@ var (
 	deliverManager     *DeliverManager
 	notifyManager      *NotifyManager
 	notifyTriggerMap   = make(map[string]bool)
-	pathTraversalRegex = regexp.MustCompile(`(?i)(\.\./|\.\.\\)|(/etc/passwd|/bin/sh|/bin/bash)`)
+	pathTraversalRegex = regexp.MustCompile(`(?i)(\.\./|\.\.\\)|(/etc/passwd|/bin/sh|/bin/bash|/\.env)`)
 	LastCommentTime    time.Time
 	EncryptTokenKey    string
 )
@@ -1023,6 +1023,11 @@ func backendHandler_delete_article(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
+	// check if ID is valid
+	if pathTraversalRegex.MatchString(req.ID) {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	// delete article
 	articleJsonPath := "configs/articles/" + req.ID + ".json"
 	err = os.Remove(articleJsonPath)
@@ -1065,6 +1070,11 @@ func backendHandler_get_article(w http.ResponseWriter, r *http.Request) {
 	// check token
 	if !checkToken(req.Token) {
 		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	// check if ID is valid
+	if pathTraversalRegex.MatchString(req.ID) {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	// get article

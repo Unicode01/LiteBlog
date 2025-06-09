@@ -768,10 +768,13 @@ function AddCardAPI(cardJson, callback) {
         });
 }
 
-function GetAccessPathAndToken() {
+function GetAccessPathAndToken(DisableAsk) {
     let path = localStorage.getItem("access_path");
     let token = localStorage.getItem("access_token");
     if (path === null || token === null) {
+        if (DisableAsk) {
+            return null;
+        }
         const newPath = prompt("Enter the access path (e.g. accessBackend):");
         if (newPath === null) return null;
         const newToken = prompt("Enter the access token:");
