@@ -77,11 +77,13 @@
         },
         {
             "album": "https://cr.un1c0de.com/f/779tY/111063093_p0_compressed.webp|https://cr.un1c0de.com/f/q6fQ/118263185_p0.png|https://cr.un1c0de.com/f/jvIB/120963406_p0.png|https://cr.un1c0de.com/f/o8h7/119800538_p0.jpg",
+            "auto_shift": "-",
             "card_description": "",
             "card_link": "",
             "card_title": "",
             "id": "f36630a171f3d4365ea87904785fcac0",
             "order": "2",
+            "preload_all": "true",
             "tags": "",
             "template": "card_template_photo_album"
         }

@@ -8,7 +8,6 @@ if (!window._card_photo_album_loaded) {
 }
 
 function card_photo_album_init() {
-
     var card_photo_album = document.querySelectorAll(".card-photo-album");
     card_photo_album.forEach(function (card) {
         var photo_container = card.querySelector(".photo-container");
@@ -25,7 +24,7 @@ function card_photo_album_init() {
         card.album_total = data.album.length;
         var i = 0;
         data.album.forEach(function (photo_url) {
-            if (i < 2) { // render first 2 photos
+            if (data.preloadAll || i < 2) { // render first 2 photos or all photos
                 var photo = document.createElement("div");
                 photo.classList.add("photo");
                 var photo_img = document.createElement("img");
@@ -55,6 +54,9 @@ function card_photo_album_init() {
                         set_photo_album_container_rect(card, card.photo_rect[photo_url].width, card.photo_rect[photo_url].height);
                     }
                 });
+                photo_img.addEventListener("click", function (e) {
+                    show_big_photo(photo_url);
+                });
                 card.photo_list.push({
                     dom: photo,
                     url: photo_url
@@ -71,6 +73,9 @@ function card_photo_album_init() {
 
             if (card.album_index < 1) { // if first photo
                 console.log("first photo")
+                // reset album transfrom
+                card.current_x = 0;
+                card.querySelector(".photo-container").style.transform = "translateX(-" + card.current_x + "px)";
                 return;
             }
             prevIndex = card.album_index-1;
@@ -97,6 +102,15 @@ function card_photo_album_init() {
 
             if (card.album_total < card.album_index+2) { // if last photo
                 console.log("last photo")
+                // reset album transfrom
+                card.current_x = 0;
+                prevWidth = 0;
+                data.album.forEach(function (photo_url) {
+                    card.current_x += prevWidth;
+                    prevWidth = card.photo_rect[photo_url].width;
+                });
+                
+                card.querySelector(".photo-container").style.transform = "translateX(-" + card.current_x + "px)";
                 return;
             }
             nextIndex = card.album_index+1;
@@ -138,6 +152,9 @@ function card_photo_album_init() {
                     photo.style.width = card.photo_rect[card.album_data.album[nextIndex+1]].width + "px";
                     photo.style.height = card.photo_rect[card.album_data.album[nextIndex+1]].height + "px";
                 }); 
+                photo.addEventListener("click", function () {
+                    show_big_photo(card.album_data.album[nextIndex+1]);
+                });
                 card.photo_list.push({
                     dom: photo,
                     url: card.album_data.album[nextIndex+1]
@@ -162,6 +179,7 @@ function get_photo_album_data(card_photo_album) {
     var ret = {}
     ret.album = info_container.getAttribute("data-album").split("|");
     ret.autoShift = parseInt(info_container.getAttribute("data-auto-shift"));
+    ret.preloadAll = info_container.getAttribute("data-preload-all") == "true";
     // remove info container
     info_container.remove();
     return ret;
@@ -183,4 +201,27 @@ function autoShift(card_photo_album,sec) {
             }
         }
     }, sec*1000);
+}
+
+function show_big_photo(photo_url) {
+    // remove big photo container if exist
+    const big_photo_container_old = document.querySelector(".big-photo-container");
+    big_photo_container_old?.remove();
+    console.log("show big photo", photo_url);
+    // create big photo container
+    var big_photo_container = document.createElement("div");
+    big_photo_container.classList.add("big-photo-container");
+    var big_photo_img = document.createElement("img");
+    big_photo_img.src = photo_url;
+    big_photo_container.appendChild(big_photo_img);
+    document.body.appendChild(big_photo_container);
+    // add event listener to close big photo
+    big_photo_container.addEventListener("click", function (event) {
+        big_photo_container.remove();
+    });
+    big_photo_container.addEventListener("contextmenu", function (event) { // prevent right click menu
+        // prevent event transfer to parent
+        // event.preventDefault();
+        event.stopPropagation();
+    });
 }

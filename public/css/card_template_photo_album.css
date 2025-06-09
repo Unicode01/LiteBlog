@@ -54,12 +54,14 @@
         justify-content: space-between;
         align-items: center;
         z-index: 2;
+        pointer-events: none;
 
         .prev-btn {
             width: 40px;
             height: 100%;
             color: var(--base-gray-200);
             cursor: pointer;
+            pointer-events: auto;
         }
 
         .next-btn {
@@ -67,6 +69,23 @@
             height: 100%;
             color: var(--base-gray-200);
             cursor: pointer;
+            pointer-events: auto;
         }
+    }
+}
+
+.big-photo-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 9999;
+    overflow: auto;
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
     }
 }
