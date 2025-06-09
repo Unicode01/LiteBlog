@@ -98,7 +98,7 @@ window.addEventListener("DOMContentLoaded", function() {
     AddTagListener();
     // get current tag and filter cards
     const currentTag = GetCurrentTag();
-    if (currentTag) {
+    if (currentTag.slice(0, 4) == 'tag-') {
         CardsFliterTag(currentTag);
     };
 });

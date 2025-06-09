@@ -425,6 +425,9 @@ function OnHistoryButtonClick() {
             localStorage.setItem('history', JSON.stringify(historyItems));
         }
         historyItems.forEach(function (item) {
+            if (item.url == "" || item.title == "") {
+                return;
+            }
             const menu_item = document.createElement('div');
             menu_item.classList.add('menu-item');
             menu_item.innerHTML = '<a class="link" href="' + item.url + '">' + item.title + '</a>';

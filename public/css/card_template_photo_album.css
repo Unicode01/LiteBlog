@@ -10,6 +10,7 @@
     display: grid;
     background-size: 100% 100%;
     grid-template-areas: "stack";
+    transition: all 0.3s ease-in-out;
     z-index: 1;
 
     .photo-container {
@@ -18,14 +19,15 @@
         height: 100%;
         grid-area: stack;
         border-radius: 10px;
-        overflow: hidden;
+        /* overflow: hidden; */
         display: flex;
-        flex-wrap: wrap;
-        flex-direction: column;
+        flex-wrap: nowrap;
+        transition: all 0.3s ease-in-out;
 
         .photo {
-            width: 100%;
+            width: var(--album-width);
             height: 100%;
+            transition: all 0.3s ease-in-out;
 
             img {
                 width: 100%;
@@ -45,6 +47,7 @@
     }
 
     .controll-container {
+        width: var(--album-width);
         position: static;
         grid-area: stack;
         display: flex;
