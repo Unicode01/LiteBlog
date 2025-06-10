@@ -76,7 +76,8 @@ body {
     /* min-width: auto; */
     overflow: hidden;
     z-index: 1000;
-    transform: scale(0);
+    /* height: 0px; */
+    /* transform: scale(0); */
     transform-origin: left top;
     transition: all 0.3s ease-in-out;
 }
@@ -88,15 +89,18 @@ body {
     background: var(--base-white);
     backdrop-filter: blur(10px);
     border: 1px solid var(--base-gray-200);
+    /* height: 0px; */
     /* min-width: auto; */
     overflow: hidden;
     z-index: 1000;
+    transition: all 0.3s ease-in-out;
 }
 
 .menu-item {
     box-sizing: border-box;
     display: block;
     width: 100%;
+    flex: 0 0 auto;
     background-color: var(--base-white);
     padding: 6px 12px;
     border: none;

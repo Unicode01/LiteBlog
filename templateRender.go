@@ -272,16 +272,23 @@ func renderarticle(articleID string) []byte {
 		bl := bluemonday.UGCPolicy()
 		article_html = bl.Sanitize(article_html)
 	}
-
-	// render article
-	rendered_article_html := RenderPageTemplate("article", map[string][]byte{
+	basicRenderMap := map[string][]byte{
 		"article_title":     []byte(articlecfg.Title),
 		"article_author":    []byte(articlecfg.Author),
 		"article_content":   []byte(article_html),
 		"article_date":      []byte(articlecfg.Pub_Date),
 		"article_edit_date": []byte(articlecfg.Edit_Date),
 		"comments":          comments_html,
-	})
+	}
+	extraFlagsList := articlecfg.ExtraFlags
+	for k, v := range extraFlagsList {
+		if basicRenderMap[k] != nil {
+			continue
+		}
+		basicRenderMap[k] = []byte(v)
+	}
+	// render article
+	rendered_article_html := RenderPageTemplate("article", basicRenderMap)
 	return rendered_article_html
 }
 
@@ -292,8 +299,15 @@ func generateEncryptToken(token, encryptKey string, timestampBase64 string) stri
 	// fmt.Printf("encoded: %s\n", encoded)
 	tokenArray := []byte(encoded)
 
+	xorshiftSeed := uint32(2166136261) // FNV偏移基础值
+	for _, b := range tokenArray {
+		xorshiftSeed = (xorshiftSeed * 16777619) ^ uint32(b)
+	}
+	xorshift, _ := NewXorshift32(xorshiftSeed)
+	// fmt.Printf("xorshiftSeed: %d\n", xorshiftSeed)
+
 	getRandomChar := func(seed int) byte {
-		return byte(33 + (seed % 94))
+		return byte(33 + ((seed + int(xorshift.Next())) % 94))
 	}
 
 	for i := 0; i < len(encryptKey); i++ {
@@ -311,7 +325,12 @@ func generateEncryptToken(token, encryptKey string, timestampBase64 string) stri
 			}
 
 		case 2:
-			insertPos := charCode % (len(tokenArray) + 1)
+			mod := xorshift.Next() % uint32(len(tokenArray)+1)
+			if mod == 0 {
+				mod = 1
+			}
+			insertPos := uint32(charCode) % mod
+			// fmt.Printf("insertPos: %d\n", insertPos)
 			char1 := getRandomChar(charCode)
 			char2 := getRandomChar(charCode + 997)
 			tokenArray = append(tokenArray[:insertPos], append([]byte{char1, char2}, tokenArray[insertPos:]...)...)
@@ -331,7 +350,7 @@ func generateEncryptToken(token, encryptKey string, timestampBase64 string) stri
 
 	finalShuffle := make([]byte, 0, len(tokenArray))
 	for len(tokenArray) > 0 {
-		randIndex := (len(encryptKey) * len(tokenArray)) % len(tokenArray)
+		randIndex := int(xorshift.Next()) % len(tokenArray)
 		finalShuffle = append(finalShuffle, tokenArray[randIndex])
 		tokenArray = append(tokenArray[:randIndex], tokenArray[randIndex+1:]...)
 	}

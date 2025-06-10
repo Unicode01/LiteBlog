@@ -77,8 +77,17 @@ function OnContextMenu(event) {
     document.body.appendChild(context_menu_doc);
     // force rerender
     context_menu_doc.offsetHeight;
-    // set scale to 1
-    context_menu_doc.style.transform = "scale(1)";
+    // get menu height
+    var menu_height = context_menu_doc.offsetHeight;
+    // force rerender
+    context_menu_doc.offsetHeight;
+    // set menu height
+    context_menu_doc.style.height = '0px';
+    // force rerender
+    context_menu_doc.offsetHeight;
+    // set menu height
+    context_menu_doc.style.height = menu_height + 'px';
+    // context_menu_doc.style.transform = "scale(1)";
 
 }
 
@@ -227,11 +236,24 @@ function addContextMenuListener() {
     addContextMenuItem(function (event) {
         // check if in edit mode
         const editmodeExist = document.getElementById('edit-button');
-        if (editmodeExist && (location.pathname == '/index.html' || location.pathname === '/')) {
+        if (editmodeExist && !window._editMode && (location.pathname == '/index.html' || location.pathname === '/')) {
             return true;
         }
         return false;
     }, "Edit Mode", function (event) {
+        event.preventDefault();
+        var editmode = document.getElementById('edit-button');
+        editmode?.click();
+    });
+    // add exit edit mode option
+    addContextMenuItem(function (event) {
+        // check if in edit mode
+        const editmodeExist = document.getElementById('edit-button');
+        if (editmodeExist && window._editMode && (location.pathname == '/index.html' || location.pathname === '/')) {
+            return true;
+        }
+        return false;
+    }, "Exit Edit Mode", function (event) {
         event.preventDefault();
         var editmode = document.getElementById('edit-button');
         editmode?.click();
@@ -410,6 +432,18 @@ function OnHistoryButtonClick() {
         menu_doc.style.top = menu_y + 'px';
         // append to body
         document.body.appendChild(menu_doc);
+        // force rerender
+        menu_doc.offsetHeight;
+        // get menu height
+        const menu_height = menu_doc.offsetHeight;
+        // force rerender
+        menu_doc.offsetHeight;
+        // set menu height
+        menu_doc.style.height = '0px';
+        // force rerender
+        menu_doc.offsetHeight;
+        // set menu height
+        menu_doc.style.height = menu_height + 'px';
 
     }
 }
