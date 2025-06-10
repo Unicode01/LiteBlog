@@ -7,8 +7,8 @@ function EnterEditMode() {
         return;
     }
     const { path, token } = result;
-    console.log("Access path: " + path);
-    console.log("Access token: " + token);
+    // console.log("Access path: " + path);
+    // console.log("Access token: " + token);
 
     if (window._editMode) {
         // save changes
@@ -169,8 +169,8 @@ function DeleteCard(cardID) {
         return false;
     }
     const { path, token } = result;
-    console.log("Access path: " + path);
-    console.log("Access token: " + token);
+    // console.log("Access path: " + path);
+    // console.log("Access token: " + token);
     const api_dic = window.location.origin + "/" + path;
     const api_delete_card = api_dic + "/delete_card";
     const data = {
@@ -225,8 +225,8 @@ function GetCardJsonAPI(cardID, callback) {
         return false;
     }
     const { path, token } = result;
-    console.log("Access path: " + path);
-    console.log("Access token: " + token);
+    // console.log("Access path: " + path);
+    // console.log("Access token: " + token);
     const api_dic = window.location.origin + "/" + path;
     const api_get_card = api_dic + "/get_card";
     const data = {
@@ -263,8 +263,8 @@ function EditCardAPI(cardJson, callback) {
         return false;
     }
     const { path, token } = result;
-    console.log("Access path: " + path);
-    console.log("Access token: " + token);
+    // console.log("Access path: " + path);
+    // console.log("Access token: " + token);
     const api_dic = window.location.origin + "/" + path;
     const api_edit_card = api_dic + "/edit_card";
     const data = {
@@ -302,8 +302,8 @@ function GetCustomSettingsAPI(callback) {
         return false;
     }
     const { path, token } = result;
-    console.log("Access path: " + path);
-    console.log("Access token: " + token);
+    // console.log("Access path: " + path);
+    // console.log("Access token: " + token);
     const api_dic = window.location.origin + "/" + path;
     const api_get_custom_settings = api_dic + "/get_custom_settings";
     const data = {
@@ -339,8 +339,8 @@ function EditCustomSettingsAPI(customSettings, callback) {
         return false;
     }
     const { path, token } = result;
-    console.log("Access path: " + path);
-    console.log("Access token: " + token);
+    // console.log("Access path: " + path);
+    // console.log("Access token: " + token);
     const api_dic = window.location.origin + "/" + path;
     const api_edit_custom_settings = api_dic + "/edit_custom_settings";
     const data = {
@@ -735,8 +735,8 @@ function AddCardAPI(cardJson, callback) {
         return false;
     }
     const { path, token } = result;
-    console.log("Access path: " + path);
-    console.log("Access token: " + token);
+    // console.log("Access path: " + path);
+    // console.log("Access token: " + token);
     const api_dic = window.location.origin + "/" + path;
     const api_add_card = api_dic + "/add_card";
     const data = {
@@ -796,11 +796,17 @@ function generateEncryptToken(token) {
     const timestampB64 = btoa(timestamp.toString());
     // console.log(timestampB64);
     encryptKey = encryptKey + timestampB64;
-    console.log(token + "|" + encryptKey)
     let tokenArray = Array.from(btoa(token + "|" + encryptKey));
+    let XorshiftSeed = 2166136261 >>> 0;
 
-    const getRandomChar = (seed) => String.fromCharCode(33 + (seed % 94));
-
+    for (let i = 0; i < tokenArray.length; i++) {
+        XorshiftSeed = Math.imul(XorshiftSeed, 16777619);
+        XorshiftSeed = (XorshiftSeed ^ tokenArray[i].charCodeAt(0)) >>> 0;
+    }
+    // console.log("XorshiftSeed: " + XorshiftSeed);
+    const xorshift = new Xorshift32(XorshiftSeed);
+    
+    const getRandomChar = (seed) => String.fromCharCode(33 + ((seed+xorshift.next()) % 94));
 
     for (let i = 0; i < encryptKey.length; i++) {
         const charCode = encryptKey.charCodeAt(i);
@@ -819,7 +825,13 @@ function generateEncryptToken(token) {
                 break;
 
             case 2:
-                tokenArray.splice(charCode % (tokenArray.length + 1), 0,
+                mod = xorshift.next() % (tokenArray.length+1);
+                if (mod == 0) {
+                    mod = 1;
+                }
+                insertPos = charCode % mod
+                // console.log("insertPos: " + insertPos);
+                tokenArray.splice(insertPos, 0,
                     getRandomChar(charCode),
                     getRandomChar(charCode + 997)
                 );
@@ -841,11 +853,31 @@ function generateEncryptToken(token) {
 
     const finalShuffle = [];
     while (tokenArray.length > 0) {
-        const randIndex = (encryptKey.length * tokenArray.length) % tokenArray.length;
+        const randIndex = xorshift.next() % tokenArray.length;
         finalShuffle.push(tokenArray.splice(randIndex, 1)[0]);
     }
 
     return finalShuffle.join('');
+}
+
+class Xorshift32 {
+    constructor(seed) {
+        if (seed === 0) throw new Error("Seed cannot be zero");
+        this.state = seed >>> 0;
+    }
+
+    next() {
+        let x = this.state;
+        x ^= x << 13;
+        x ^= x >>> 17;
+        x ^= x << 5;
+        this.state = x >>> 0;
+        return this.state;
+    }
+
+    random() {
+        return this.next() / 0x100000000;
+    }
 }
 
 function AddEditButtonListener() {

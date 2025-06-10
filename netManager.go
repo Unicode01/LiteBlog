@@ -36,12 +36,13 @@ var (
 )
 
 type articleJsonStruct struct {
-	Title       string `json:"title"`
-	Content     string `json:"content"`
-	ContentHTML string `json:"content_html"`
-	Author      string `json:"author"`
-	Edit_Date   string `json:"edit_date"`
-	Pub_Date    string `json:"pub_date"`
+	Title       string            `json:"title"`
+	Content     string            `json:"content"`
+	ContentHTML string            `json:"content_html"`
+	Author      string            `json:"author"`
+	Edit_Date   string            `json:"edit_date"`
+	Pub_Date    string            `json:"pub_date"`
+	ExtraFlags  map[string]string `json:"extra_flags"`
 	Comments    []struct {
 		Author   string `json:"author"`
 		Email    string `json:"email"`
@@ -813,10 +814,11 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 	type articlerequest struct {
 		Token   string `json:"token"`
 		Article struct {
-			Title       string `json:"title"`
-			Content     string `json:"content"`
-			ContentHTML string `json:"content_html"`
-			Author      string `json:"author"`
+			Title       string            `json:"title"`
+			Content     string            `json:"content"`
+			ContentHTML string            `json:"content_html"`
+			Author      string            `json:"author"`
+			ExtraFlags  map[string]string `json:"extra_flags"`
 		} `json:"article"`
 	}
 	var req articlerequest
@@ -880,6 +882,7 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 		Author:      req.Article.Author,
 		Edit_Date:   time.Now().Format("2006-01-02 15:04:05"),
 		Pub_Date:    time.Now().Format("2006-01-02 15:04:05"),
+		ExtraFlags:  req.Article.ExtraFlags,
 		Comments: make([]struct {
 			Author   string `json:"author"`
 			Email    string `json:"email"`
@@ -930,11 +933,12 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 	type articlerequest struct {
 		Token   string `json:"token"`
 		Article struct {
-			ID          string `json:"article_id"`
-			Title       string `json:"title"`
-			Content     string `json:"content"`
-			ContentHTML string `json:"content_html"`
-			Author      string `json:"author"`
+			ID          string            `json:"article_id"`
+			Title       string            `json:"title"`
+			Content     string            `json:"content"`
+			ContentHTML string            `json:"content_html"`
+			Author      string            `json:"author"`
+			ExtraFlags  map[string]string `json:"extra_flags"`
 		} `json:"article"`
 	}
 	var req articlerequest
@@ -975,6 +979,7 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 	articleJson.Content = req.Article.Content
 	articleJson.ContentHTML = req.Article.ContentHTML
 	articleJson.Author = req.Article.Author
+	articleJson.ExtraFlags = req.Article.ExtraFlags
 	articleJson.Edit_Date = time.Now().Format("2006-01-02 15:04:05")
 	articleJsonBin, err = json.MarshalIndent(articleJson, "", "    ")
 	if err != nil {
@@ -1673,4 +1678,26 @@ func checkToken(token string) bool {
 		}
 	}
 	return false
+}
+
+type Xorshift32 struct {
+	state uint32
+}
+
+func NewXorshift32(seed uint32) (*Xorshift32, error) {
+	if seed == 0 {
+		return nil, fmt.Errorf("seed cannot be zero")
+	}
+	return &Xorshift32{state: seed}, nil
+}
+
+func (x *Xorshift32) Next() uint32 {
+	x.state ^= x.state << 13
+	x.state ^= x.state >> 17
+	x.state ^= x.state << 5
+	return x.state
+}
+
+func (x *Xorshift32) Random() float64 {
+	return float64(x.Next()) / float64(1<<32)
 }

@@ -7,15 +7,15 @@ var Goole_reCaptcha_Site_key = "{{global:google_site_key}}"
 var comment_check_type = "{{global:comment_check_type}}"
 // end of render variable
 
-function AddArticleAPI(title, author, content, contentHTML, callback) {
+function AddArticleAPI(title, author, content, contentHTML,extraFlags, callback) {
     const result = GetAccessPathAndToken();
     if (!result) {
         console.log("Access path and token are required.");
         return false;
     }
     const { path, token } = result;
-    console.log("Access path: " + path);
-    console.log("Access token: " + token);
+    // console.log("Access path: " + path);
+    // console.log("Access token: " + token);
     const api_dic = window.location.origin + "/" + path;
     const api_add_article = api_dic + "/add_article";
     const data = {
@@ -24,7 +24,8 @@ function AddArticleAPI(title, author, content, contentHTML, callback) {
             title: title,
             author: author,
             content: content,
-            content_html: contentHTML
+            content_html: contentHTML,
+            extra_flags: extraFlags
         }
     }
     console.log(data);
@@ -51,15 +52,15 @@ function AddArticleAPI(title, author, content, contentHTML, callback) {
         });
 }
 
-function EditArticleAPI(article_id, title, author, content, contentHTML, callback) {
+function EditArticleAPI(article_id, title, author, content, contentHTML, extraFlags, callback) {
     const result = GetAccessPathAndToken();
     if (!result) {
         console.log("Access path and token are required.");
         return false;
     }
     const { path, token } = result;
-    console.log("Access path: " + path);
-    console.log("Access token: " + token);
+    // console.log("Access path: " + path);
+    // console.log("Access token: " + token);
     const api_dic = window.location.origin + "/" + path;
     const api_edit_article = api_dic + "/edit_article";
     const data = {
@@ -69,7 +70,8 @@ function EditArticleAPI(article_id, title, author, content, contentHTML, callbac
             title: title,
             author: author,
             content: content,
-            content_html: contentHTML
+            content_html: contentHTML,
+            extra_flags: extraFlags
         }
     }
     console.log(data);
@@ -103,8 +105,8 @@ function GetArticleAPI(article_id, callback) {
         return false;
     }
     const { path, token } = result;
-    console.log("Access path: " + path);
-    console.log("Access token: " + token);
+    // console.log("Access path: " + path);
+    // console.log("Access token: " + token);
     const api_dic = window.location.origin + "/" + path;
     const api_get_article = api_dic + "/get_article";
     const data = {
@@ -177,8 +179,8 @@ function DeleteCommentAPI(comment_id, callback) {
         return false;
     }
     const { path, token } = result;
-    console.log("Access path: " + path);
-    console.log("Access token: " + token);
+    // console.log("Access path: " + path);
+    // console.log("Access token: " + token);
     const api_dic = window.location.origin + "/" + path;
     const api_delete_comment = api_dic + "/delete_comment";
     const data = {
@@ -217,8 +219,8 @@ function DeleteArticleAPI(article_id, callback) {
         return false;
     }
     const { path, token } = result;
-    console.log("Access path: " + path);
-    console.log("Access token: " + token);
+    // console.log("Access path: " + path);
+    // console.log("Access token: " + token);
     const api_dic = window.location.origin + "/" + path;
     const api_delete_article = api_dic + "/delete_article";
     const data = {
@@ -265,7 +267,7 @@ function SaveArticle() {
     // check if in /addarticle.html
     if (location.pathname === "/addarticle.html") {
         // add article
-        AddArticleAPI(editor_title, author_input, markdown_input, rendered_content, function (result) {
+        AddArticleAPI(editor_title, author_input, markdown_input, rendered_content,{"loc":"en"}, function (result) {
             if (result != "") {
                 console.log(result);
                 alert("Article added successfully!");
@@ -281,7 +283,7 @@ function SaveArticle() {
     } else if (location.pathname === "/editarticle.html") {
         article_id = getQueryVariable("article_id");
         // edit article
-        EditArticleAPI(article_id, editor_title, author_input, markdown_input, rendered_content, function (result) {
+        EditArticleAPI(article_id, editor_title, author_input, markdown_input, rendered_content,{"loc":"en"}, function (result) {
             if (result != "") {
                 alert("Article edited successfully!");
                 console.log(result);
