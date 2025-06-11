@@ -223,11 +223,10 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	renderList := []string{".js", ".css", ".html", ".xml"}
 	// check if file is renderable
 	if file_ext == "" || !strings.Contains(strings.Join(renderList, "|"), file_ext) { // not render file
-		content_type := GetContentType(r.URL.Path)
-		w.Header().Set("Content-Type", content_type)
 		file, err := os.OpenFile("public"+r.URL.Path, os.O_RDONLY, 0) // check file exist
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			f, err := os.Open("public/404.html")
 			if err != nil {
 				w.Write([]byte("404 Not Found"))
@@ -237,6 +236,8 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			f.Close()
 			return
 		}
+		content_type := GetContentType(r.URL.Path)
+		w.Header().Set("Content-Type", content_type)
 		defer file.Close()
 		io.Copy(w, file) // directly serve file
 		return
