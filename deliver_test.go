@@ -1,7 +1,7 @@
 package main_test
 
 import (
-	lb "LiteBlog"
+	lb "LiteBlog/utils"
 	"context"
 	"fmt"
 	"testing"

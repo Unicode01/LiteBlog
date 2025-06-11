@@ -38,7 +38,8 @@
         },
         {
             "//": "the bg_image_theme can be light or dark",
-            "bg_image_theme": "light",
+            "auto_play": "false",
+            "bg_image_theme": "dark",
             "card_description": "",
             "card_link": "",
             "card_title": "",

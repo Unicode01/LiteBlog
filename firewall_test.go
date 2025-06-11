@@ -1,7 +1,7 @@
 package main_test
 
 import (
-	"LiteBlog/firewall"
+	"LiteBlog/utils/firewall"
 	"fmt"
 	"testing"
 	"time"

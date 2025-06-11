@@ -139,6 +139,13 @@ function card_music_player_init() {
                 card.querySelector(".player-pause").innerHTML = "▶";
             }
         });
+        // add auto play event listener
+        if (music_info.autoPlay) {
+            music_player.addEventListener("loadedmetadata", function () {
+                music_player.play();
+                player_play_button.innerHTML = "⏸";
+            });
+        }
         window._cards_for_musics.push(card);
     });
 }
@@ -208,6 +215,7 @@ function get_music_info(card) {
     returnvar["image"] = music_info_container.getAttribute("data-music-image");
     returnvar["lyricLink"] = music_info_container.getAttribute("data-music-lyric");
     returnvar["imageTheme"] = music_info_container.getAttribute("data-image-theme");
+    returnvar["autoPlay"] = music_info_container.getAttribute("data-auto-play") === "true";
     return returnvar;
 }
 
