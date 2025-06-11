@@ -58,6 +58,7 @@ This file contains the server configurations such as server port,TLS settings, c
 ##### access_config
 - `backend_path`: This is the path to the backend server.
 - `access_token`: This is the access token for the backend server.
+- `RandomKey`: If `true`, the server will generate `token_encrypt_key` randomly. If `false`, the server will use the `backend_path` and `access_token`to generate the `token_encrypt_key` on each start up.
 ##### cache_config
 - `use_disk`: This is a boolean value to enable or disable the disk cache.
 - `max_cache_size`: This is the maximum cache size in bytes.

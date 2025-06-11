@@ -41,6 +41,7 @@ type AccessConfig struct {
 	EnableBackend bool   `json:"enable_backend"`
 	BackendPath   string `json:"backend_path"`
 	AccessToken   string `json:"access_token"`
+	RandomKey     bool   `json:"random_key"`
 }
 
 type CacheConfig struct {

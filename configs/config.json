@@ -9,7 +9,9 @@
         }
     },
     "access_config": {
+        "//": "reandom_key means the token_encrypt_key will be random generated on each start up, if false, it will use the access_token and backend_path to generate the token_encrypt_key.",
         "enable_backend": true,
+        "random_key": true,
         "backend_path": "yourbackendPath",
         "access_token": "yourAccessToken"
     },
