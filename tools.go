@@ -224,3 +224,69 @@ func checkToken(token string) bool {
 	}
 	return false
 }
+
+func generateEncryptToken(token, encryptKey string, timestampBase64 string) string {
+	encryptKey = encryptKey + timestampBase64
+	data := []byte(token + "|" + encryptKey)
+	encoded := base64.StdEncoding.EncodeToString(data)
+	// fmt.Printf("encoded: %s\n", encoded)
+	tokenArray := []byte(encoded)
+
+	xorshiftSeed := uint32(2166136261) // FNV偏移基础值
+	for _, b := range tokenArray {
+		xorshiftSeed = (xorshiftSeed * 16777619) ^ uint32(b)
+	}
+	xorshift, _ := NewXorshift32(xorshiftSeed)
+	// fmt.Printf("xorshiftSeed: %d\n", xorshiftSeed)
+
+	getRandomChar := func(seed int) byte {
+		return byte(33 + ((seed + int(xorshift.Next())) % 94))
+	}
+
+	for i := 0; i < len(encryptKey); i++ {
+		charCode := int(encryptKey[i])
+		operation := charCode % 5
+
+		switch operation {
+		case 0:
+			tokenArray = append([]byte{getRandomChar(charCode + i)}, tokenArray...)
+
+		case 1:
+			if len(tokenArray) > 0 {
+				pos := (charCode * i) % len(tokenArray)
+				tokenArray[pos] = getRandomChar(charCode ^ int(tokenArray[pos]))
+			}
+
+		case 2:
+			mod := xorshift.Next() % uint32(len(tokenArray)+1)
+			if mod == 0 {
+				mod = 1
+			}
+			insertPos := uint32(charCode) % mod
+			// fmt.Printf("insertPos: %d\n", insertPos)
+			char1 := getRandomChar(charCode)
+			char2 := getRandomChar(charCode + 997)
+			tokenArray = append(tokenArray[:insertPos], append([]byte{char1, char2}, tokenArray[insertPos:]...)...)
+
+		case 3:
+			if len(tokenArray) > 1 {
+				pos1 := charCode % len(tokenArray)
+				pos2 := len(tokenArray) - 1 - pos1
+				tokenArray[pos1], tokenArray[pos2] = tokenArray[pos2], tokenArray[pos1]
+			}
+
+		default:
+			pseudo := [...]string{"==", "=", "=A", "B="}[charCode%4]
+			tokenArray = append(tokenArray, []byte(pseudo)...)
+		}
+	}
+
+	finalShuffle := make([]byte, 0, len(tokenArray))
+	for len(tokenArray) > 0 {
+		randIndex := int(xorshift.Next()) % len(tokenArray)
+		finalShuffle = append(finalShuffle, tokenArray[randIndex])
+		tokenArray = append(tokenArray[:randIndex], tokenArray[randIndex+1:]...)
+	}
+
+	return string(finalShuffle)
+}

@@ -3,8 +3,9 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -104,11 +105,33 @@ func autoRender(ctx context.Context) {
 			RenderedMap["rss_feed"] = renderRSSFeed()
 
 			// generate token encrypt key
-			newToken := sha256.Sum256([]byte(Config.AccessCfg.BackendPath + Config.AccessCfg.AccessToken))
-			RenderedMap["token_encrypt_key"] = []byte(fmt.Sprintf("%x", newToken))
-			EncryptTokenKey = fmt.Sprintf("%x", newToken)
-			// EncryptToken = generateEncryptToken(Config.AccessCfg.AccessToken, fmt.Sprintf("%x", newToken))
-
+			if EncryptTokenKey == "" {
+				if Config.AccessCfg.RandomKey {
+					RandSeedBytes := make([]byte, 4)
+					_, err := rand.Read(RandSeedBytes)
+					if err != nil {
+						xorshift, _ := NewXorshift32(uint32(time.Now().UnixNano()))
+						value := xorshift.Next()
+						RandSeedBytes[0] = byte(value >> 24)
+						RandSeedBytes[1] = byte(value >> 16)
+						RandSeedBytes[2] = byte(value >> 8)
+						RandSeedBytes[3] = byte(value)
+					}
+					RandSeed := uint32(binary.LittleEndian.Uint32(RandSeedBytes))
+					xorshift, _ := NewXorshift32(RandSeed)
+					EncryptTokenKey = ""
+					for i := 0; i < 32; i++ { // 32 bytes key
+						value := xorshift.Next() % 256 // 0-255, get a random byte
+						EncryptTokenKey += fmt.Sprintf("%02x", value)
+					}
+					RenderedMap["token_encrypt_key"] = []byte(EncryptTokenKey)
+					// fmt.Printf("token encrypt key: %s\n", EncryptTokenKey)
+				} else {
+					newToken := sha256.Sum256([]byte(Config.AccessCfg.BackendPath + Config.AccessCfg.AccessToken))
+					RenderedMap["token_encrypt_key"] = []byte(fmt.Sprintf("%x", newToken))
+					EncryptTokenKey = fmt.Sprintf("%x", newToken)
+				}
+			}
 			// fmt.Printf("card rendered\n")
 			render_end_time := time.Now()
 			render_time := render_end_time.Sub(render_start_time)
@@ -290,70 +313,4 @@ func renderarticle(articleID string) []byte {
 	// render article
 	rendered_article_html := RenderPageTemplate("article", basicRenderMap)
 	return rendered_article_html
-}
-
-func generateEncryptToken(token, encryptKey string, timestampBase64 string) string {
-	encryptKey = encryptKey + timestampBase64
-	data := []byte(token + "|" + encryptKey)
-	encoded := base64.StdEncoding.EncodeToString(data)
-	// fmt.Printf("encoded: %s\n", encoded)
-	tokenArray := []byte(encoded)
-
-	xorshiftSeed := uint32(2166136261) // FNV偏移基础值
-	for _, b := range tokenArray {
-		xorshiftSeed = (xorshiftSeed * 16777619) ^ uint32(b)
-	}
-	xorshift, _ := NewXorshift32(xorshiftSeed)
-	// fmt.Printf("xorshiftSeed: %d\n", xorshiftSeed)
-
-	getRandomChar := func(seed int) byte {
-		return byte(33 + ((seed + int(xorshift.Next())) % 94))
-	}
-
-	for i := 0; i < len(encryptKey); i++ {
-		charCode := int(encryptKey[i])
-		operation := charCode % 5
-
-		switch operation {
-		case 0:
-			tokenArray = append([]byte{getRandomChar(charCode + i)}, tokenArray...)
-
-		case 1:
-			if len(tokenArray) > 0 {
-				pos := (charCode * i) % len(tokenArray)
-				tokenArray[pos] = getRandomChar(charCode ^ int(tokenArray[pos]))
-			}
-
-		case 2:
-			mod := xorshift.Next() % uint32(len(tokenArray)+1)
-			if mod == 0 {
-				mod = 1
-			}
-			insertPos := uint32(charCode) % mod
-			// fmt.Printf("insertPos: %d\n", insertPos)
-			char1 := getRandomChar(charCode)
-			char2 := getRandomChar(charCode + 997)
-			tokenArray = append(tokenArray[:insertPos], append([]byte{char1, char2}, tokenArray[insertPos:]...)...)
-
-		case 3:
-			if len(tokenArray) > 1 {
-				pos1 := charCode % len(tokenArray)
-				pos2 := len(tokenArray) - 1 - pos1
-				tokenArray[pos1], tokenArray[pos2] = tokenArray[pos2], tokenArray[pos1]
-			}
-
-		default:
-			pseudo := [...]string{"==", "=", "=A", "B="}[charCode%4]
-			tokenArray = append(tokenArray, []byte(pseudo)...)
-		}
-	}
-
-	finalShuffle := make([]byte, 0, len(tokenArray))
-	for len(tokenArray) > 0 {
-		randIndex := int(xorshift.Next()) % len(tokenArray)
-		finalShuffle = append(finalShuffle, tokenArray[randIndex])
-		tokenArray = append(tokenArray[:randIndex], tokenArray[randIndex+1:]...)
-	}
-
-	return string(finalShuffle)
 }
