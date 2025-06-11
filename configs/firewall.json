@@ -1,16 +1,3 @@
 {
-    "rules": [
-        {
-            "action": 1,
-            "rule": "196.251.81.194",
-            "type": "ipaddr",
-            "timeout": 1749673110
-        },
-        {
-            "action": 1,
-            "rule": "78.153.140.147",
-            "type": "ipaddr",
-            "timeout": 1749673178
-        }
-    ]
+    "rules": []
 }
