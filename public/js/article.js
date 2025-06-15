@@ -7,7 +7,7 @@ var Goole_reCaptcha_Site_key = "{{global:google_site_key}}"
 var comment_check_type = "{{global:comment_check_type}}"
 // end of render variable
 
-function AddArticleAPI(title, author, content, contentHTML,extraFlags, callback) {
+function AddArticleAPI(title, author, content, contentHTML, extraFlags, callback) {
     const result = GetAccessPathAndToken();
     if (!result) {
         console.log("Access path and token are required.");
@@ -136,7 +136,7 @@ function GetArticleAPI(article_id, callback) {
         });
 }
 
-function AddCommentAPI(article_id,reply_to, author, email, content, callback) {
+function AddCommentAPI(article_id, reply_to, author, email, content, callback) {
     path = "api/v1"
     const api_dic = window.location.origin + "/" + path;
     const api_add_comment = api_dic + "/add_comment";
@@ -264,10 +264,24 @@ function SaveArticle() {
         rendered_content = document.querySelector('.article-content').innerHTML;
     }
     const markdown_input = document.querySelector('#markdown-input').value;
+
+    extra_flags = {};
+    // set extra flags
+    // get all text
+    let renderedContext = document.querySelector('.article-content').textContent;
+    // get article language code
+    let article_language = detectLanguage(renderedContext);
+    extra_flags.language_code = article_language["language"];
+    // get article description
+    console.log(renderedContext);
+    let article_description = renderedContext.slice(0, 100); // get first 100 characters
+    // set extra flags
+    extra_flags.article_description = article_description;
+
     // check if in /addarticle.html
     if (location.pathname === "/addarticle.html") {
         // add article
-        AddArticleAPI(editor_title, author_input, markdown_input, rendered_content,{"loc":"en"}, function (result) {
+        AddArticleAPI(editor_title, author_input, markdown_input, rendered_content, extra_flags, function (result) {
             if (result != "") {
                 console.log(result);
                 alert("Article added successfully!");
@@ -283,7 +297,7 @@ function SaveArticle() {
     } else if (location.pathname === "/editarticle.html") {
         article_id = getQueryVariable("article_id");
         // edit article
-        EditArticleAPI(article_id, editor_title, author_input, markdown_input, rendered_content,{"loc":"en"}, function (result) {
+        EditArticleAPI(article_id, editor_title, author_input, markdown_input, rendered_content, extra_flags, function (result) {
             if (result != "") {
                 alert("Article edited successfully!");
                 console.log(result);
@@ -379,7 +393,7 @@ function OnAddCommentButtonClick() {
                     return;
                 }
                 window.comment_token = token;
-                AddCommentAPI(article_id,window.CommentReplyTo, author_input, email_address, content_input, function (result) {
+                AddCommentAPI(article_id, window.CommentReplyTo, author_input, email_address, content_input, function (result) {
                     if (result != "") {
                         console.log(result);
                         window.CommentReplyTo = "";
@@ -401,7 +415,7 @@ function OnAddCommentButtonClick() {
             alert("Please fill in all required fields.");
             return;
         }
-        AddCommentAPI(article_id,window.CommentReplyTo, author_input, email_address, content_input, function (result) {
+        AddCommentAPI(article_id, window.CommentReplyTo, author_input, email_address, content_input, function (result) {
             if (result != "") {
                 console.log(result);
                 window.CommentReplyTo = "";
@@ -652,7 +666,7 @@ function RenderHighlight() {
         if (!document.getElementById("article-code-viewer-style")) {
             const highlight_style = document.createElement("link");
             highlight_style.id = "article-code-viewer-style";
-            highlight_style.href = "/css/"+GetTheme()+".highlight.css";
+            highlight_style.href = "/css/" + GetTheme() + ".highlight.css";
             highlight_style.rel = "stylesheet";
             document.head.appendChild(highlight_style);
         }
@@ -678,15 +692,15 @@ function SwitchToRemoveEditDate() {
     // select article-edit-date
     const articleEditDate = document.querySelector('.article-edit-date');
     // get article-edit-date text, remove 'ed. '
-    const articleEditDateText = articleEditDate.textContent.trim().slice(4);
+    const articleEditDateText = articleEditDate?.textContent.trim().slice(4);
     // get article-date text, remove 'pub. '
     const articleDateText = Array.from(articleDate.childNodes)
-    .filter(node => node.nodeType === 3)
-    .map(textNode => textNode.textContent.trim())
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .slice(5)
-    .slice(0,-1);
+        .filter(node => node.nodeType === 3)
+        .map(textNode => textNode.textContent.trim())
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .slice(5)
+        .slice(0, -1);
     // compare article-edit-date and article-date
     // console.log(articleEditDateText, articleDateText);
     if (articleEditDateText === articleDateText) {
@@ -714,3 +728,83 @@ addThemeSwitchBroadcastListener(function (theme) {
         document.head.appendChild(style);
     }
 })
+
+function detectLanguage(text) {
+    if (!text || text.trim() === '') return 'en';
+
+    const languageCounts = {
+        en: 0, zh: 0, ko: 0, ru: 0, ar: 0, ja: 0
+    };
+
+    const languageCodes = {
+        en: 'en', zh: 'zh-CN', ko: 'ko', ru: 'ru', ar: 'ar', ja: 'ja'
+    }
+    
+    var meetSpace = true; // start with space
+
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const code = char.charCodeAt(0);
+
+        // JA
+        if ((code >= 0x3040 && code <= 0x309F) ||
+            (code >= 0x30A0 && code <= 0x30FF)) {
+            languageCounts.ja++;
+            continue;
+        }
+
+        // KO
+        if ((code >= 0xAC00 && code <= 0xD7AF) ||
+            (code >= 0x1100 && code <= 0x11FF) ||
+            (code >= 0x3130 && code <= 0x318F)) {
+            languageCounts.ko++;
+            continue;
+        }
+
+        // RU
+        if (code >= 0x0400 && code <= 0x04FF) {
+            languageCounts.ru++;
+            continue;
+        }
+
+        // AR
+        if (code >= 0x0600 && code <= 0x06FF) {
+            languageCounts.ar++;
+            continue;
+        }
+
+        // ZH
+        if (code >= 0x4E00 && code <= 0x9FFF) {
+            languageCounts.zh++;
+            continue;
+        }
+
+        // EN, count keywords
+        if (code < 128) {
+            if (meetSpace) {
+                languageCounts.en++;
+            }
+        }
+
+        if (char === ' ') {
+            meetSpace = true;
+        } else if (meetSpace) {
+            meetSpace = false;
+        }
+    }
+
+    let maxCount = 0;
+    let detectedLang = "en";
+
+    for (const lang in languageCounts) {
+        if (languageCounts[lang] > maxCount) {
+            maxCount = languageCounts[lang];
+            detectedLang = languageCodes[lang];
+        }
+    }
+
+    return {
+        language: detectedLang,
+        counts: languageCounts
+    };
+}

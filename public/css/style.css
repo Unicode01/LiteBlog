@@ -54,6 +54,7 @@ body {
     font-size: 21px;
     font-weight: bold;
     color: var(--base-black);
+    white-space:nowrap;
 }
 
 .content-container {
