@@ -821,6 +821,9 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 		req.Article.Title = p.Sanitize(req.Article.Title)
 		req.Article.ContentHTML = pcontent.Sanitize(req.Article.ContentHTML)
 		req.Article.Author = p.Sanitize(req.Article.Author)
+		for k, v := range req.Article.ExtraFlags {
+			req.Article.ExtraFlags[k] = p.Sanitize(v)
+		}
 	}
 	// add article
 	// generate article id
@@ -941,6 +944,9 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 		req.Article.Title = p.Sanitize(req.Article.Title)
 		req.Article.ContentHTML = pcontent.Sanitize(req.Article.ContentHTML)
 		req.Article.Author = p.Sanitize(req.Article.Author)
+		for k, v := range req.Article.ExtraFlags {
+			req.Article.ExtraFlags[k] = p.Sanitize(v)
+		}
 	}
 	// update article
 	articleJsonPath := "configs/articles/" + req.Article.ID + ".json"
