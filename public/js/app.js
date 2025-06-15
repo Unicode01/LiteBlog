@@ -68,9 +68,20 @@ function OnContextMenu(event) {
     if (last_item.classList.contains('menu-item-line')) {
         last_item.remove();
     }
+    
     // set position
     var menu_x = event.clientX;
     var menu_y = event.clientY;
+    const menu_visual_width = 100;
+    var screeen_width = window.screen.availWidth;
+    // var screeen_height = window.screen.height;
+    // console.log(screeen_width,menu_x);
+    if (menu_x + menu_visual_width > screeen_width) {
+        context_menu_doc.style.transform = "translateX(-100%)";
+    }
+    // if (menu_y + context_menu_doc.offsetHeight > screeen_height) {
+    //     menu_y = menu_y - context_menu_doc.offsetHeight;
+    // }
     context_menu_doc.style.left = menu_x + 'px';
     context_menu_doc.style.top = menu_y + 'px';
     // append to body
