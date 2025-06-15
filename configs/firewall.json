@@ -2,12 +2,6 @@
     "rules": [
         {
             "action": 1,
-            "rule": "117.48.157.75",
-            "type": "ipaddr",
-            "timeout": 1750018746
-        },
-        {
-            "action": 1,
             "rule": "196.251.84.199",
             "type": "ipaddr",
             "timeout": 1750020397
