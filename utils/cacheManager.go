@@ -76,7 +76,7 @@ func (cm *CacheManager) AddCacheItem(CacheKey string, reader io.Reader, timeoutS
 	return nil
 }
 
-func (cm *CacheManager) GetCacheItem(CacheKey string) (*os.File, error) {
+func (cm *CacheManager) GetCacheItem(CacheKey string) (*SeekedFile, error) {
 	CacheKey = keysha256(CacheKey)
 	// check if cache item exists
 	cacheFilePath := cm.cacheDirectory + CacheKey + ".cache"
@@ -100,8 +100,30 @@ func (cm *CacheManager) GetCacheItem(CacheKey string) (*os.File, error) {
 		return nil, ErrCacheExpired
 	}
 	// read cache item from file
-	f.Seek(4, io.SeekStart)
-	return f, nil
+	// sf := &SeekedFile{
+	// 	File:   f,
+	// 	offset: 4, // skip cache timeout stamp
+	// }
+	dataLength, err := f.Seek(0, io.SeekEnd) // find data length
+
+	if err != nil {
+		return nil, err
+	}
+	selectionReader := io.NewSectionReader(f, 4, dataLength-4)
+	sf := &SeekedFile{
+		SrcFile:       f,
+		SectionReader: *selectionReader,
+	}
+	return sf, nil
+}
+
+type SeekedFile struct {
+	io.SectionReader
+	SrcFile *os.File
+}
+
+func (sf *SeekedFile) Close() error {
+	return sf.SrcFile.Close()
 }
 
 func (cm *CacheManager) DelCacheItem(CacheKey string) error {
