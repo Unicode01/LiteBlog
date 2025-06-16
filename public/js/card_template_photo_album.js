@@ -29,6 +29,7 @@ function card_photo_album_init() {
                 photo.classList.add("photo");
                 var photo_img = document.createElement("img");
                 photo_img.src = photo_url;
+                photo_img.alt = "photo";
                 photo.appendChild(photo_img);
                 photo_container.appendChild(photo);
                 card.photo_loaded[photo_url] = true;

@@ -223,6 +223,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	renderList := []string{".js", ".css", ".html", ".xml"}
 	// check if file is renderable
 	if file_ext == "" || !strings.Contains(strings.Join(renderList, "|"), file_ext) { // not render file
+		// directly serve file
 		file, err := os.OpenFile("public"+r.URL.Path, os.O_RDONLY, 0) // check file exist
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
@@ -236,10 +237,13 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			f.Close()
 			return
 		}
-		content_type := GetContentType(r.URL.Path)
-		w.Header().Set("Content-Type", content_type)
-		defer file.Close()
-		io.Copy(w, file) // directly serve file
+		// content_type := GetContentType(r.URL.Path)
+		// w.Header().Set("Content-Type", content_type)
+		// defer file.Close()
+
+		http.ServeContent(w, r, r.URL.Path, time.Now(), file) // directly serve file
+		file.Close()
+		// io.Copy(w, file)
 		return
 	}
 
@@ -249,9 +253,10 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		if f != nil && err == nil { // hit cache
 			cached = true
 			w.Header().Set("X-LiteBlog-Disk-Cache", "hit")
-			content_type := GetContentType(r.URL.Path)
-			w.Header().Set("Content-Type", content_type)
-			io.Copy(w, f)
+			// content_type := GetContentType(r.URL.Path)
+			// w.Header().Set("Content-Type", content_type)
+			http.ServeContent(w, r, r.URL.Path, time.Now(), f) // directly serve file
+			// io.Copy(w, f)
 			f.Close()
 			return
 		}
@@ -282,6 +287,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	fileBin = RenderTemplate(fileBin, nil)
 	content_type := GetContentType(r.URL.Path)
 	w.Header().Set("Content-Type", content_type)
+	w.Header().Set("Content-Length", fmt.Sprint(len(fileBin)))
 	w.Write(fileBin)
 	// add to cache(using deliverManager to avoid extra delay)
 	if Config.CacheCfg.UseDisk {

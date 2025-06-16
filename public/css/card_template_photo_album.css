@@ -2,6 +2,7 @@
     --album-width: 500px;
     --album-height: 300px;
     margin: 41px;
+    min-width: var(--album-width);
     width: var(--album-width);
     height: var(--album-height);
     border-radius: 10px;
