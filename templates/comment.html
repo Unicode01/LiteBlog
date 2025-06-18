@@ -1,7 +1,24 @@
 <div id="article-comment" class="article-comment" comment-id="{{comment_id}}">
-    <div id="comment-Author" class="comment-author">{{comment_author}}
+    <div id="comment-Author">
+        <div class="author-container">
+            <div class="comment-author">{{comment_author}}</div>
+            <div class="comment-reply-to" data-reply-to="{{comment_reply_to}}"></div>
+        </div>
         <button id="comment-Reply" class="comment-reply" onclick='OnReplyButtonClick("{{comment_id}}")'>Reply</button>
     </div>
     <div id="comment-Date" class="comment-date">{{comment_date}}</div>
     <div id="comment-Content" class="comment-content">{{comment_content}}</div>
+    <script> 
+        var comment_id = "{{comment_id}}";
+        var reply_to = "{{comment_reply_to}}";
+        var thisE = document.querySelector(`#article-comment[comment-id="${comment_id}"]`);
+        var reply_to_element = document.querySelector(`#article-comment[comment-id="${reply_to}"]`)
+        if (reply_to_element) {
+            var replyedCommentAuthor = reply_to_element.querySelector('.comment-author').textContent.trim();
+            thisE.querySelector('.comment-reply-to').textContent = `(@${replyedCommentAuthor})`;
+            thisE.querySelector('.comment-reply-to').addEventListener('click', function () {
+                reply_to_element.scrollIntoView({ behavior: 'auto', block: 'center' });
+            });
+        }
+    </script>
 </div>

@@ -22,6 +22,7 @@ var (
 	GlobalMapLocker   = new(sync.RWMutex)
 	RenderedMap       = make(map[string][]byte)
 	RenderedMapLocker = new(sync.RWMutex)
+	cardJsonPrev      = []byte("")
 )
 
 func RenderTemplate(template []byte, ReplaceMap map[string][]byte) []byte {
@@ -154,11 +155,16 @@ func renderCards() []byte {
 		Log(3, "error reading card config file: "+err.Error())
 		return []byte("")
 	}
+	cardJsonPrev = card_file
 	err = json.Unmarshal(card_file, &cardcfg)
 	if err != nil {
 		Log(3, "error parsing card config file: "+err.Error())
 		return []byte("")
 	}
+	// sort cards by order
+	sort.Slice(cardcfg.Cards, func(i, j int) bool {
+		return cardcfg.Cards[i]["order"] < cardcfg.Cards[j]["order"]
+	})
 	cards_bytes := []byte("")
 	for _, card := range cardcfg.Cards {
 		card_opt := map[string][]byte{}
@@ -177,13 +183,7 @@ func renderRSSFeed() []byte {
 		Cards []map[string]string `json:"cards"`
 	}
 	var cardcfg Card_Config
-	card_config_filepath := "configs/cards.json"
-	card_file, err := os.ReadFile(card_config_filepath)
-	if err != nil {
-		Log(3, "error reading card config file: "+err.Error())
-		return []byte("")
-	}
-	err = json.Unmarshal(card_file, &cardcfg)
+	err := json.Unmarshal(cardJsonPrev, &cardcfg)
 	if err != nil {
 		Log(3, "error parsing card config file: "+err.Error())
 		return []byte("")
@@ -274,19 +274,20 @@ func renderarticle(articleID string) []byte {
 	// render article comments
 	comments_html := []byte("")
 	for _, comment := range articlecfg.Comments {
-		if comment.ReplyTo != "" {
-			for _, c := range articlecfg.Comments {
-				if c.ID == comment.ReplyTo {
-					comment.Author = comment.Author + " (@" + c.Author + ")"
-					break
-				}
-			}
-		}
+		// if comment.ReplyTo != "" {
+		// 	for _, c := range articlecfg.Comments {
+		// 		if c.ID == comment.ReplyTo {
+		// 			comment.Author = comment.Author + " (@" + c.Author + ")"
+		// 			break
+		// 		}
+		// 	}
+		// }
 		comment_html := RenderPageTemplate("comment", map[string][]byte{
-			"comment_author":  []byte(comment.Author),
-			"comment_content": []byte(comment.Content),
-			"comment_date":    []byte(comment.Pub_Date),
-			"comment_id":      []byte(comment.ID),
+			"comment_author":   []byte(comment.Author),
+			"comment_content":  []byte(comment.Content),
+			"comment_date":     []byte(comment.Pub_Date),
+			"comment_id":       []byte(comment.ID),
+			"comment_reply_to": []byte(comment.ReplyTo),
 		})
 		comments_html = append(comments_html, comment_html...)
 	}

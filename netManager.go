@@ -83,16 +83,22 @@ func InitNetManager(config *ServerConfig) error {
 		}
 		tlsConfig := &tls.Config{
 			Certificates: []tls.Certificate{tlsCert},
-			NextProtos:   []string{"http/1.1"},
+			NextProtos:   []string{"http/1.1", "h2"},
 			MinVersion:   tls.VersionTLS12,
 		}
 		httpServer = &http.Server{
-			Addr:      net.JoinHostPort(config.Host, fmt.Sprint(config.Port)),
-			TLSConfig: tlsConfig,
+			Addr:         net.JoinHostPort(config.Host, fmt.Sprint(config.Port)),
+			TLSConfig:    tlsConfig,
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
+			IdleTimeout:  10 * time.Second,
 		}
 	} else {
 		httpServer = &http.Server{
-			Addr: net.JoinHostPort(config.Host, fmt.Sprint(config.Port)),
+			Addr:         net.JoinHostPort(config.Host, fmt.Sprint(config.Port)),
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
+			IdleTimeout:  10 * time.Second,
 		}
 	}
 	httpServer.Handler = http.HandlerFunc(httpHandler)
