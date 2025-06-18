@@ -348,11 +348,11 @@ function ShowCommentInputBox() {
                 },
             });
         };
-        document.body.appendChild(CommentInputBoxDoc);
         // append turnstile script
         const turnstile_script = document.createElement("script");
         turnstile_script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback";
-        document.body.appendChild(turnstile_script);
+        document.body.appendChild(CommentInputBoxDoc);
+        CommentInputBoxDoc.appendChild(turnstile_script);
     } else if (comment_check_type == "google_recaptcha") {
         const CommentBoxPre = document.querySelector(".comment-input-box");
         CommentBoxPre?.remove()
@@ -374,13 +374,15 @@ function CancleCommentInputBox() {
 
 function OnAddCommentButtonClick() {
     const article_id = getQueryVariable("article_id");
-    const author_input = document.querySelector('#add-comment-author').value;
-    const email_address = document.querySelector('#add-comment-emailaddress').value;
-    const content_input = document.querySelector('#add-comment-text').value;
+    var author_input = document.querySelector('#add-comment-author').value;
+    var email_address = document.querySelector('#add-comment-emailaddress').value;
+    var content_input = document.querySelector('#add-comment-text').value;
     if (!isAvailableEmailAddress(email_address)) {
         alert("Invalid email address.");
         return;
     }
+    // escape content input
+    content_input = escapeString(content_input);
     // check if google recaptcha
     if (comment_check_type == "google_recaptcha") {
 
@@ -703,9 +705,9 @@ function SwitchToRemoveEditDate() {
         .slice(0, -1);
     // compare article-edit-date and article-date
     // console.log(articleEditDateText, articleDateText);
-    if (articleEditDateText === articleDateText) {
+    if (articleEditDateText != articleDateText) {
         // remove article-edit-date
-        articleEditDate.remove();
+        articleEditDate.style.opacity = 1;
     }
 }
 
@@ -714,7 +716,6 @@ window.addEventListener('DOMContentLoaded', function () {
     RenderHighlight();
     SwitchToRemoveEditDate();
 });
-
 
 addThemeSwitchBroadcastListener(function (theme) {
     const styleDom = document.querySelector('#article-code-viewer-style');
@@ -739,7 +740,7 @@ function detectLanguage(text) {
     const languageCodes = {
         en: 'en', zh: 'zh-CN', ko: 'ko', ru: 'ru', ar: 'ar', ja: 'ja'
     }
-    
+
     var meetSpace = true; // start with space
 
     for (let i = 0; i < text.length; i++) {
@@ -807,4 +808,15 @@ function detectLanguage(text) {
         language: detectedLang,
         counts: languageCounts
     };
+}
+
+function escapeString(str) {
+    return str.replace(/[\n<>]/g, (char) => {
+        switch (char) {
+            case '\n': return '&#10;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            default: return char;
+        }
+    });
 }

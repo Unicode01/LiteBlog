@@ -16,8 +16,6 @@
     --text-secondary: var(--base-gray-700);
     --text-muted: #6C757D;
 
-    --card-width: {{global:card_max_width}};
-    --card-height: {{global:card_max_height}};
 }
 
 body {

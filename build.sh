@@ -22,6 +22,9 @@ platforms=(
 # 项目名称
 app_name="LiteBlog"
 
+# go bin 目录
+go_bin_dir="/root/sdk/go1.24.2/bin/"
+
 # 输出目录
 output_dir="release"
 rm -rf $output_dir
@@ -62,9 +65,9 @@ for platform in "${platforms[@]}"; do
     echo "Building for $os/$arch..."
 
     if [ "$PGO" == "true" ]; then
-        env CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -o $output_file "${args[@]}" -pgo=cpu.pprof
+        env CGO_ENABLED=0 GOOS=$os GOARCH=$arch $go_bin_dir/go build -o $output_file "${args[@]}" -pgo=cpu.pprof
     else
-        env CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -o $output_file "${args[@]}"
+        env CGO_ENABLED=0 GOOS=$os GOARCH=$arch $go_bin_dir/go build -o $output_file "${args[@]}"
     fi
 
     # 检查是否成功编译

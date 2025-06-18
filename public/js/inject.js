@@ -7,5 +7,5 @@ addContextMenuItem(function(event){
 console.log("dicision function called",event)
 return true;
 },"test",function(event){
-console.log("contextmenu called,event",event);
+alert("on click event called.")
 })

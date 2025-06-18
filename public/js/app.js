@@ -598,7 +598,7 @@ function addThemeSwitchBroadcastListener(callback) {
     switchThemeListeners.push(callback)
 }
 
-function addContextMenuItem(decisionFunction, title, callback) {
+function addContextMenuItem(decisionFunction = function() {return true;}, title, callback) {
     contextMenuList.push({
         decisionFunction: decisionFunction,
         title: title,
