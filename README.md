@@ -12,7 +12,7 @@ LiteBlog is a blog system written in Golang,html,css,js. Aim to provide a simple
 - Easy to deploy and manage
 - Full static support
 ## Requirements
-- Golang 1.16+
+- Golang 1.24+
 ## Installation
 ### From Source
 Clone the repository and run the following command to start the server.
@@ -25,7 +25,11 @@ go run LiteBlog
 Download the latest binary from [release page](https://github.com/Unicode01/LiteBlog/releases) and run it.Or you can build the binary from source.
 - Before compile the binary, you should run following command to install the dependencies.
 ```bash
-apt update && apt install -y golang git
+apt update && apt install -y wget git
+wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz -O golang.tar.gz
+tar -C /usr/local -xzf golang.tar.gz
+export PATH=$PATH:/usr/local/go/bin
+rm -rf golang.tar.gz
 ```
 ```bash
 git clone https://github.com/LiteBlog/LiteBlog.git
@@ -39,12 +43,16 @@ Here is a example to run liteblog with docker, and mount the `configs` directory
 If you want to change `public` or `templates` directory, you can mount it to the container using `-v` option.
 - Before build the docker image, you should run following command to install the dependencies.
 ```bash
-apt update && apt install -y golang git zip docker.io
+apt update && apt install -y git zip docker.io
+wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz -O golang.tar.gz
+tar -C /usr/local -xzf golang.tar.gz
+export PATH=$PATH:/usr/local/go/bin
+rm -rf golang.tar.gz
 ```
 ```bash
 git clone https://github.com/LiteBlog/LiteBlog.git
 cd LiteBlog
-./build.sh
+./build.sh platform linux/amd64
 docker build -t liteblog .
 docker run -p 80:80 -v $(pwd)/configs:/liteblog/configs/ liteblog
 ```

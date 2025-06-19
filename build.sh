@@ -23,7 +23,12 @@ platforms=(
 app_name="LiteBlog"
 
 # go bin 目录
-go_bin_dir="/root/sdk/go1.24.2/bin/"
+go_bin_dir="/usr/local/go/bin"
+
+# 获取运行参数
+if [ "$1" == "platform" ]; then
+    platforms=("$2")
+fi
 
 # 输出目录
 output_dir="release"
