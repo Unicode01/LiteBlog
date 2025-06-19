@@ -16,6 +16,14 @@ LiteBlog is a blog system written in Golang,html,css,js. Aim to provide a simple
 ## Installation
 ### From Source
 Clone the repository and run the following command to start the server.
+- Before compile the binary, you should run following command to install the dependencies.
+```bash
+apt update && apt install -y wget git
+wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz -O golang.tar.gz
+tar -C /usr/local -xzf golang.tar.gz
+export PATH=$PATH:/usr/local/go/bin
+rm -rf golang.tar.gz
+```
 ```bash
 git clone https://github.com/LiteBlog/LiteBlog.git
 cd LiteBlog

@@ -54,7 +54,9 @@ func RenderStatic() {
 		if info.IsDir() {
 			return nil
 		}
-		file_ext := path.Ext(Fpath)
+		destPath := filepath.Join(outputDir, Fpath)
+		destDir := filepath.Dir(destPath)
+		file_ext := filepath.Ext(Fpath)
 		// check if in renderList
 		if file_ext == "" || !strings.Contains(strings.Join(renderList, "|"), file_ext) {
 			// no render
@@ -66,18 +68,16 @@ func RenderStatic() {
 			}
 			defer inFile.Close()
 			// check if output file exist
-			if _, err := os.Stat(outputDir + Fpath); err == nil {
+			if _, err := os.Stat(destPath); err == nil {
 				// file exist, delete
-				os.Remove(outputDir + Fpath)
+				os.Remove(destPath)
 				return nil
 			}
-			// create output dir
-			output_dir := path.Dir(outputDir + Fpath)
-			if _, err := os.Stat(output_dir); err != nil {
-				os.MkdirAll(output_dir, 0755)
+			if _, err := os.Stat(destDir); err != nil {
+				os.MkdirAll(destDir, 0755)
 			}
 			// open output file
-			outFile, err := os.Create(outputDir + Fpath)
+			outFile, err := os.Create(destPath)
 			if err != nil {
 				panic(err)
 			}
@@ -96,17 +96,15 @@ func RenderStatic() {
 			Log(1, "render static file: "+Fpath)
 			fileBin := RenderTemplate(NeedRender, nil)
 			// check if output file exist
-			if _, err := os.Stat(outputDir + Fpath); err == nil {
+			if _, err := os.Stat(destPath); err == nil {
 				// file exist, delete
-				os.Remove(outputDir + Fpath)
+				os.Remove(destPath)
 			}
-			// create output dir
-			output_dir := path.Dir(outputDir + Fpath)
-			if _, err := os.Stat(output_dir); err != nil {
-				os.MkdirAll(output_dir, 0755)
+			if _, err := os.Stat(destDir); err != nil {
+				os.MkdirAll(destDir, 0755)
 			}
 			// open output file
-			outFile, err := os.Create(outputDir + Fpath)
+			outFile, err := os.Create(destPath)
 			if err != nil {
 				panic(err)
 			}
