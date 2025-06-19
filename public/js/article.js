@@ -304,6 +304,9 @@ function SaveArticle() {
                         localStorage.removeItem("localStoredArticle");
                         // jump to article page
                         window.location.href = "/articles/" + article_id;
+                    },
+                    extraStyle: {
+                        "cursor": "pointer"
                     }
                 });
                 
@@ -330,6 +333,9 @@ function SaveArticle() {
                         console.log(result);
                         // jump to article page
                         window.location.href = "/articles/" + article_id;
+                    },
+                    extraStyle: {
+                        "cursor": "pointer"
                     }
                 });
             } else {
@@ -442,6 +448,9 @@ function OnAddCommentButtonClick() {
                             onTimeout: function() {
                                 // jump to article page
                                 window.location.reload();
+                            },
+                            extraStyle: {
+                                "cursor": "pointer"
                             }
                         });
                         // remove comment input box
@@ -477,6 +486,9 @@ function OnAddCommentButtonClick() {
                     onTimeout: function() {
                         // jump to article page
                         window.location.reload();
+                    },
+                    extraStyle: {
+                        "cursor": "pointer"
                     }
                 });
                 // remove comment input box

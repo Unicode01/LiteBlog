@@ -552,10 +552,10 @@ function InsertDarkCss(callback) {
 }
 
 function RemoveDarkCss() {
-    const link = document.querySelector('style[id="dark-theme"]');
-    if (link) {
-        link.remove();
-    }
+    const link = document.querySelectorAll('style[id="dark-theme"]');
+    link.forEach(function (item) {
+        item.remove();
+    });
 }
 
 function SetTheme(Theme) {
@@ -613,9 +613,17 @@ function themeSwitchClick(e) {
     console.log("current theme:" + current_theme);
     if (current_theme == "light") {
         SetTheme("dark");
+        window.Notify.add("Dark theme enabled", {
+            type: "success",
+            timeout: 2000,
+        });
     } else {
         console.log("set light theme");
         SetTheme("light");
+        window.Notify.add("Light theme enabled", {
+            type: "success",
+            timeout: 2000,
+        });
     }
 }
 
@@ -689,6 +697,7 @@ class Notify {
             onRemove: null,
             onTimeout: null,
             onShow: null,
+            onHover: null,
             extraStyle: null,
         }, defaultOptions);
         
@@ -759,6 +768,14 @@ class Notify {
         childNode.addEventListener("click", (e) => {
             e.stopPropagation();
             this.onEvent("click", newNotify.id, e);
+        });
+        childNode.addEventListener("mouseenter", (e) => {
+            e.stopPropagation();
+            this.onEvent("hover", newNotify.id, e);
+        });
+        childNode.addEventListener("mouseleave", (e) => {
+            e.stopPropagation();
+            this.onEvent("hover", newNotify.id, e);
         });
         
         this.notiContainer.insertBefore(childNode, this.notiContainer.firstChild);
@@ -855,6 +872,12 @@ class Notify {
                 notify = this.notifyList[id];
                 if (notify?.options.onShow) {
                     notify.options.onShow(notify);
+                }
+                break;
+            case "hover":
+                notify = this.notifyList[id];
+                if (notify?.options.onHover) {
+                    notify.options.onHover(notify, broswerEvent);
                 }
                 break;
             default:

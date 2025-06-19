@@ -410,7 +410,6 @@ body {
                 display: flex;
                 font-size: var(--notify-font-size);
                 color: var(--base-black);
-                word-break: break-all;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 
