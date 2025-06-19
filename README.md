@@ -21,7 +21,7 @@ Clone the repository and run the following command to start the server.
 apt update && apt install -y wget git
 wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz -O golang.tar.gz
 tar -C /usr/local -xzf golang.tar.gz
-export PATH=$PATH:/usr/local/go/bin
+export PATH=/usr/local/go/bin:$PATH
 rm -rf golang.tar.gz
 ```
 ```bash
@@ -36,7 +36,7 @@ Download the latest binary from [release page](https://github.com/Unicode01/Lite
 apt update && apt install -y wget git
 wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz -O golang.tar.gz
 tar -C /usr/local -xzf golang.tar.gz
-export PATH=$PATH:/usr/local/go/bin
+export PATH=/usr/local/go/bin:$PATH
 rm -rf golang.tar.gz
 ```
 ```bash
@@ -54,7 +54,7 @@ If you want to change `public` or `templates` directory, you can mount it to the
 apt update && apt install -y git zip docker.io
 wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz -O golang.tar.gz
 tar -C /usr/local -xzf golang.tar.gz
-export PATH=$PATH:/usr/local/go/bin
+export PATH=/usr/local/go/bin:$PATH
 rm -rf golang.tar.gz
 ```
 ```bash
