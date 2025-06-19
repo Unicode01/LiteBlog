@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -163,7 +164,15 @@ func renderCards() []byte {
 	}
 	// sort cards by order
 	sort.Slice(cardcfg.Cards, func(i, j int) bool {
-		return cardcfg.Cards[i]["order"] < cardcfg.Cards[j]["order"]
+		a, e := strconv.Atoi(cardcfg.Cards[i]["order"])
+		if e != nil {
+			return false
+		}
+		b, e := strconv.Atoi(cardcfg.Cards[j]["order"])
+		if e != nil {
+			return true
+		}
+		return a < b
 	})
 	cards_bytes := []byte("")
 	for _, card := range cardcfg.Cards {

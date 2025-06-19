@@ -83,7 +83,7 @@ func InitNetManager(config *ServerConfig) error {
 		}
 		tlsConfig := &tls.Config{
 			Certificates: []tls.Certificate{tlsCert},
-			NextProtos:   []string{"http/1.1", "h2"},
+			NextProtos:   []string{"h2", "http/1.1"},
 			MinVersion:   tls.VersionTLS12,
 		}
 		httpServer = &http.Server{
