@@ -284,14 +284,33 @@ function SaveArticle() {
         AddArticleAPI(editor_title, author_input, markdown_input, rendered_content, extra_flags, function (result) {
             if (result != "") {
                 console.log(result);
-                alert("Article added successfully!");
-                // jump to article page
-                article_id = result.article_id;
-                console.log(article_id);
-                // clear local storage
-                localStorage.removeItem("localStoredArticle");
-                // jump to article page
-                window.location.href = "/articles/" + article_id;
+                window.Notify.add("Article added successfully!", {
+                    type:"success",
+                    timeout: 3000,
+                    onClick: function() {
+                        // jump to article page
+                        article_id = result.article_id;
+                        console.log(article_id);
+                        // clear local storage
+                        localStorage.removeItem("localStoredArticle");
+                        // jump to article page
+                        window.location.href = "/articles/" + article_id;
+                    },
+                    onTimeout: function() {
+                        // jump to article page
+                        article_id = result.article_id;
+                        console.log(article_id);
+                        // clear local storage
+                        localStorage.removeItem("localStoredArticle");
+                        // jump to article page
+                        window.location.href = "/articles/" + article_id;
+                    }
+                });
+                
+            } else {
+                window.Notify.add("Article added failed!", {
+                    type:"error"
+                });
             }
         });
     } else if (location.pathname === "/editarticle.html") {
@@ -299,10 +318,24 @@ function SaveArticle() {
         // edit article
         EditArticleAPI(article_id, editor_title, author_input, markdown_input, rendered_content, extra_flags, function (result) {
             if (result != "") {
-                alert("Article edited successfully!");
-                console.log(result);
-                // jump to article page
-                window.location.href = "/articles/" + article_id;
+                window.Notify.add("Article edited successfully!", {
+                    type:"success",
+                    timeout: 3000,
+                    onClick: () => {
+                        console.log(result);
+                        // jump to article page
+                        window.location.href = "/articles/" + article_id;
+                    },
+                    onTimeout: () => {
+                        console.log(result);
+                        // jump to article page
+                        window.location.href = "/articles/" + article_id;
+                    }
+                });
+            } else {
+                window.Notify.add("Article edited failed!", {
+                    type:"error"
+                });
             }
         });
     }
@@ -366,7 +399,7 @@ function ShowCommentInputBox() {
     }
 }
 
-function CancleCommentInputBox() {
+function CancelCommentInputBox() {
     const CommentBoxPre = document.querySelector(".comment-input-box");
     CommentBoxPre?.remove()
     window.CommentReplyTo = "";
@@ -399,13 +432,26 @@ function OnAddCommentButtonClick() {
                     if (result != "") {
                         console.log(result);
                         window.CommentReplyTo = "";
-                        alert("Comment added successfully!");
+                        window.Notify.add("Comment added successfully!", {
+                            type:"success",
+                            timeout: 3000,
+                            onClick: function() {
+                                // jump to article page
+                                window.location.reload();
+                            },
+                            onTimeout: function() {
+                                // jump to article page
+                                window.location.reload();
+                            }
+                        });
                         // remove comment input box
-                        CancleCommentInputBox();
+                        CancelCommentInputBox();
                         // reload page
                         location.reload();
                     } else {
-                        alert("Failed to add comment.");
+                        window.Notify.add("Failed to add comment.", {
+                            type:"error"
+                        });
                     }
                 });
             });
@@ -421,13 +467,26 @@ function OnAddCommentButtonClick() {
             if (result != "") {
                 console.log(result);
                 window.CommentReplyTo = "";
-                alert("Comment added successfully!");
+                window.Notify.add("Comment added successfully!", {
+                    type:"success",
+                    timeout: 3000,
+                    onClick: function() {
+                        // jump to article page
+                        window.location.reload();
+                    },
+                    onTimeout: function() {
+                        // jump to article page
+                        window.location.reload();
+                    }
+                });
                 // remove comment input box
-                CancleCommentInputBox();
+                CancelCommentInputBox();
                 // reload page
                 location.reload();
             } else {
-                alert("Failed to add comment.");
+                window.Notify.add("Failed to add comment.", {
+                    type:"error"
+                });
             }
         });
     }
@@ -705,7 +764,7 @@ function SwitchToRemoveEditDate() {
         .slice(0, -1);
     // compare article-edit-date and article-date
     // console.log(articleEditDateText, articleDateText);
-    if (articleEditDateText != articleDateText) {
+    if (articleEditDateText != articleDateText && location.pathname.startsWith("/articles/")) {
         // remove article-edit-date
         articleEditDate.style.opacity = 1;
     }

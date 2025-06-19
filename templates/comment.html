@@ -8,7 +8,7 @@
     </div>
     <div id="comment-Date" class="comment-date">{{comment_date}}</div>
     <div id="comment-Content" class="comment-content">{{comment_content}}</div>
-    <script> 
+    <script>
         var comment_id = "{{comment_id}}";
         var reply_to = "{{comment_reply_to}}";
         var thisE = document.querySelector(`#article-comment[comment-id="${comment_id}"]`);
@@ -18,7 +18,16 @@
             thisE.querySelector('.comment-reply-to').textContent = `(@${replyedCommentAuthor})`;
             thisE.querySelector('.comment-reply-to').addEventListener('click', function () {
                 reply_to_element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                reply_to_element.style.opacity = '0.5';
+                reply_to_element.style.transition = 'opacity 0.3s ease-in-out';
+                setTimeout(function () {
+                    reply_to_element.style.opacity = '1';
+                    setTimeout(function () {
+                        reply_to_element.style.transition = 'none';
+                    }, 300);
+                }, 300);
             });
         }
+        thisE.querySelector('script').remove();
     </script>
 </div>

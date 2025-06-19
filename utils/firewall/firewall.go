@@ -19,8 +19,8 @@ type Firewall struct {
 }
 
 func NewFirewall() *Firewall {
-	ctx, cancle := context.WithCancel(context.Background())
-	fw := &Firewall{ruleLocker: new(sync.RWMutex), headRule: nil, lastRule: nil, cancel: cancle, ctx: ctx}
+	ctx, cancel := context.WithCancel(context.Background())
+	fw := &Firewall{ruleLocker: new(sync.RWMutex), headRule: nil, lastRule: nil, cancel: cancel, ctx: ctx}
 	go fw.autoDeleteRule(ctx)
 	fw.ReadRules()
 	return fw

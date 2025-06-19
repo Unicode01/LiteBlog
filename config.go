@@ -206,9 +206,9 @@ func BackupConfigures() {
 		return
 	} else {
 		if BackupThreadCancel == nil {
-			ctx, cancle := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(context.Background())
 			EnableBackupThread(ctx)
-			BackupThreadCancel = cancle
+			BackupThreadCancel = cancel
 		}
 	}
 }
