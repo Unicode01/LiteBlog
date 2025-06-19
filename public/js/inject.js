@@ -7,5 +7,5 @@ addContextMenuItem(function(event){
 console.log("dicision function called",event)
 return true;
 },"test",function(event){
-alert("on click event called.")
+window.Notify.add("on click event called.",{timeout:0})
 })

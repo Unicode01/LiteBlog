@@ -251,7 +251,7 @@ function DeleteArticleAPI(article_id, callback) {
         });
 }
 
-function SaveArticle() {
+function SaveArticle(implicitlySave = false) {
     const editor_title = document.querySelector('.title-input').value;
     const author_input = document.querySelector('.author-input').value;
     var rendered_content = "";
@@ -284,6 +284,10 @@ function SaveArticle() {
         AddArticleAPI(editor_title, author_input, markdown_input, rendered_content, extra_flags, function (result) {
             if (result != "") {
                 console.log(result);
+                if (implicitlySave) {
+                    window.Notify.add("Article added successfully!",{type:"success"});
+                    return;
+                }
                 window.Notify.add("Article added successfully!", {
                     type:"success",
                     timeout: 3000,
@@ -320,6 +324,10 @@ function SaveArticle() {
         article_id = getQueryVariable("article_id");
         // edit article
         EditArticleAPI(article_id, editor_title, author_input, markdown_input, rendered_content, extra_flags, function (result) {
+            if (implicitlySave) {
+                window.Notify.add("Article edited successfully!",{type:"success"});
+                return;
+            }
             if (result != "") {
                 window.Notify.add("Article edited successfully!", {
                     type:"success",
@@ -401,7 +409,9 @@ function ShowCommentInputBox() {
         document.body.appendChild(CommentInputBoxDoc);
         CommentInputBoxDoc.appendChild(recaptcha_script);
     } else {
-        alert("Comment system has been disabled.")
+        window.Notify.add("Comment has been disabled.", {
+            type:"info"
+        });
     }
 }
 
@@ -417,7 +427,9 @@ function OnAddCommentButtonClick() {
     var email_address = document.querySelector('#add-comment-emailaddress').value;
     var content_input = document.querySelector('#add-comment-text').value;
     if (!isAvailableEmailAddress(email_address)) {
-        alert("Invalid email address.");
+        window.Notify.add("Invalid email address.",{
+            type:"error"
+        });
         return;
     }
     // escape content input
@@ -430,7 +442,9 @@ function OnAddCommentButtonClick() {
                 // Add your logic to submit to your backend server here.
                 if (!article_id || !author_input || !content_input || !token) {
                     console.log("Article id, author, content and token are required.");
-                    alert("Please fill in all required fields.");
+                    window.Notify.add("Please fill in all fields.",{
+                        type:"error"
+                    });
                     return;
                 }
                 window.comment_token = token;
@@ -469,7 +483,9 @@ function OnAddCommentButtonClick() {
     } else if (comment_check_type == "cloudflare_turnstile") {
         if (!article_id || !author_input || !content_input || !window.comment_token) {
             console.log("Article id, author, content and token are required.");
-            alert("Please fill in all required fields.");
+            window.Notify.add("Please fill in all fields.",{
+                type:"error"
+            });
             return;
         }
         AddCommentAPI(article_id, window.CommentReplyTo, author_input, email_address, content_input, function (result) {

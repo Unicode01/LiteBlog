@@ -70,6 +70,35 @@
                         <input type="text" id="author-input" class="author-input" placeholder="Enter author name...">
                     </div>
                     <div id="editor-container" class="editor-container display-flex justify-content-center align-items-center height-100 width-100">
+                        <div class="edit-toolbar">
+                            <div class="edit-toolbar-item">
+                                <button id="title-button" class="title-button button" onclick="onToolbarButtonClick('title')" title="Title">T</button>
+                            </div>
+                            <div class="edit-toolbar-item">
+                                <button id="bold-button" class="bold-button button" onclick="onToolbarButtonClick('bold')" title="Bold">B</button>
+                            </div>
+                            <div class="edit-toolbar-item">
+                                <button id="italic-button" class="italic-button button" onclick="onToolbarButtonClick('italic')" title="Italic" style="font-style: italic;">I</button>
+                            </div>
+                            <div class="edit-toolbar-item">
+                                <button id="link-button" class="link-button button" onclick="onToolbarButtonClick('link')" title="Link">L</button>
+                            </div>
+                            <div class="edit-toolbar-item">
+                                <button id="image-button" class="image-button button" onclick="onToolbarButtonClick('image')" title="Image">[I]</button>
+                            </div>
+                            <div class="edit-toolbar-item">
+                                <button id="code-button" class="code-button button" onclick="onToolbarButtonClick('code')" title="Code">C</button>
+                            </div>
+                            <div class="edit-toolbar-item">
+                                <button id="list-button" class="list-button button" onclick="onToolbarButtonClick('list')" title="List">•</button>
+                            </div>
+                            <div class="edit-toolbar-item">
+                                <button id="quote-button" class="quote-button button" onclick="onToolbarButtonClick('quote')" title="Quote">Q</button>
+                            </div>
+                            <div class="edit-toolbar-item">
+                                <button id="table-button" class="table-button button" onclick="onToolbarButtonClick('table')" title="Table">|-|</button>
+                            </div>
+                        </div>
                         <textarea id="markdown-input" class="markdown-textarea" placeholder="article content markdown here..."></textarea>
                     </div>
                 </div>
