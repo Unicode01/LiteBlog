@@ -12,7 +12,7 @@ LiteBlog is a blog system written in Golang,html,css,js. Aim to provide a simple
 - Easy to deploy and manage
 - Full static support
 ## Requirements
-- Golang 1.24+
+- Golang 1.19+
 ## Installation
 ### From Source
 Clone the repository and run the following command to start the server.

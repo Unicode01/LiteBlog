@@ -525,7 +525,15 @@ async function copyText(text) {
     }
 }
 
+let abortController = null;
 function InsertDarkCss(callback) {
+    if (abortController) {
+        abortController.abort();
+    }
+    
+    abortController = new AbortController();
+    const signal = abortController.signal;
+
     function loadStyleString(css){
         var style = document.createElement("style");
         style.type = "text/css";
@@ -538,7 +546,8 @@ function InsertDarkCss(callback) {
         var head = document.getElementsByTagName("head")[0];
         head.appendChild(style);
     }
-    fetch('/css/dark.css')
+    
+    fetch('/css/dark.css', { signal })
        .then(response => response.text())
        .then(css => {
             loadStyleString(css);
