@@ -168,6 +168,11 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// set extra headers
+	for k, v := range Config.ServerCfg.ExtraHeaders {
+		w.Header().Set(k, v)
+	}
+
 	// check public api
 	if strings.HasPrefix(r.URL.Path, "/api/v1/") { // public api
 		servePublicAPI(w, r)

@@ -1,3 +1,10 @@
 {
-    "rules": []
+    "rules": [
+        {
+            "action": 1,
+            "rule": "196.251.85.74",
+            "type": "ipaddr",
+            "timeout": 1750362483
+        }
+    ]
 }

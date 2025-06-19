@@ -412,6 +412,7 @@ body {
                 color: var(--base-black);
                 overflow: hidden;
                 text-overflow: ellipsis;
+                margin-right: var(--notify-message-margin-right);
                 
             }
         }

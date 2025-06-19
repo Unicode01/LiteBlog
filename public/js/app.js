@@ -653,6 +653,7 @@ function InitNotifyModule() {
         position: "top-center",
         notifyMargin: 5,
         notifyIconSize: 25,
+        notifyMessageMarginRight: 20,
         maxList: 5,
     }, {
         timeout: 3000,
@@ -692,6 +693,7 @@ class Notify {
             notifyMargin: 10,
             notifyFontSize: 14,
             notifyIconSize: 20,
+            notifyMessageMarginRight: 10,
             maxList: 5,
             animationDuration: 300,
             position: "top-left", // top-left, top-center, top-right, bottom-left, bottom-center, bottom-right
@@ -717,6 +719,7 @@ class Notify {
         this.notiContainer.style.setProperty("--notify-width", this.Settings.notifyWidth + "px");
         this.notiContainer.style.setProperty("--notify-height", this.Settings.notifyHeight + "px");
         this.notiContainer.style.setProperty("--notify-margin", this.Settings.notifyMargin + "px");
+        this.notiContainer.style.setProperty("--notify-message-margin-right", this.Settings.notifyMessageMarginRight + "px");
         this.notiContainer.style.setProperty("--notify-icon-size", this.Settings.notifyIconSize + "px");
         this.notiContainer.style.setProperty("--notify-font-size", this.Settings.notifyFontSize + "px");
         this.notiContainer.style.setProperty("--notify-animation-duration", this.Settings.animationDuration + "ms");
@@ -742,7 +745,7 @@ class Notify {
             index: this.notifyCounter++,
             status: "showing", // showing, removed
         };
-        if (!options.icon) {
+        if (!options?.icon) {
             switch (newNotify.options.type) {
                 case "success":
                     newNotify.options.icon = "/img/notify-success.svg";
@@ -835,6 +838,50 @@ class Notify {
         return newNotify.id;
     }
 
+    alert(message) {
+        this.add(message, {
+            type: "info",
+            timeout: 3000,
+            keepAlive: true,
+            onClick: (notify, event) => {
+                this.remove(notify.id);
+            }
+        });
+    }
+
+    error(message) {
+        this.add(message, {
+            type: "error",
+            timeout: 5000,
+            keepAlive: true,
+            onClick: (notify, event) => {
+                this.remove(notify.id);
+            }
+        });
+    }
+
+    success(message) {
+        this.add(message, {
+            type: "success",
+            timeout: 5000,
+            keepAlive: true,
+            onClick: (notify, event) => {
+                this.remove(notify.id);
+            }
+        });
+    }
+
+    warning(message) {
+        this.add(message, {
+            type: "warning",
+            timeout: 5000,
+            keepAlive: true,
+            onClick: (notify, event) => {
+                this.remove(notify.id);
+            }
+        });
+    }
+
     remove(id) {
         if (!this.notifyList[id] || this.notifyList[id].status == "removed") { // if not exist, return
             return;
@@ -892,6 +939,13 @@ class Notify {
             default:
                 break;
         }
+    }
+
+    destroy() {
+        for (let id in this.notifyList) {
+            this.remove(id);
+        }
+        this.notiContainer.remove();
     }
 }
 
