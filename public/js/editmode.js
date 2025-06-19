@@ -41,7 +41,10 @@ function EnterEditMode() {
         )
             .then(response => {
                 if (response.ok) {
-                    console.log("Save changes successfully");
+                    console.log("Save changes successfully.");
+                    window.Notify.add("Save changes successfully", {
+                        type: "success"
+                    });
                     window._editMode = false;
                     // remove edit-mode-border class
                     cards.forEach((card) => {
@@ -58,10 +61,16 @@ function EnterEditMode() {
                     card_input_box?.remove();
                 } else {
                     console.log("Save changes failed");
+                    window.Notify.add("Save changes failed.", {
+                        type: "error"
+                    });
                 }
             })
             .catch(error => {
                 console.log("Save changes failed: " + error);
+                window.Notify.add("Save changes failed.", {
+                    type: "error"
+                });
             });
         return;
     }
@@ -162,7 +171,7 @@ function updateViewCardOrder(event) {
     }
 }
 
-function DeleteCard(cardID) {
+function DeleteCard(cardID, callback) {
     const result = GetAccessPathAndToken();
     if (!result) {
         console.log("Access path and token are required.");
@@ -188,17 +197,15 @@ function DeleteCard(cardID) {
         .then(response => {
             if (response.ok) {
                 console.log("Delete card successfully");
-                const card = document.querySelector(`[card-id="${cardID}"]`);
-                card.remove();
-                return true;
+                callback(true);
             } else {
                 console.log("Delete card failed");
-                return false;
+                callback(false);
             }
         })
         .catch(error => {
             console.log("Delete card failed: " + error);
-            return false;
+            callback(false);
         });
     return true;
 }
@@ -514,7 +521,17 @@ function OnAddCardButtonClick(editMode = false) {
         }
         EditCardAPI(GetCardJson(), function (data) {
             console.log(data);
-            CancleInputBox();
+            if (data === "") {
+                console.log("Edit card failed");
+                window.Notify.add("Edit card failed", {
+                    type: "error"
+                });
+            } else {
+                window.Notify.add("Edit card successfully", {
+                    type: "success"
+                });
+            }
+            CancelInputBox();
         })
     } else {
         function GetCardJson() {
@@ -543,7 +560,17 @@ function OnAddCardButtonClick(editMode = false) {
         }
         AddCardAPI(GetCardJson(), function (data) {
             console.log(data);
-            CancleInputBox();
+            if (data === "") {
+                console.log("Add card failed");
+                window.Notify.add("Add card failed", {
+                    type: "error"
+                });
+            } else {
+                window.Notify.add("Add card successfully", {
+                    type: "success"
+                });
+            }
+            CancelInputBox();
         })
     }
 }
@@ -602,7 +629,17 @@ function OnEditSettingsButtonClick() {
     }
     EditCustomSettingsAPI(GetGlobalSettings(), function (data) {
         console.log(data);
-        CancleInputBox();
+        if (data === "") {
+            console.log("Edit custom settings failed");
+            window.Notify.add("Edit custom settings failed", {
+                type: "error"
+            });
+        } else {
+            window.Notify.add("Custom settings saved.", {
+                type: "success"
+            });
+        }
+        CancelInputBox();
     });
 
 }
@@ -717,7 +754,7 @@ function onExportButtonClick() {
     
 }
 
-function CancleInputBox() {
+function CancelInputBox() {
     const add_card_box = document.querySelector(".card-input-box");
     const edit_settings_box = document.querySelector(".edit-settings-box");
     add_card_box?.remove();

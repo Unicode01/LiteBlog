@@ -12,7 +12,7 @@ import (
 var (
 	LoggedFileHandler *os.File
 	LastLogFile       string
-	SyncThreadCancle  context.CancelFunc
+	SyncThreadCancel  context.CancelFunc
 	LogData           struct {
 		Debugs uint32
 		Infos  uint32
@@ -25,9 +25,9 @@ var (
 // Log logs a message with a given level.
 // level: 0-4, 0 is debug, 1 is info, 2 is warning, 3 is error, 4 is critical.
 func Log(level int, msg string) {
-	if SyncThreadCancle == nil {
+	if SyncThreadCancel == nil {
 		var ctx context.Context
-		ctx, SyncThreadCancle = context.WithCancel(context.Background())
+		ctx, SyncThreadCancel = context.WithCancel(context.Background())
 		go autoSync(ctx)
 	}
 	output := ""
@@ -131,7 +131,7 @@ func CheckLogFileSize() {
 }
 
 func CloseLogger() {
-	if SyncThreadCancle != nil {
-		SyncThreadCancle()
+	if SyncThreadCancel != nil {
+		SyncThreadCancel()
 	}
 }
