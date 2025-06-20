@@ -1,8 +1,8 @@
 // render variables from server
-var Card_max_width = {{global:card_max_width}}; //w
-var Card_max_height = {{global:card_max_height}};
-var Card_min_width = {{global:card_min_width}}; //w
-var Card_min_height = {{global:card_min_height}};
+var Card_max_width = parseInt(`{{global:card_max_width}}`); //w
+var Card_max_height = parseInt(`{{global:card_max_height}}`);
+var Card_min_width = parseInt(`{{global:card_min_width}}`); //w
+var Card_min_height = parseInt(`{{global:card_min_height}}`);
 var Context_menu_html = `{{file:context_menu}}`
 // end render
 var switchThemeListeners = [];

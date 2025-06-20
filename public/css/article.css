@@ -56,7 +56,12 @@
 
 /* 文章正文 */
 .article-content {
-    overflow: hidden;
+    /* overflow: hidden; */
+    /* Note */
+    /* 这里会和上面的 article-content 发生margin合并,二取最大值,如果overflow:hidden就没有这个问题,但是会导致scroll-margin-top失效 */
+    /* 因此二选一选择注释掉overflow:hidden,用于解决scroll-margin-top失效问题 */
+    /* 在使用这个解决办法之前已尝试使用::before 伪元素撑开高度,但是由于overflow:hidden会导致创建BFC,此时的滚动没法找到可滚动祖先元素,所以没法做到滚动到scroll-margin-top的位置 */
+    /* 在注释掉overflow:hidden后,使用正常的文档流,没有新的BFC创建,所以可以找到可滚动祖先元素,实现scroll-margin-top的效果 */
     margin: 0 auto;
     line-height: 1.7;
     font-size: 1.1rem;
@@ -80,6 +85,7 @@
     .author-container {
         display: flex;
         flex-direction: row;
+
         .comment-reply-to {
             margin-left: 0.5rem;
             font-size: 12px;
@@ -92,12 +98,21 @@
     }
 }
 
+.comment-scroll-container::before {
+    content: "";
+    display: block;
+    height: 50px;
+    margin-top: -50px;
+    visibility: hidden;
+}
+
 #comment-Author {
     font-weight: 600;
     color: #2d3748;
     margin-bottom: 0.5rem;
     display: flex;
     justify-content: space-between;
+
     #comment-Reply {
         margin-left: 0.3rem;
         font-size: 12px;

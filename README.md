@@ -47,7 +47,7 @@ go build -o LiteBlog
 ```
 ### From Docker
 Run `./build.sh` to build the zip. **Before build the zip, You should write your own configs in `configs/`**
-Here is a example to run liteblog with docker, and mount the `configs` directory to the container.
+Here is a example to run liteblog with docker, and mount the `configs` directory to the container.You can use `compress` option to run `build.sh`, but you should install [uglifyjs](https://github.com/mishoo/UglifyJS) and [uglifycss](https://www.npmjs.com/package/uglifycss) (using nodejs) first.
 If you want to change `public` or `templates` directory, you can mount it to the container using `-v` option.
 - Before build the docker image, you should run following command to install the dependencies.
 ```bash
