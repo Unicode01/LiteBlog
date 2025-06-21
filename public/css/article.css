@@ -98,6 +98,19 @@
     }
 }
 
+.email-label-container {
+    align-items: center;
+}
+
+input.email-subscribe-button[type="checkbox"] {
+    position: relative;
+    height: 14px;
+    width: 14px;
+    border-radius: 8px;
+    margin-right: 4px;
+    transition: all 0.2s;
+}
+
 .comment-scroll-container::before {
     content: "";
     display: block;

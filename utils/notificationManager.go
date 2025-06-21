@@ -22,7 +22,7 @@ type NotifyManager struct {
 func NewNotifyManager(notifyType NotifyType) *NotifyManager {
 	nm := &NotifyManager{
 		notifyType:                   notifyType,
-		minDelayBetweenNotifications: 60,
+		minDelayBetweenNotifications: 0, // disabled by default
 		lastNotificationTime:         0,
 		notifyTimeout:                60, // 60s
 	}

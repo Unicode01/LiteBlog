@@ -884,12 +884,13 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 		Pub_Date:    time.Now().Format("2006-01-02 15:04:05"),
 		ExtraFlags:  req.Article.ExtraFlags,
 		Comments: make([]struct {
-			Author   string `json:"author"`
-			Email    string `json:"email"`
-			Content  string `json:"content"`
-			Pub_Date string `json:"pub_date"`
-			ID       string `json:"id"`
-			ReplyTo  string `json:"reply_to"`
+			Author     string `json:"author"`
+			Email      string `json:"email"`
+			Content    string `json:"content"`
+			Pub_Date   string `json:"pub_date"`
+			ID         string `json:"id"`
+			Subscribed bool   `json:"subscribed"`
+			ReplyTo    string `json:"reply_to"`
 		}, 0),
 	}
 	articleJsonBin, err := json.MarshalIndent(articleJson, "", "    ")
@@ -1375,6 +1376,7 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 		Content      string `json:"content"`
 		Author       string `json:"author"`
 		Email        string `json:"email"`
+		Subscribed   bool   `json:"subscribed"`
 		ReplyTo      string `json:"reply_to"`
 	}
 	var req commentRequest
@@ -1440,19 +1442,21 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 		commentID = generateTraceID()
 	}
 	articleJson.Comments = append(articleJson.Comments, struct {
-		Author   string `json:"author"`
-		Email    string `json:"email"`
-		Content  string `json:"content"`
-		Pub_Date string `json:"pub_date"`
-		ID       string `json:"id"`
-		ReplyTo  string `json:"reply_to"`
+		Author     string `json:"author"`
+		Email      string `json:"email"`
+		Content    string `json:"content"`
+		Pub_Date   string `json:"pub_date"`
+		ID         string `json:"id"`
+		Subscribed bool   `json:"subscribed"`
+		ReplyTo    string `json:"reply_to"`
 	}{
-		Author:   req.Author,
-		Email:    req.Email,
-		Content:  req.Content,
-		ID:       commentID,
-		Pub_Date: time.Now().Format("2006-01-02 15:04:05"),
-		ReplyTo:  req.ReplyTo,
+		Author:     req.Author,
+		Email:      req.Email,
+		Content:    req.Content,
+		ID:         commentID,
+		Subscribed: req.Subscribed,
+		Pub_Date:   time.Now().Format("2006-01-02 15:04:05"),
+		ReplyTo:    req.ReplyTo,
 	})
 	articleJsonBin, err = json.MarshalIndent(articleJson, "", "    ")
 	if err != nil {
@@ -1483,13 +1487,36 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 				message := "Article ID: " + req.Article_id + "\n"
 				message += "Article Title: " + articleJson.Title + "\n"
 				message += "Author: " + req.Author + "\n"
-				message += "Email: " + req.Email + "\n"
+				message += "Email: " + req.Email + " " + fmt.Sprintf("(Subscribed: %t)", req.Subscribed) + "\n"
 				message += "Content: " + req.Content + "\n"
 				message += "Reply To: " + req.ReplyTo + "\n"
+				message += "Link: " + Config.ServerCfg.URLOrigin + "/articles/" + req.Article_id + "#comment-" + commentID + "\n"
 				// send message
 				err := notifyManager.Notify("New Comment Received", message)
 				if err != nil {
 					fmt.Printf("Failed to send notification, %s\n", err)
+				}
+			})
+		}
+		if notifyTriggerMap["subscribed_comment_reply"] {
+			deliverManager.AddTask(func() {
+				// check if the comment is a reply and the author is subscribed
+				for _, comment := range articleJson.Comments {
+					if comment.ID == req.ReplyTo && comment.Subscribed {
+						// build message
+						message := "Article ID: " + req.Article_id + "\n"
+						message += "Article Title: " + articleJson.Title + "\n"
+						message += "Author: " + req.Author + "\n"
+						message += "Content: " + req.Content + "\n"
+						message += "Reply To: " + req.ReplyTo + "\n"
+						message += "Link: " + Config.ServerCfg.URLOrigin + "/articles/" + req.Article_id + "#comment-" + commentID + "\n"
+						// send message
+						err := notifyManager.Notify("New Comment Reply Received", message)
+						if err != nil {
+							fmt.Printf("Failed to send notification, %s\n", err)
+						}
+						break
+					}
 				}
 			})
 		}

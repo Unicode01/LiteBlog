@@ -2,7 +2,10 @@
     <div class="input-group">
         <label for="add-comment-author">Author</label>
         <input type="text" id="add-comment-author" required>
-        <label for="add-comment-emailaddress">Email Address</label>
+        <label for="add-comment-emailaddress" class="email-label-container">
+            <div class="email-label">Email Address</div>
+            <input type="checkbox" title="Subscribe to receive email notifications when you receive new reply." class="email-subscribe-button"></input>
+        </label>
         <input type="text" id="add-comment-emailaddress" required>
         <label for="add-comment-text">Comment</label>
         <textarea id="add-comment-text" rows="3" required></textarea>

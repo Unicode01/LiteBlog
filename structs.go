@@ -9,11 +9,12 @@ type articleJsonStruct struct {
 	Pub_Date    string            `json:"pub_date"`
 	ExtraFlags  map[string]string `json:"extra_flags"`
 	Comments    []struct {
-		Author   string `json:"author"`
-		Email    string `json:"email"`
-		Content  string `json:"content"`
-		Pub_Date string `json:"pub_date"`
-		ID       string `json:"id"`
-		ReplyTo  string `json:"reply_to"`
+		Author     string `json:"author"`
+		Email      string `json:"email"`
+		Content    string `json:"content"`
+		Pub_Date   string `json:"pub_date"`
+		ID         string `json:"id"`
+		Subscribed bool   `json:"subscribed"` // subscribed to the comment thread
+		ReplyTo    string `json:"reply_to"`
 	} `json:"comments"`
 }
