@@ -20,9 +20,8 @@ Clone the repository and run the following command to start the server.
 ```bash
 apt update && apt install -y wget git
 wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz -O golang.tar.gz
-tar -C /usr/local -xzf golang.tar.gz
+tar -C /usr/local -xzf golang.tar.gz && rm -rf golang.tar.gz
 export PATH=/usr/local/go/bin:$PATH
-rm -rf golang.tar.gz
 ```
 ```bash
 git clone https://github.com/LiteBlog/LiteBlog.git
@@ -35,9 +34,8 @@ Download the latest binary from [release page](https://github.com/Unicode01/Lite
 ```bash
 apt update && apt install -y wget git
 wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz -O golang.tar.gz
-tar -C /usr/local -xzf golang.tar.gz
+tar -C /usr/local -xzf golang.tar.gz && rm -rf golang.tar.gz
 export PATH=/usr/local/go/bin:$PATH
-rm -rf golang.tar.gz
 ```
 ```bash
 git clone https://github.com/LiteBlog/LiteBlog.git
@@ -53,14 +51,13 @@ If you want to change `public` or `templates` directory, you can mount it to the
 ```bash
 apt update && apt install -y git zip docker.io
 wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz -O golang.tar.gz
-tar -C /usr/local -xzf golang.tar.gz
+tar -C /usr/local -xzf golang.tar.gz && rm -rf golang.tar.gz
 export PATH=/usr/local/go/bin:$PATH
-rm -rf golang.tar.gz
 ```
 ```bash
 git clone https://github.com/LiteBlog/LiteBlog.git
 cd LiteBlog
-./build.sh platform linux/amd64
+./build.sh platform linux/amd64 compress
 docker build -t liteblog .
 docker run -p 80:80 -v $(pwd)/configs:/liteblog/configs/ liteblog
 ```

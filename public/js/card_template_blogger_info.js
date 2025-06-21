@@ -13,7 +13,7 @@ function getBloggerInfo(container) {
     const blogger_avatar = info_container.getAttribute('data-blogger-avatar');
     const blogger_bio = info_container.getAttribute('data-blogger-bio');
     const blogger_contact_info = info_container.getAttribute('data-blogger-contact-info');
-    console.log(blogger_name, blogger_avatar, blogger_bio, blogger_contact_info);
+    // console.log(blogger_name, blogger_avatar, blogger_bio, blogger_contact_info);
     // tackle the contact info
     // structure: [type](link)|[type](link)|...
     function parseLinkData(input) {

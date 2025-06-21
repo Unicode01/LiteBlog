@@ -363,10 +363,11 @@ body {
         width: var(--notify-width);
         height: var(--notify-height);
         background-color: var(--base-white);
+        position: relative;
         display: flex;
         justify-content: space-between;
         pointer-events: auto;
-        border-radius: 8px;
+        border-radius: var(--notify-border-radius);
         border: 1px solid var(--base-gray-200);
         margin: var(--notify-margin);
 
@@ -380,6 +381,20 @@ body {
 
         &:hover {
             background-color: var(--base-gray-200);
+        }
+
+        &::after { 
+            /* set as progress bar */
+            content: "";
+            position: absolute;
+            bottom: 0px;
+            left: calc(var(--notify-border-radius) / 2);
+            width: calc(100% - var(--notify-border-radius));
+            height: 1px;
+            background-color: var(--progress-color);
+            transition: all var(--notify-duration) linear;
+            transform: scale(var(--progress-scale),1);
+            transform-origin: var(--progress-transform-origin);
         }
 
         .notify-icon {
