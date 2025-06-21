@@ -813,9 +813,15 @@ function GetAccessPathAndToken(DisableAsk) {
             return null;
         }
         const newPath = prompt("Enter the access path (e.g. accessBackend):");
-        if (newPath === null) return null;
+        if (newPath === null) {
+            window.Notify.warning("Access path is required.");
+            return null;
+        };
         const newToken = prompt("Enter the access token:");
-        if (newToken === null) return null;
+        if (newToken === null) {
+            window.Notify.warning("Access token is required.");
+            return null;
+        };
 
         localStorage.setItem("access_path", newPath);
         localStorage.setItem("access_token", newToken);

@@ -694,6 +694,8 @@ class Notify {
             notifyFontSize: 14,
             notifyIconSize: 20,
             notifyMessageMarginRight: 10,
+            progressMode: "center",  // left,center,right
+            progressColor: "#007BFF",
             maxList: 5,
             animationDuration: 300,
             position: "top-left", // top-left, top-center, top-right, bottom-left, bottom-center, bottom-right
@@ -723,6 +725,10 @@ class Notify {
         this.notiContainer.style.setProperty("--notify-icon-size", this.Settings.notifyIconSize + "px");
         this.notiContainer.style.setProperty("--notify-font-size", this.Settings.notifyFontSize + "px");
         this.notiContainer.style.setProperty("--notify-animation-duration", this.Settings.animationDuration + "ms");
+        this.notiContainer.style.setProperty("--progress-color", this.Settings.progressColor)
+        this.notiContainer.style.setProperty("--notify-border-radius", "8px")
+        this.notiContainer.style.setProperty("--progress-transform-origin", "center")
+        this.notiContainer.style.setProperty("--progress-scale", "1")
 
         // set extra style
         if (this.Settings.extraStyle) {
@@ -735,6 +741,13 @@ class Notify {
         this.notiContainer.classList.add(this.current_theme + "-theme");
 
         document.body.appendChild(this.notiContainer);
+
+        // add event listener
+        addThemeSwitchBroadcastListener((theme) => {
+            this.notiContainer.classList.remove(this.current_theme + "-theme");
+            this.notiContainer.classList.add(theme + "-theme");
+            this.current_theme = theme;
+        });
     }
 
     add(message, options) {
@@ -812,7 +825,6 @@ class Notify {
         setTimeout(() => {
             childNode.classList.remove("notify-show");
         }, this.Settings.animationDuration);
-
         
         // check if need to close
         if (this.Settings.maxList > 0 && Object.keys(this.notifyList).length > this.Settings.maxList) {
@@ -834,6 +846,31 @@ class Notify {
                 this.remove(selected[i].id);
             }
         }
+
+        // set properties
+        if (options.timeout > 0) {
+            switch (this.Settings.progressMode) {
+                case "center":
+                    childNode.style.setProperty("--notify-duration", options.timeout + "ms")
+                    childNode.offsetHeight // force reflow
+                    childNode.style.setProperty("--progress-scale", "0")
+                    break;
+                case "left":
+                    childNode.style.setProperty("--notify-duration", options.timeout + "ms")
+                    childNode.style.setProperty("--progress-transform-origin", "left")
+                    childNode.offsetHeight // force reflow
+                    childNode.style.setProperty("--progress-scale", "0")
+                    break;
+                case "right":
+                    childNode.style.setProperty("--notify-duration", options.timeout + "ms")
+                    childNode.style.setProperty("--progress-transform-origin", "right")
+                    childNode.offsetHeight // force reflow
+                    childNode.style.setProperty("--progress-scale", "0")
+                    break;
+            }
+            
+        } 
+        
 
         return newNotify.id;
     }
