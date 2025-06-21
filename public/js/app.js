@@ -848,21 +848,19 @@ class Notify {
         }
 
         // set properties
-        if (options.timeout > 0) {
+        if (newNotify.options.timeout > 0) {
+            childNode.style.setProperty("--notify-duration", newNotify.options.timeout + "ms")
             switch (this.Settings.progressMode) {
                 case "center":
-                    childNode.style.setProperty("--notify-duration", options.timeout + "ms")
                     childNode.offsetHeight // force reflow
                     childNode.style.setProperty("--progress-scale", "0")
                     break;
                 case "left":
-                    childNode.style.setProperty("--notify-duration", options.timeout + "ms")
                     childNode.style.setProperty("--progress-transform-origin", "left")
                     childNode.offsetHeight // force reflow
                     childNode.style.setProperty("--progress-scale", "0")
                     break;
                 case "right":
-                    childNode.style.setProperty("--notify-duration", options.timeout + "ms")
                     childNode.style.setProperty("--progress-transform-origin", "right")
                     childNode.offsetHeight // force reflow
                     childNode.style.setProperty("--progress-scale", "0")
@@ -889,7 +887,6 @@ class Notify {
     error(message) {
         this.add(message, {
             type: "error",
-            timeout: 5000,
             keepAlive: true,
             onClick: (notify, event) => {
                 this.remove(notify.id);
@@ -900,7 +897,6 @@ class Notify {
     success(message) {
         this.add(message, {
             type: "success",
-            timeout: 5000,
             keepAlive: true,
             onClick: (notify, event) => {
                 this.remove(notify.id);
@@ -911,8 +907,16 @@ class Notify {
     warning(message) {
         this.add(message, {
             type: "warning",
-            timeout: 5000,
             keepAlive: true,
+            onClick: (notify, event) => {
+                this.remove(notify.id);
+            }
+        });
+    }
+
+    info(message) {
+        this.add(message, {
+            type: "info",
             onClick: (notify, event) => {
                 this.remove(notify.id);
             }
