@@ -27,6 +27,7 @@ type AllConfig struct {
 
 type ServerConfig struct {
 	Host         string            `json:"host"`
+	URLOrigin    string            `json:"url_origin"`
 	Port         int               `json:"port"`
 	TlsConfig    TlsConfig         `json:"tls_config"`
 	ExtraHeaders map[string]string `json:"extra_headers"`

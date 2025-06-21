@@ -136,7 +136,7 @@ function GetArticleAPI(article_id, callback) {
         });
 }
 
-function AddCommentAPI(article_id, reply_to, author, email, content, callback) {
+function AddCommentAPI(article_id, reply_to, author, email, content, subscribed, callback) {
     path = "api/v1"
     const api_dic = window.location.origin + "/" + path;
     const api_add_comment = api_dic + "/add_comment";
@@ -146,6 +146,7 @@ function AddCommentAPI(article_id, reply_to, author, email, content, callback) {
         author: author,
         email: email,
         reply_to: reply_to,
+        subscribed: subscribed,
         content: content
     }
     console.log(data);
@@ -426,6 +427,7 @@ function OnAddCommentButtonClick() {
     var author_input = document.querySelector('#add-comment-author').value;
     var email_address = document.querySelector('#add-comment-emailaddress').value;
     var content_input = document.querySelector('#add-comment-text').value;
+    var subscribed = document.querySelector('.email-subscribe-button').checked;
     if (!isAvailableEmailAddress(email_address)) {
         window.Notify.add("Invalid email address.",{
             type:"error"
@@ -448,7 +450,7 @@ function OnAddCommentButtonClick() {
                     return;
                 }
                 window.comment_token = token;
-                AddCommentAPI(article_id, window.CommentReplyTo, author_input, email_address, content_input, function (result) {
+                AddCommentAPI(article_id, window.CommentReplyTo, author_input, email_address, content_input, subscribed, function (result) {
                     if (result != "") {
                         console.log(result);
                         window.CommentReplyTo = "";
@@ -469,8 +471,6 @@ function OnAddCommentButtonClick() {
                         });
                         // remove comment input box
                         CancelCommentInputBox();
-                        // reload page
-                        location.reload();
                     } else {
                         window.Notify.add("Failed to add comment.", {
                             type:"error"
@@ -488,7 +488,7 @@ function OnAddCommentButtonClick() {
             });
             return;
         }
-        AddCommentAPI(article_id, window.CommentReplyTo, author_input, email_address, content_input, function (result) {
+        AddCommentAPI(article_id, window.CommentReplyTo, author_input, email_address, content_input, subscribed, function (result) {
             if (result != "") {
                 console.log(result);
                 window.CommentReplyTo = "";
@@ -509,8 +509,6 @@ function OnAddCommentButtonClick() {
                 });
                 // remove comment input box
                 CancelCommentInputBox();
-                // reload page
-                location.reload();
             } else {
                 window.Notify.add("Failed to add comment.", {
                     type:"error"

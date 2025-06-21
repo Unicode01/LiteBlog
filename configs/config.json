@@ -7,6 +7,7 @@
             "cert_file": "fullchain.crt",
             "key_file": "private.key"
         },
+        "url_origin": "http://localhost",
         "//":"extra_headers is used to add extra headers to the response, like X-Powered-By",
         "extra_headers": {
             "X-Powered-By": "LiteBlog"
@@ -65,11 +66,12 @@
         "filter_card": true
     },
     "notify_config": {
-        "//": "this is the notify config, if enabled is true, it will send the notification to the receiver.Available types: smtp|telegrambot,available triggers: receive_comment",
+        "//": "this is the notify config, if enabled is true, it will send the notification to the receiver.Available types: smtp|telegrambot,available triggers: receive_comment|subscribed_comment_reply",
         "enabled": false,
         "type": "telegrambot",
         "trigger": [
-            "receive_comment"
+            "receive_comment",
+            "subscribed_comment_reply"
         ],
         "smtp_config": {
             "host": "smtp.gmail.com:587",
