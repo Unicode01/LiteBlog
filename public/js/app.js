@@ -867,7 +867,11 @@ class Notify {
                     break;
             }
             
-        } 
+        } else {
+            // remove progress bar
+            childNode.style.setProperty("--notify-duration", "0ms")
+            childNode.style.setProperty("--progress-scale", "0")
+        }
         
 
         return newNotify.id;
