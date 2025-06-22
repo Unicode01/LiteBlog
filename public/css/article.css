@@ -353,8 +353,9 @@ input.email-subscribe-button[type="checkbox"] {
     border-radius: 6px;
     padding: 1.2em;
     margin: 1.5rem 0;
-    overflow-x: auto;
+    overflow: auto;
     font-size: 0.9em;
+    max-height: 800px;
 }
 
 .article-content code {

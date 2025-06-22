@@ -200,7 +200,9 @@ func renderRSSFeed() []byte {
 	rss_posts := []byte("")
 	// sort cards by order
 	sort.Slice(cardcfg.Cards, func(i, j int) bool {
-		return cardcfg.Cards[i]["order"] < cardcfg.Cards[j]["order"]
+		ii, _ := strconv.Atoi(cardcfg.Cards[i]["order"])
+		jj, _ := strconv.Atoi(cardcfg.Cards[j]["order"])
+		return ii < jj
 	})
 	for _, card := range cardcfg.Cards {
 		card_title := card["card_title"]
