@@ -773,13 +773,6 @@ function RenderHighlight() {
     });
 }
 
-function RenderImageLoadingAnimation() {
-    const imgs = document.querySelectorAll('.article-content img');
-    imgs.forEach(img => {
-        
-    });
-}
-
 function SwitchToRemoveEditDate() {
     // select article-date
     const articleDate = document.querySelector('.article-date');

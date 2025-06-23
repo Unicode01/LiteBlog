@@ -68,7 +68,7 @@ function OnContextMenu(event) {
     if (last_item.classList.contains('menu-item-line')) {
         last_item.remove();
     }
-    
+
     // set position
     var menu_x = event.clientX;
     var menu_y = event.clientY;
@@ -179,7 +179,7 @@ function addContextMenuListener() {
         if (!confirm("Are you sure to delete this card?")) {
             return;
         }
-        DeleteCard(window._delete_selected_card.getAttribute("card-id"), function(success){
+        DeleteCard(window._delete_selected_card.getAttribute("card-id"), function (success) {
             if (success) {
                 console.log("card deleted");
                 window._delete_selected_card.remove();
@@ -352,7 +352,7 @@ function addContextMenuListener() {
             }
         });
         return active;
-    }, "Delete Comment", function (event) { 
+    }, "Delete Comment", function (event) {
         event.preventDefault();
         // show confirm dialog
         if (!confirm("Are you sure to delete this comment?")) {
@@ -376,7 +376,7 @@ function addContextMenuListener() {
             }
         });
     });
-    
+
 }
 
 function AddEventListener() {
@@ -506,7 +506,7 @@ async function copyText(text) {
     try {
         await navigator.clipboard.writeText(text);
         console.log("link copied to clipboard with clipboard api:" + text);
-        window.Notify.add("Copied to clipboard!",{
+        window.Notify.add("Copied to clipboard!", {
             type: "success",
             timeout: 2000,
         })
@@ -515,7 +515,7 @@ async function copyText(text) {
         const success = document.execCommand("copy");
         if (success) {
             console.log("link copied to clipboard:" + text);
-            window.Notify.add("Copied to clipboard!",{
+            window.Notify.add("Copied to clipboard!", {
                 type: "success",
                 timeout: 2000,
             })
@@ -530,32 +530,32 @@ function InsertDarkCss(callback) {
     if (abortController) {
         abortController.abort();
     }
-    
+
     abortController = new AbortController();
     const signal = abortController.signal;
 
-    function loadStyleString(css){
+    function loadStyleString(css) {
         var style = document.createElement("style");
         style.type = "text/css";
         style.id = "dark-theme";
-        try{
+        try {
             style.appendChild(document.createTextNode(css));
-        } catch (ex){
+        } catch (ex) {
             style.textContent = css;
         }
         var head = document.getElementsByTagName("head")[0];
         head.appendChild(style);
     }
-    
+
     fetch('/css/dark.css', { signal })
-       .then(response => response.text())
-       .then(css => {
+        .then(response => response.text())
+        .then(css => {
             loadStyleString(css);
             // save to local storage
             localStorage.setItem("dark-theme-css", css);
             callback();
         })
-       .catch(error => {
+        .catch(error => {
             console.log(error);
         });
 }
@@ -586,7 +586,7 @@ function SetTheme(Theme) {
                 listener(Theme);
             });
         });
-        
+
     } else {
         // set light theme
         // remove dark theme style
@@ -640,11 +640,55 @@ function addThemeSwitchBroadcastListener(callback) {
     switchThemeListeners.push(callback)
 }
 
-function addContextMenuItem(decisionFunction = function() {return true;}, title, callback) {
+function addContextMenuItem(decisionFunction = function () { return true; }, title, callback) {
     contextMenuList.push({
         decisionFunction: decisionFunction,
         title: title,
         callback: callback
+    });
+}
+
+function stackCard(fromCard, toCard) {
+    const cards = Array.from(document.querySelectorAll(".content-container .card-container"));
+    cards.sort((a, b) => {
+        const orderA = parseInt(getComputedStyle(a).order) || 0;
+        const orderB = parseInt(getComputedStyle(b).order) || 0;
+        return orderA - orderB;
+    });
+    let startFind = false;
+    const selectedCards = [];
+    let lastOne = null;
+
+    for (const card of cards) {
+        if (card == toCard) {
+            break;
+        }
+        if (card == fromCard) {
+            startFind = true;
+        }
+
+        if (startFind) {
+            if (!card.classList.contains("card-container-split-line")) {
+                selectedCards.push(card);
+            } else if (card != fromCard) {
+                break;
+            }
+        }
+
+        lastOne = card;
+    }
+    selectedCards.forEach(card => {
+        if (card.classList.contains("stacked-card")) {
+            card.style.display = "";
+            card.classList.remove("stacked-card");
+            card.classList.add("show-stack-card");
+        } else {
+            card.classList.add("stacked-card");
+            card.classList.remove("show-stack-card");
+            setTimeout(() => {
+                card.style.display = "none"
+            }, 200);
+        }
     });
 }
 
@@ -701,7 +745,7 @@ class Notify {
             position: "top-left", // top-left, top-center, top-right, bottom-left, bottom-center, bottom-right
             extraStyle: null,
         }, settings);
-        this.defaultOptions = Object.assign({},{
+        this.defaultOptions = Object.assign({}, {
             icon: '/img/notify-info.svg',
             type: 'info', // success, warning, error, info
             timeout: 5000, // 0: never close, otherwise in milliseconds
@@ -713,7 +757,7 @@ class Notify {
             onHover: null,
             extraStyle: null,
         }, defaultOptions);
-        
+
         // set properties
         this.notiContainer.classList.add(this.Settings.position);
         this.notiContainer.style.setProperty("--notify-container-width", this.Settings.containerWidth + "px");
@@ -774,7 +818,7 @@ class Notify {
                     break;
             }
         }
-        
+
         // console.log(newNotify);
         this.notifyList[newNotify.id] = newNotify;
         let childNode = this.basicNotify.cloneNode(true);
@@ -802,7 +846,7 @@ class Notify {
             e.stopPropagation();
             this.onEvent("hover", newNotify.id, e);
         });
-        
+
         this.notiContainer.insertBefore(childNode, this.notiContainer.firstChild);
 
         // check timeout
@@ -825,12 +869,12 @@ class Notify {
         setTimeout(() => {
             childNode.classList.remove("notify-show");
         }, this.Settings.animationDuration);
-        
+
         // check if need to close
         if (this.Settings.maxList > 0 && Object.keys(this.notifyList).length > this.Settings.maxList) {
             let selected = [];
             let needToRemove = Object.keys(this.notifyList).length - this.Settings.maxList;
-        
+
             console.log("need to remove:", needToRemove);
             for (let id in this.notifyList) {
                 if (selected.length >= needToRemove) {
@@ -842,7 +886,7 @@ class Notify {
             }
             console.log("selected:", selected);
             for (let i = 0; i < selected.length; i++) {
-                console.log("remove oldest notify:",selected[i].index);
+                console.log("remove oldest notify:", selected[i].index);
                 this.remove(selected[i].id);
             }
         }
@@ -866,13 +910,13 @@ class Notify {
                     childNode.style.setProperty("--progress-scale", "0")
                     break;
             }
-            
+
         } else {
             // remove progress bar
             childNode.style.setProperty("--notify-duration", "0ms")
             childNode.style.setProperty("--progress-scale", "0")
         }
-        
+
 
         return newNotify.id;
     }
