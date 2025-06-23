@@ -434,6 +434,14 @@ body {
     }
 }
 
+.stacked-card {
+    animation: notify-remove 0.2s ease forwards;
+}
+
+.show-stack-card {
+    animation: notify-show 0.2s ease forwards;
+}
+
 @keyframes notify-remove {
     from {
         opacity: 1;
