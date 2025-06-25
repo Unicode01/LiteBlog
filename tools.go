@@ -130,7 +130,8 @@ func getRequestIP(r *http.Request) string {
 		ip = r.Header.Get("X-Real-Ip")
 	}
 	if ip == "" {
-		ip = r.Header.Get("X-Forwarded-For")
+		xforwardedforIPs := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+		ip = strings.TrimSpace(xforwardedforIPs[len(xforwardedforIPs)-1]) // Get the last IP in the list
 	}
 	if ip == "" {
 		ip, _, _ = net.SplitHostPort(r.RemoteAddr)

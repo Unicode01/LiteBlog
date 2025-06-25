@@ -2,30 +2,17 @@ package main_test
 
 import (
 	"LiteBlog/utils/firewall"
+	"context"
 	"fmt"
 	"testing"
 	"time"
 )
 
 func Test_firewall(t *testing.T) {
-	wall := firewall.NewFirewall()
-	timeNow := time.Now().Nanosecond()
-	for i := 0; i < 10000000; i++ {
-		wall.AddRule(&firewall.Rule{
-			Rule:   "myrule" + fmt.Sprintf("%d", i),
-			Action: i,
-			Type:   "ipaddr",
-		})
+	wall := firewall.NewFirewall(context.Background())
+	for range 1000000 {
+		time.Sleep(time.Millisecond)
+		i, r := wall.MatchRule("127.0.0.1", nil)
+		fmt.Printf("%d,reason:%s\n", i, r)
 	}
-	fmt.Printf("Add Timeused: %d\n", time.Now().Nanosecond()-timeNow)
-
-	timeNow = time.Now().Nanosecond()
-	for i := 9000000; i < 9000010; i++ {
-		fmt.Printf("match rule: %s, result: %d\n", "myrule"+fmt.Sprintf("%d", i), wall.MatchRule("myrule"+fmt.Sprintf("%d", i), nil))
-	}
-	fmt.Printf("Del Timeused: %d\n", time.Now().Nanosecond()-timeNow)
-
-	timeNow = time.Now().Nanosecond()
-	wall.ShowRules()
-	fmt.Printf("Show Timeused: %d\n", time.Now().Nanosecond()-timeNow)
 }

@@ -35,8 +35,9 @@ var (
 // Init the network manager
 // init net proxy
 func InitNetManager(config *ServerConfig) error {
+	ctx := context.Background()
 	// init firewall
-	fireWall = firewall.NewFirewall()
+	fireWall = firewall.NewFirewall(ctx)
 	// build cache manager
 	cacheManager = utils.NewCacheManager(Config.CacheCfg.MaxCacheSize, Config.CacheCfg.MaxCacheItems) // 2GB cache, 1 million cache item
 	// build deliver manager
@@ -138,12 +139,12 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		response_time := response_end_time.Sub(response_start_time)
 		Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, UA: '%s', %s %s, %s, disk_cached=%t", IP, traceID, r.Header.Get("User-Agent"), r.Method, r.URL.Path, response_time, cached))
 	}()
-
-	if fireWall.MatchRule(IP, r) == 1 {
+	firewallAction, blockReason := fireWall.MatchRule(IP, r)
+	if firewallAction == 1 {
 		w.WriteHeader(http.StatusForbidden)
 		f, err := os.Open("public/403.html")
 		if err != nil {
-			w.Write([]byte("403 Forbidden | You have been blocked by the firewall."))
+			w.Write([]byte("403 Forbidden | You have been blocked by the firewall.\nReason: " + blockReason))
 			return
 		}
 		io.Copy(w, f)
@@ -160,7 +161,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		io.Copy(w, f)
 		f.Close()
 		// add to block list
-		fireWall.AddRule(&firewall.Rule{Action: 1, Rule: IP, Type: "ipaddr", Timeout: time.Now().Add(time.Hour).Unix()})
+		fireWall.AddRule(&firewall.Rule{Action: 1, Rule: IP, Type: "ipaddr", Timeout: time.Now().Add(time.Hour).Unix(), Reason: "path traversal"})
 		return
 	}
 	if strings.HasSuffix(r.URL.Path, "/") { // redirect to index.html
