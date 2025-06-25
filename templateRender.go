@@ -23,7 +23,9 @@ var (
 	GlobalMapLocker   = new(sync.RWMutex)
 	RenderedMap       = make(map[string][]byte)
 	RenderedMapLocker = new(sync.RWMutex)
-	cardJsonPrev      = []byte("")
+	cardConfigPrev    struct {
+		Cards []map[string]string `json:"cards"`
+	}
 )
 
 func RenderTemplate(template []byte, ReplaceMap map[string][]byte) []byte {
@@ -156,7 +158,6 @@ func renderCards() []byte {
 		Log(3, "error reading card config file: "+err.Error())
 		return []byte("")
 	}
-	cardJsonPrev = card_file
 	err = json.Unmarshal(card_file, &cardcfg)
 	if err != nil {
 		Log(3, "error parsing card config file: "+err.Error())
@@ -174,6 +175,7 @@ func renderCards() []byte {
 		}
 		return a < b
 	})
+	cardConfigPrev = cardcfg
 	cards_bytes := []byte("")
 	for _, card := range cardcfg.Cards {
 		card_opt := map[string][]byte{}
@@ -188,22 +190,8 @@ func renderCards() []byte {
 }
 
 func renderRSSFeed() []byte {
-	type Card_Config struct {
-		Cards []map[string]string `json:"cards"`
-	}
-	var cardcfg Card_Config
-	err := json.Unmarshal(cardJsonPrev, &cardcfg)
-	if err != nil {
-		Log(3, "error parsing card config file: "+err.Error())
-		return []byte("")
-	}
+	cardcfg := cardConfigPrev
 	rss_posts := []byte("")
-	// sort cards by order
-	sort.Slice(cardcfg.Cards, func(i, j int) bool {
-		ii, _ := strconv.Atoi(cardcfg.Cards[i]["order"])
-		jj, _ := strconv.Atoi(cardcfg.Cards[j]["order"])
-		return ii < jj
-	})
 	for _, card := range cardcfg.Cards {
 		card_title := card["card_title"]
 		card_description := card["card_description"]
