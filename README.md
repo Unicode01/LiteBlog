@@ -154,36 +154,48 @@ Yes, Here is some example of the firewall rules:
 - if you want to block the ip address `8.9.10.11`, you can add the following rule to the `configs/firewall.json` file:
 ``` json
 {
-	"rules": [
-        "//": "action 1: block, 0: allow/default",
-        "action": 1,
-        "type": "ipaddr",
-        "rule": "8.9.10.11",
-        "timeout": 99999999999
-    ]
+    "//": "action 1: block, 0: allow/default",
+    "name": "block_ipaddr_8.9.10.11",
+    "action": 1,
+    "type": "ipaddr",
+    "rule": "8.9.10.11",
+    "timeout": 99999999999
 }
 ```
 - if you want to block the ip cidr `192.168.0.0/24`, you can add the following rule to the `configs/firewall.json` file:
 ``` json
 {
-    "rules": [
-        "//": "action 1: block, 0: allow/default",
-        "action": 1,
-        "type": "ipcidr",
-        "rule": "192.168.0.0/24",
-        "timeout": 99999999999
-    ]
+    "//": "action 1: block, 0: allow/default",
+    "name": "block_ipcidr_192.168.0.0/24",
+    "action": 1,
+    "type": "ipcidr",
+    "rule": "192.168.0.0/24",
+    "timeout": 99999999999
 }
 ```
 - if you want to block the user agent `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36`, you can add the following rule to the `configs/firewall.json` file:
 ``` json
 {
-    "rules": [
-        "//": "action 1: block, 0: allow/default",
-        "action": 1,
-        "type": "useragent",
-        "rule": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36",
-        "timeout": 99999999999
+    "//": "action 1: block, 0: allow/default",
+    "name": "block_useragent_default",
+    "action": 1,
+    "type": "useragent",
+    "rule": "^Mozilla/5\\.0 \\(Windows NT 10\\.0; Win64; x64\\) AppleWebKit/537\\.36 \\(KHTML, like Gecko\\) Chrome/58\\.0\\.3029\\.110 Safari/537\\.36$",
+    "timeout": 99999999999
+}
+```
+- if you want to set rate limit rule, which will block the request if the request rate is over the limit, you can add the following rule to the `configs/firewall.json` file:
+``` json
+{
+    "//": "rule: requests per second;args: block_time=60, block_time is the block time in seconds",
+    "name": "default_rate_limit",
+    "action": 1,
+    "rule": "200",
+    "type": "ratelimit",
+    "timeout": 9999999999,
+    "reason": "you have exceeded the rate limit",
+    "args": [
+        "block_time=60"
     ]
 }
 ```
