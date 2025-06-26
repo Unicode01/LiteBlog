@@ -16,6 +16,7 @@ import (
 )
 
 type Firewall struct {
+	LastError error
 	headRule  *chainRule
 	lastRule  *chainRule
 	chainLock *sync.RWMutex
@@ -79,13 +80,19 @@ func (f *Firewall) AddRule(rule *Rule, head ...bool) bool {
 		f.ipcidrRuleMapLocker.Lock()
 		_, parsedNet, err := net.ParseCIDR(rule.Rule)
 		if err != nil {
+			f.LastError = fmt.Errorf("invalid ipcidr rule: %s", rule.Rule)
 			break
 		}
 		rule.parsedIPNet = parsedNet
 		f.ipcidrRuleMap = append(f.ipcidrRuleMap, rule)
 		f.ipcidrRuleMapLocker.Unlock()
 	case "useragent": // add to uaRuleMap
-		rule.parsedUARegex = regexp.MustCompile(rule.Rule)
+		parsedUARegex, err := regexp.Compile(rule.Rule)
+		if err != nil {
+			f.LastError = fmt.Errorf("invalid useragent rule: %s", rule.Rule)
+			break
+		}
+		rule.parsedUARegex = parsedUARegex
 		f.uaRuleMap.Store(rule.parsedUARegex, rule)
 	case "ratelimit": // add to rateLimitRuleMap
 		f.rateLimitRuleMapLocker.Lock()
@@ -113,9 +120,11 @@ func (f *Firewall) DeleteRule(ruleName string) bool {
 	f.chainLock.Lock()
 	defer f.chainLock.Unlock()
 	if f.headRule == nil {
+		f.LastError = fmt.Errorf("no rule found: %s", ruleName)
 		return false
 	}
 	if _, ok := f.nameRuleMap.Load(ruleName); !ok {
+		f.LastError = fmt.Errorf("no rule found: %s", ruleName)
 		return false
 	}
 	dummy := &chainRule{next: f.headRule} // dummy head
@@ -188,44 +197,41 @@ func (f *Firewall) MatchRule(ip string, r *http.Request) (action int, reason str
 		return rule.Action, rule.Reason
 	}
 
-	// check ip cidr rules
-	f.ipcidrRuleMapLocker.RLock()
-	for _, rule := range f.ipcidrRuleMap {
-		if rule.Timeout > 0 && rule.Timeout < time.Now().Unix() { // timeout
-			continue
-		}
-		var mask *net.IPNet
-		if rule.parsedIPNet == nil { // has parsed ip net
-			// parse ip cidr
-			_, mask_, err := net.ParseCIDR(rule.Rule)
-			if err != nil {
+	// parse rule to net.ip
+	ruleIP := net.ParseIP(ip)
+	if ruleIP != nil {
+		// check ip cidr rules
+		f.ipcidrRuleMapLocker.RLock()
+		for _, rule := range f.ipcidrRuleMap {
+			if rule.Timeout > 0 && rule.Timeout < time.Now().Unix() { // timeout
 				continue
 			}
-			mask = mask_
-		} else {
-			mask = rule.parsedIPNet
-		}
+			var mask *net.IPNet
+			if rule.parsedIPNet == nil { // has parsed ip net
+				// parse ip cidr
+				_, mask_, err := net.ParseCIDR(rule.Rule)
+				if err != nil {
+					continue
+				}
+				mask = mask_
+			} else {
+				mask = rule.parsedIPNet
+			}
 
-		// parse rule to net.ip
-		ruleIP := net.ParseIP(ip)
-		if ruleIP == nil {
-			continue
+			// check ip(rule) in cidr
+			if mask.Contains(ruleIP) {
+				f.ipcidrRuleMapLocker.RUnlock()
+				return rule.Action, rule.Reason
+			}
 		}
-		// check ip(rule) in cidr
-		if mask.Contains(ruleIP) {
-
-			f.ipcidrRuleMapLocker.RUnlock()
-			return rule.Action, rule.Reason
-		}
+		f.ipcidrRuleMapLocker.RUnlock()
 	}
-	f.ipcidrRuleMapLocker.RUnlock()
 
 	// check ua rules
 	if r != nil {
 		isMatched := false
-		action := 0
-		reason := ""
-		f.uaRuleMap.Range(func(key, value interface{}) bool {
+		var selectedRule *Rule
+		f.uaRuleMap.Range(func(key, value any) bool {
 			regex := key.(*regexp.Regexp)
 			rule := value.(*Rule)
 			if regex.MatchString(r.Header.Get("User-Agent")) { // match ua
@@ -233,14 +239,13 @@ func (f *Firewall) MatchRule(ip string, r *http.Request) (action int, reason str
 				if rule.Timeout > 0 && rule.Timeout < time.Now().Unix() { // timeout
 					return true
 				}
-				action = rule.Action
-				reason = rule.Reason
+				selectedRule = rule
 				return false
 			}
 			return true
 		})
 		if isMatched {
-			return action, reason
+			return selectedRule.Action, selectedRule.Reason
 		}
 	}
 
@@ -327,6 +332,7 @@ func (f *Firewall) ReadRules() bool {
 	// read from file
 	cfg_filebin, err := os.ReadFile(cfg_path)
 	if err != nil {
+		f.LastError = fmt.Errorf("read firewall config file failed: %s", err)
 		return false
 	}
 	// parse json
@@ -336,7 +342,7 @@ func (f *Firewall) ReadRules() bool {
 	var cfg Config
 	err = json.Unmarshal(cfg_filebin, &cfg)
 	if err != nil {
-		fmt.Printf("json.Unmarshal error: %v\n", err)
+		f.LastError = fmt.Errorf("invalid firewall config: %s", err)
 		return false
 	}
 	// add rules
@@ -367,11 +373,13 @@ func (f *Firewall) SaveRules() bool {
 	// 生成带格式的 JSON
 	data, err := json.MarshalIndent(cfg, "", "    ")
 	if err != nil {
+		f.LastError = fmt.Errorf("marshal firewall config failed: %s", err)
 		return false
 	}
 
 	// 写入文件
 	if err := os.WriteFile(cfgPath, data, 0644); err != nil {
+		f.LastError = fmt.Errorf("write firewall config file failed: %s", err)
 		return false
 	}
 
