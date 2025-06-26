@@ -161,7 +161,14 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		io.Copy(w, f)
 		f.Close()
 		// add to block list
-		fireWall.AddRule(&firewall.Rule{Action: 1, Rule: IP, Type: "ipaddr", Timeout: time.Now().Add(time.Hour).Unix(), Reason: "path traversal"})
+		fireWall.AddRule(&firewall.Rule{
+			Name:    "auto_blocked_by_path_traversal-IP-" + IP,
+			Action:  1,
+			Rule:    IP,
+			Type:    "ipaddr",
+			Timeout: time.Now().Add(time.Hour).Unix(),
+			Reason:  "path traversal",
+		})
 		return
 	}
 	if strings.HasSuffix(r.URL.Path, "/") { // redirect to index.html
