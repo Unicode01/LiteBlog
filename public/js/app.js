@@ -416,6 +416,7 @@ function OnHistoryButtonClick() {
     } else {
         historyItems = localStorage.getItem('history');
         if (!historyItems) {
+            window.Notify.info("No history found");
             return;
         }
         // get history from local storage

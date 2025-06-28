@@ -87,6 +87,13 @@
             "preload_all": "true",
             "tags": "",
             "template": "card_template_photo_album"
+        },
+        {
+            "card_description": "This template is used to add link to RSS feed, but not shown on the index page.",
+            "card_link": "https://example.com/me.html",
+            "card_title": "1",
+            "id": "4",
+            "template": "card_template_empty"
         }
     ]
 }
