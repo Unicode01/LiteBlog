@@ -27,7 +27,7 @@ type Firewall struct {
 	// rate limit
 	rateLimitRuleMap       []*Rule // rule
 	rateLimitRuleMapLocker *sync.RWMutex
-	rateLimitMapIP         sync.Map // ip -> count
+	rateLimitMapIP         sync.Map // ip -> count (atomic.Int32)
 	// ipaddr
 	ipaddrRuleMap sync.Map // ip -> rule
 	// ipcidr

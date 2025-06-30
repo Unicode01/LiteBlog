@@ -796,10 +796,20 @@ function SwitchToRemoveEditDate() {
     }
 }
 
+function AddImgEventListener() {
+    articleImgs = document.querySelectorAll(".article-content img");
+    articleImgs.forEach(function (img) {
+        img.addEventListener("click", function (event) {
+            show_big_photo(img.src);
+        });
+    });
+}
+
 window.addEventListener('DOMContentLoaded', function () {
     RenderOutline();
     RenderHighlight();
     SwitchToRemoveEditDate();
+    AddImgEventListener();
 });
 
 addThemeSwitchBroadcastListener(function (theme) {
@@ -903,5 +913,28 @@ function escapeString(str) {
             case '>': return '&gt;';
             default: return char;
         }
+    });
+}
+
+function show_big_photo(photo_url) {
+    // remove big photo container if exist
+    const big_photo_container_old = document.querySelector(".big-photo-container");
+    big_photo_container_old?.remove();
+    console.log("show big photo", photo_url);
+    // create big photo container
+    var big_photo_container = document.createElement("div");
+    big_photo_container.classList.add("big-photo-container");
+    var big_photo_img = document.createElement("img");
+    big_photo_img.src = photo_url;
+    big_photo_container.appendChild(big_photo_img);
+    document.body.appendChild(big_photo_container);
+    // add event listener to close big photo
+    big_photo_container.addEventListener("click", function (event) {
+        big_photo_container.remove();
+    });
+    big_photo_container.addEventListener("contextmenu", function (event) { // prevent right click menu
+        // prevent event transfer to parent
+        // event.preventDefault();
+        event.stopPropagation();
     });
 }
