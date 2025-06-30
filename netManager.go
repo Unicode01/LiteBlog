@@ -166,7 +166,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			Action:  1,
 			Rule:    IP,
 			Type:    "ipaddr",
-			Timeout: time.Now().Add(time.Hour).Unix(),
+			Timeout: time.Now().Add(time.Hour).Unix(), // block for 1 hour
 			Reason:  "path traversal",
 		})
 		return

@@ -295,6 +295,22 @@ input.email-subscribe-button[type="checkbox"] {
     border-left: 3px solid var(--base-gray-700);
 }
 
+.big-photo-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 9999;
+    overflow: hidden;
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: scale-down;
+    }
+}
+
 /* 以下为文章内容的样式 */
 
 /* 基础段落 */
