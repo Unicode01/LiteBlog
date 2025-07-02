@@ -1393,6 +1393,11 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	// check text length
+	if Config.CommentCfg.MaxTextLength != 0 && len(req.Content) > Config.CommentCfg.MaxTextLength {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	// check the email address
 	if !isAvailableEmailAddress(req.Email) {
 		w.WriteHeader(http.StatusBadRequest)
