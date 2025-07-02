@@ -7,11 +7,25 @@ var Context_menu_html = `{{file:context_menu}}`
 // end render
 var switchThemeListeners = [];
 var contextMenuList = [];
+// drag
+let dragTarget = null;
+let draggingoffsetX = 0;
+let draggingoffsetY = 0;
 
 function init() {
     ResizeCard();
     AddEventListener();
     LogHistory();
+    document.addEventListener('mousedown', function (e) {
+        if (e.target.classList.contains('card-drag-handle')) {
+            dragTarget = e.target.closest('.card-input-box,.edit-settings-box,.comment-input-box');
+            const rect = dragTarget.getBoundingClientRect();
+            draggingoffsetX = e.clientX - rect.left;
+            draggingoffsetY = e.clientY - rect.top + parseInt(getComputedStyle(dragTarget).marginTop.slice(0, -2));
+            document.addEventListener('mousemove', onBoxMouseMove);
+            document.addEventListener('mouseup', onBoxMouseUp);
+        }
+    });
 }
 
 function ResizeCard() {
@@ -622,11 +636,11 @@ function themeSwitchClick(e) {
     const current_theme = GetTheme();
     console.log("current theme:" + current_theme);
     if (current_theme == "light") {
-        SetTheme("dark");
-        window.Notify.add("Dark theme enabled", {
-            type: "success",
+        window.Notify.add("Loading Dark Theme...", {
+            type: "info",
             timeout: 2000,
         });
+        SetTheme("dark");
     } else {
         console.log("set light theme");
         SetTheme("light");
@@ -706,6 +720,19 @@ function InitNotifyModule() {
             window.Notify.remove(notify.id);
         },
     });
+}
+
+function onBoxMouseMove(e) {
+    if (!dragTarget) return;
+    dragTarget.style.transform = "none";
+    dragTarget.style.left = `${e.clientX - draggingoffsetX}px`;
+    dragTarget.style.top = `${e.clientY - draggingoffsetY}px`;
+}
+
+function onBoxMouseUp() {
+    document.removeEventListener('mousemove', onBoxMouseMove);
+    document.removeEventListener('mouseup', onBoxMouseUp);
+    dragTarget = null;
 }
 
 class Notify {

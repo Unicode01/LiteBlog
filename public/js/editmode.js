@@ -648,7 +648,13 @@ function onImportButtonClick() {
     // require user to enter the codes of base64 encoded json data
     const input = prompt("Enter the base64 encoded json data:");
     if (input === null) return;
-    const jsonData = JSON.parse(decodeURIComponent(atob(input)));
+    let jsonData = {};
+    try {
+        decodedInput = JSON.parse(decodeURIComponent(atob(input)));
+    } catch(error) {
+        window.Notify.error("Invalid encoded data.");
+        return;
+    }
     console.log(jsonData);
     const customFields = {};
     const card_title = document.getElementById('add-card-title')
