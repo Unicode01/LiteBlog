@@ -442,6 +442,16 @@ body {
     animation: notify-show 0.2s ease forwards;
 }
 
+.card-drag-handle {
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    color: var(--base-black);
+    cursor: move;
+    user-select: none;
+    font-weight: bold;
+}
+
 @keyframes notify-remove {
     from {
         opacity: 1;
