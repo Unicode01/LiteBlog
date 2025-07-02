@@ -27,7 +27,8 @@ type Firewall struct {
 	// rate limit
 	rateLimitRuleMap       []*Rule // rule
 	rateLimitRuleMapLocker *sync.RWMutex
-	rateLimitMapIP         sync.Map // ip -> count (atomic.Int32)
+	rateLimitMapIP         sync.Map     // ip -> count (atomic.Int32)
+	rateLimitTicker        *time.Ticker // statistical cycle (millisecond)
 	// ipaddr
 	ipaddrRuleMap sync.Map // ip -> rule
 	// ipcidr
@@ -48,10 +49,12 @@ func NewFirewall(ctx context.Context) *Firewall {
 		ipcidrRuleMap:          make([]*Rule, 0),
 		ipcidrRuleMapLocker:    new(sync.RWMutex),
 	}
-	fw.ReadRules()
-	go fw.autoDeleteRule(ctx)
 	// create rate limit ticker
 	rateLimitTicker := time.NewTicker(time.Second * 1) // 1s
+	fw.rateLimitTicker = rateLimitTicker
+
+	fw.ReadRules()
+	go fw.autoDeleteRule(ctx)
 	go func() {
 		for {
 			select {
@@ -69,7 +72,8 @@ func (f *Firewall) AddRule(rule *Rule, head ...bool) bool {
 	if rule.Name == "" || rule.Rule == "" {
 		return false
 	}
-	f.DeleteRule(rule.Name) // delete old rule
+	rule.compiledRuleArgs = new(sync.Map) // init compiledRuleArgs
+	f.DeleteRule(rule.Name)               // delete old rule
 	f.chainLock.Lock()
 	defer f.chainLock.Unlock()
 	newChain := &chainRule{Rule: rule, next: nil}
@@ -99,6 +103,25 @@ func (f *Firewall) AddRule(rule *Rule, head ...bool) bool {
 		f.rateLimitRuleMap = append(f.rateLimitRuleMap, rule)
 		f.rateLimitRuleMapLocker.Unlock()
 	}
+
+	// get args
+	for _, arg := range rule.Args {
+		argsArr := strings.Split(arg, "=")
+		if len(argsArr) != 2 {
+			continue
+		}
+		rule.compiledRuleArgs.Store(argsArr[0], argsArr[1])
+		switch argsArr[0] {
+		case "cycle":
+			i, err := strconv.ParseInt(argsArr[1], 10, 64)
+			if err != nil {
+				f.LastError = fmt.Errorf("invalid cycle arg: %s", argsArr[1])
+				break
+			}
+			f.rateLimitTicker.Reset(time.Second * time.Duration(i))
+		}
+	}
+
 	f.nameRuleMap.Store(rule.Name, rule)
 
 	if f.headRule == nil {
@@ -256,17 +279,13 @@ func (f *Firewall) MatchRule(ip string, r *http.Request) (action int, reason str
 			f.rateLimitRuleMapLocker.RUnlock()
 			return 0, ""
 		}
-		blockTime := time.Now().Unix() + 60 // 60s
-		for _, arg := range rule.Args {
-			args := strings.Split(arg, "=")
-			if len(args) != 2 {
-				continue
-			}
-			switch args[0] {
-			case "block_time":
-				if t, err := strconv.ParseInt(args[1], 10, 64); err == nil {
-					blockTime = time.Now().Unix() + t
-				}
+		blockTime := time.Now().Unix() + 60               // 60s
+		v, ok := rule.compiledRuleArgs.Load("block_time") // set block time
+		if ok {
+			vStr := v.(string)
+			vInt, err := strconv.ParseInt(vStr, 10, 64)
+			if err == nil {
+				blockTime = time.Now().Unix() + vInt
 			}
 		}
 		// check count
@@ -400,6 +419,7 @@ type Rule struct {
 	Reason  string   `json:"reason"`  // reason for block or allow
 	Args    []string `json:"args"`    // extra args for rule
 
-	parsedIPNet   *net.IPNet     // parsed ip net for ipcidr rule
-	parsedUARegex *regexp.Regexp // parsed ua regex for useragent rule
+	parsedIPNet      *net.IPNet     // parsed ip net for ipcidr rule
+	parsedUARegex    *regexp.Regexp // parsed ua regex for useragent rule
+	compiledRuleArgs *sync.Map      // compiled args for rules
 }
