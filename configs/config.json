@@ -48,7 +48,8 @@
         "cf_site_key": "your_site_key",
         "google_site_key": "your_site_key",
         "google_secret_key": "your_secret_key",
-        "min_seconds_between_comments": 30
+        "min_seconds_between_comments": 30,
+        "max_text_length": 1000
     },
     "logger_config": {
         "//": "0: debug/all 1: info 2: warning 3: error 4: critical; file_sync_interval: the interval to sync the log file to disk, default is 10 seconds; disable_stdout: disable the output to stdout, default is false.max_log_file_size: the max size of the log file, default is 512MB.",

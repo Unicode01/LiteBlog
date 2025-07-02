@@ -74,6 +74,7 @@ type CommentConfig struct {
 	GoogleSecretKey           string `json:"google_secret_key"`
 	GoogleSiteKey             string `json:"google_site_key"`
 	MinSecondsBetweenComments int    `json:"min_seconds_between_comments"`
+	MaxTextLength             int    `json:"max_text_length"`
 }
 
 type LoggerConfig struct {
