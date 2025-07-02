@@ -150,7 +150,7 @@ The cache is used to improve the performance of the server. The cache will store
 ### How does the asynchronous cache mechanism work?
 The asynchronous cache mechanism is used to improve the performance of the server. When the resource can be cached, the server will use asynchronized deliver manager to deliver the content which need be cached. This can improve the performance of the server when need to cache a large amount of data.
 ### Can I configure the firewall rules?
-Yes, Here is some example of the firewall rules:
+Yes, Here is some example of the firewall rules, you should make sure the `name` is unique and the `rule` is correct.:
 - if you want to block the ip address `8.9.10.11`, you can add the following rule to the `configs/firewall.json` file:
 ``` json
 {
@@ -187,7 +187,7 @@ Yes, Here is some example of the firewall rules:
 - if you want to set rate limit rule, which will block the request if the request rate is over the limit, you can add the following rule to the `configs/firewall.json` file:
 ``` json
 {
-    "//": "rule: requests per second;args: block_time=60, block_time is the block time in seconds",
+    "//": "rule: requests per second;args: block_time=60, block_time is the block time in seconds; cycle=10, the statistics cycle in seconds",
     "name": "default_rate_limit",
     "action": 1,
     "rule": "200",
@@ -195,7 +195,8 @@ Yes, Here is some example of the firewall rules:
     "timeout": 9999999999,
     "reason": "you have exceeded the rate limit",
     "args": [
-        "block_time=60"
+        "block_time=60",
+        "cycle=10"
     ]
 }
 ```
