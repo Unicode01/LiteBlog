@@ -7,7 +7,6 @@
             "type": "ratelimit",
             "timeout": 9999999999,
             "reason": "you have exceeded the rate limit",
-            "//": "if the frequency of requests exceeds 200 per 10 seconds, block the IP for 60 seconds",
             "args": [
                 "block_time=60",
                 "cycle=10"

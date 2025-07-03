@@ -16,6 +16,10 @@ import (
 	"time"
 )
 
+var (
+	idRegex = regexp.MustCompile(`^[a-zA-Z0-9]{16}$`)
+)
+
 type Xorshift32 struct {
 	state uint32
 }
@@ -290,4 +294,8 @@ func generateEncryptToken(token, encryptKey string, timestampBase64 string) stri
 	}
 
 	return string(finalShuffle)
+}
+
+func isValidID(id string) bool {
+	return idRegex.MatchString(id)
 }

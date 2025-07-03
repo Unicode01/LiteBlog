@@ -14,7 +14,9 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/microcosm-cc/bluemonday"
@@ -28,6 +30,9 @@ var (
 	notifyManager      *utils.NotifyManager
 	notifyTriggerMap   = make(map[string]bool)
 	pathTraversalRegex = regexp.MustCompile(`(?i)(\.\./|\.\.\\)|(/etc/passwd|/bin/sh|/bin/bash|/\.env)`)
+	cardAPILocker      = sync.RWMutex{}
+	articleAPILocker   = sync.RWMutex{}
+	settingsAPILocker  = sync.RWMutex{}
 	LastCommentTime    time.Time
 	EncryptTokenKey    string
 )
@@ -141,25 +146,11 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 	firewallAction, blockReason := fireWall.MatchRule(IP, r)
 	if firewallAction == 1 {
-		w.WriteHeader(http.StatusForbidden)
-		f, err := os.Open("public/403.html")
-		if err != nil {
-			w.Write([]byte("403 Forbidden | You have been blocked by the firewall.\nReason: " + blockReason))
-			return
-		}
-		io.Copy(w, f)
-		f.Close()
+		serveError(w, http.StatusForbidden, blockReason)
 		return
 	}
 	if pathTraversalRegex.MatchString(r.URL.Path) { // path traversal
-		w.WriteHeader(http.StatusForbidden)
-		f, err := os.Open("public/403.html")
-		if err != nil {
-			w.Write([]byte("403 Forbidden"))
-			return
-		}
-		io.Copy(w, f)
-		f.Close()
+		serveError(w, http.StatusForbidden, "path traversal")
 		// add to block list
 		fireWall.AddRule(&firewall.Rule{
 			Name:    "auto_blocked_by_path_traversal-IP-" + IP,
@@ -214,14 +205,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		articleIDHTML := r.URL.Path[len("/articles/"):]
 		filebin := renderarticle(articleIDHTML)
 		if len(filebin) == 0 {
-			w.WriteHeader(http.StatusNotFound)
-			f, err := os.Open("public/404.html")
-			if err != nil {
-				w.Write([]byte("404 Not Found"))
-				return
-			}
-			io.Copy(w, f)
-			f.Close()
+			serveError(w, http.StatusNotFound, "Article not found")
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -245,21 +229,15 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		// directly serve file
 		file, err := os.OpenFile("public"+r.URL.Path, os.O_RDONLY, 0) // check file exist
 		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			f, err := os.Open("public/404.html")
-			if err != nil {
-				w.Write([]byte("404 Not Found"))
-				return
-			}
-			io.Copy(w, f)
-			f.Close()
+			serveError(w, http.StatusNotFound, "File not found")
 			return
 		}
 		// content_type := GetContentType(r.URL.Path)
 		// w.Header().Set("Content-Type", content_type)
 		// defer file.Close()
 
+		// set cache control
+		// w.Header().Set("Cache-Control", "max-age=31536000, public") // 1 year cache
 		http.ServeContent(w, r, r.URL.Path, time.Now(), file) // directly serve file
 		file.Close()
 		// io.Copy(w, file)
@@ -284,14 +262,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	// open file to render
 	file, err := os.OpenFile("public"+r.URL.Path, os.O_RDONLY, 0) // check file exist
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		f, err := os.Open("public/404.html")
-		if err != nil {
-			w.Write([]byte("404 Not Found"))
-			return
-		}
-		io.Copy(w, f)
-		f.Close()
+		serveError(w, http.StatusNotFound, "File not found")
 		return
 	}
 	defer file.Close()
@@ -299,8 +270,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	// render template
 	fileBin, err := io.ReadAll(file)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal Server Error"))
+		serveError(w, http.StatusInternalServerError, "Failed to read file")
 		return
 	}
 	fileBin = RenderTemplate(fileBin, nil)
@@ -369,8 +339,7 @@ func serveBackend(w http.ResponseWriter, r *http.Request) {
 		backendHandler_edit_custom_settings(w, r)
 		return
 	default:
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("404 Not Found"))
+		serveError(w, http.StatusNotFound, "Backend API not found")
 		return
 	}
 }
@@ -382,22 +351,40 @@ func servePublicAPI(w http.ResponseWriter, r *http.Request) {
 		public_api_add_comment(w, r)
 		return
 	default:
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("404 Not Found"))
+		serveError(w, http.StatusNotFound, "API not found")
 		return
 	}
 }
 
-func backendHandler_edit_order(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
+func serveError(w http.ResponseWriter, statusCode int, message string) {
+	errorPages := map[int][]byte{
+		400: []byte("400 Bad Request"),
+		401: []byte("401 Unauthorized"),
+		403: []byte("403 Forbidden"),
+		404: []byte("404 Not Found"),
+		500: []byte("500 Internal Server Error"),
 	}
-	bodyBin, err := io.ReadAll(r.Body)
+	Log(1, fmt.Sprintf("Serve error: %d, %s", statusCode, message))
+	// open error page
+	f, err := os.OpenFile(fmt.Sprintf("public/%d.html", statusCode), os.O_RDONLY, 0)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(statusCode)
+		w.Write(errorPages[statusCode])
 		return
 	}
+	defer f.Close()
+	w.WriteHeader(statusCode)
+	io.Copy(w, f)
+}
+
+func backendHandler_edit_order(w http.ResponseWriter, r *http.Request) {
+	cardAPILocker.Lock()
+	defer cardAPILocker.Unlock()
+	if r.Method != "POST" {
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	jsonDecoder := json.NewDecoder(r.Body)
 	type orderrequest struct {
 		Token   string `json:"token"`
 		Changes []struct {
@@ -406,51 +393,63 @@ func backendHandler_edit_order(w http.ResponseWriter, r *http.Request) {
 		} `json:"changes"`
 	}
 	var req orderrequest
-	err = json.Unmarshal(bodyBin, &req)
+	err := jsonDecoder.Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		// fmt.Printf("Failed to parse request body, %s\n", err)
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
 		return
 	}
 	// check token
 	if !checkToken(req.Token) {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
+	// read cards data
+	type cards struct {
+		Cards []map[string]string `json:"cards"`
+	}
+	var cardsData cards
+	cardFile, err := os.OpenFile("configs/cards.json", os.O_RDWR, 0644)
+	if err != nil {
+		serveError(w, http.StatusInternalServerError, "Failed to open cards.json")
+		return
+	}
+	defer cardFile.Close()
+	// decode json
+	err = json.NewDecoder(cardFile).Decode(&cardsData)
+	if err != nil {
+		serveError(w, http.StatusInternalServerError, "Failed to decode cards.json")
+		return
+	}
+
 	// update order
+	cardMap := make(map[string]map[string]string)
+	for _, card := range cardsData.Cards {
+		cardMap[card["id"]] = card
+	}
 	for _, change := range req.Changes {
-		// update order
-		type cards struct {
-			Cards []map[string]string `json:"cards"`
-		}
-		var cardsData cards
-		cardsDataBin, err := os.ReadFile("configs/cards.json")
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		err = json.Unmarshal(cardsDataBin, &cardsData)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		for i, card := range cardsData.Cards {
-			if card["id"] == change.ID {
-				cardsData.Cards[i]["order"] = fmt.Sprint(change.Order)
-				// fmt.Printf("Update card %s order to %d\n", change.ID, change.Order)
-				break
-			}
-		}
-		cardsDataBin, err = json.MarshalIndent(cardsData, "", "    ")
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		err = os.WriteFile("configs/cards.json", cardsDataBin, 0644)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+		cardMap[change.ID]["order"] = fmt.Sprint(change.Order) // set new order
+		// for i, card := range cardsData.Cards {
+		// 	if card["id"] == change.ID {
+		// 		cardsData.Cards[i]["order"] = fmt.Sprint(change.Order)
+		// 		// fmt.Printf("Update card %s order to %d\n", change.ID, change.Order)
+		// 		break
+		// 	}
+		// }
+	}
+	// write back
+	if _, err := cardFile.Seek(0, 0); err != nil {
+		serveError(w, http.StatusInternalServerError, "Failed to seek cards.json")
+		return
+	}
+	if err := cardFile.Truncate(0); err != nil { // directly clear file, will be replace as rename later
+		serveError(w, http.StatusInternalServerError, "Failed to truncate cards.json")
+		return
+	}
+	jsonEncoder := json.NewEncoder(cardFile)
+	jsonEncoder.SetIndent("", "    ")
+	err = jsonEncoder.Encode(cardsData)
+	if err != nil {
+		serveError(w, http.StatusInternalServerError, "Failed to encode cards.json")
 	}
 	// response
 	w.WriteHeader(http.StatusOK)
@@ -464,29 +463,27 @@ func backendHandler_edit_order(w http.ResponseWriter, r *http.Request) {
 }
 
 func backendHandler_delete_card(w http.ResponseWriter, r *http.Request) {
+	cardAPILocker.Lock()
+	defer cardAPILocker.Unlock()
 	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	bodyBin, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+	jsonDecoder := json.NewDecoder(r.Body)
 	type cardrequest struct {
 		Token string `json:"token"`
 		ID    string `json:"cardID"`
 	}
 	var req cardrequest
-	err = json.Unmarshal(bodyBin, &req)
+	err := jsonDecoder.Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
 		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
 	if !checkToken(req.Token) {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	// delete card
@@ -494,14 +491,15 @@ func backendHandler_delete_card(w http.ResponseWriter, r *http.Request) {
 		Cards []map[string]string `json:"cards"`
 	}
 	var cardsData cards
-	cardsDataBin, err := os.ReadFile("configs/cards.json")
+	cardFile, err := os.OpenFile("configs/cards.json", os.O_RDWR, 0644)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to open cards.json")
 		return
 	}
-	err = json.Unmarshal(cardsDataBin, &cardsData)
+	defer cardFile.Close()
+	err = json.NewDecoder(cardFile).Decode(&cardsData)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to decode cards.json")
 		return
 	}
 	newCards := make([]map[string]string, 0)
@@ -511,14 +509,19 @@ func backendHandler_delete_card(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	cardsData.Cards = newCards
-	cardsDataBin, err = json.MarshalIndent(cardsData, "", "    ")
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+	if _, err := cardFile.Seek(0, 0); err != nil {
+		serveError(w, http.StatusInternalServerError, "Failed to seek cards.json")
 		return
 	}
-	err = os.WriteFile("configs/cards.json", cardsDataBin, 0644)
+	if err := cardFile.Truncate(0); err != nil { // directly clear file, will be replace as rename later
+		serveError(w, http.StatusInternalServerError, "Failed to truncate cards.json")
+		return
+	}
+	jsonEncoder := json.NewEncoder(cardFile)
+	jsonEncoder.SetIndent("", "    ")
+	err = jsonEncoder.Encode(cardsData)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to encode cards.json")
 		return
 	}
 	// response
@@ -533,13 +536,10 @@ func backendHandler_delete_card(w http.ResponseWriter, r *http.Request) {
 }
 
 func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
+	cardAPILocker.Lock()
+	defer cardAPILocker.Unlock()
 	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	bodyBin, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	type cardrequest struct {
@@ -547,15 +547,16 @@ func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
 		CardJson map[string]string `json:"card"`
 	}
 	var req cardrequest
-	err = json.Unmarshal(bodyBin, &req)
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
 		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
 	if !checkToken(req.Token) {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	if Config.ContentAdvisorCfg.Enabled && Config.ContentAdvisorCfg.FilterCard {
@@ -571,14 +572,16 @@ func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
 		Cards []map[string]string `json:"cards"`
 	}
 	var cardsData cards
-	cardsDataBin, err := os.ReadFile("configs/cards.json")
+	cardFile, err := os.OpenFile("configs/cards.json", os.O_RDWR, 0644)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to open cards.json")
 		return
 	}
-	err = json.Unmarshal(cardsDataBin, &cardsData)
+	defer cardFile.Close()
+	jsonDecoder = json.NewDecoder(cardFile)
+	err = jsonDecoder.Decode(&cardsData)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to decode cards.json")
 		return
 	}
 	newCard := req.CardJson
@@ -601,14 +604,19 @@ func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cardsData.Cards = append(cardsData.Cards, newCard)
-	cardsDataBin, err = json.MarshalIndent(cardsData, "", "    ")
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+	if _, err := cardFile.Seek(0, 0); err != nil {
+		serveError(w, http.StatusInternalServerError, "Failed to seek cards.json")
 		return
 	}
-	err = os.WriteFile("configs/cards.json", cardsDataBin, 0644)
+	if err := cardFile.Truncate(0); err != nil { // directly clear file, will be replace as rename later
+		serveError(w, http.StatusInternalServerError, "Failed to truncate cards.json")
+		return
+	}
+	jsonEncoder := json.NewEncoder(cardFile)
+	jsonEncoder.SetIndent("", "    ")
+	err = jsonEncoder.Encode(cardsData)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to encode cards.json")
 		return
 	}
 	// response
@@ -623,13 +631,10 @@ func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
 }
 
 func backendHandler_get_card(w http.ResponseWriter, r *http.Request) {
+	cardAPILocker.Lock()
+	defer cardAPILocker.Unlock()
 	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	bodyBin, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	type cardrequest struct {
@@ -637,15 +642,16 @@ func backendHandler_get_card(w http.ResponseWriter, r *http.Request) {
 		ID    string `json:"cardID"`
 	}
 	var req cardrequest
-	err = json.Unmarshal(bodyBin, &req)
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
 		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
 	if !checkToken(req.Token) {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	// get card
@@ -653,56 +659,51 @@ func backendHandler_get_card(w http.ResponseWriter, r *http.Request) {
 		Cards []map[string]string `json:"cards"`
 	}
 	var cardsData cards
-	cardsDataBin, err := os.ReadFile("configs/cards.json")
+	cardFile, err := os.OpenFile("configs/cards.json", os.O_RDONLY, 0644)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to open cards.json")
 		return
 	}
-	err = json.Unmarshal(cardsDataBin, &cardsData)
+	defer cardFile.Close()
+	err = json.NewDecoder(cardFile).Decode(&cardsData)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to decode cards.json")
 		return
 	}
 	for _, card := range cardsData.Cards {
 		if card["id"] == req.ID {
-			cardBin, err := json.Marshal(card)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
+			// response
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write(cardBin)
+			jsonEncoder := json.NewEncoder(w)
+			jsonEncoder.Encode(card) // no error will be returned as string-string map
 			return
 		}
 	}
-	w.WriteHeader(http.StatusNotFound)
-	w.Write([]byte("Card not found"))
+	serveError(w, http.StatusNotFound, "Card not found")
 }
 
 func backendHandler_get_all_cards(w http.ResponseWriter, r *http.Request) {
+	cardAPILocker.Lock()
+	defer cardAPILocker.Unlock()
 	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	bodyBin, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	type cardrequest struct {
 		Token string `json:"token"`
 	}
 	var req cardrequest
-	err = json.Unmarshal(bodyBin, &req)
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
 		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
 	if !checkToken(req.Token) {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	// get card
@@ -710,34 +711,28 @@ func backendHandler_get_all_cards(w http.ResponseWriter, r *http.Request) {
 		Cards []map[string]string `json:"cards"`
 	}
 	var cardsData cards
-	cardsDataBin, err := os.ReadFile("configs/cards.json")
+	cardFile, err := os.OpenFile("configs/cards.json", os.O_RDONLY, 0644)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to open cards.json")
 		return
 	}
-	err = json.Unmarshal(cardsDataBin, &cardsData)
+	defer cardFile.Close()
+	err = json.NewDecoder(cardFile).Decode(&cardsData)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	cardsDataBin, err = json.Marshal(cardsData.Cards)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to decode cards.json")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(cardsDataBin)
+	jsonEncoder := json.NewEncoder(w)
+	jsonEncoder.Encode(cardsData.Cards) // no error will be returned as string-string map
 }
 
 func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
+	cardAPILocker.Lock()
+	defer cardAPILocker.Unlock()
 	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	bodyBin, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	type cardrequest struct {
@@ -745,15 +740,16 @@ func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
 		CardJson map[string]string `json:"card"`
 	}
 	var req cardrequest
-	err = json.Unmarshal(bodyBin, &req)
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
 		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
 	if !checkToken(req.Token) {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	if Config.ContentAdvisorCfg.Enabled && Config.ContentAdvisorCfg.FilterCard {
@@ -769,14 +765,16 @@ func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
 		Cards []map[string]string `json:"cards"`
 	}
 	var cardsData cards
-	cardsDataBin, err := os.ReadFile("configs/cards.json")
+	cardFile, err := os.OpenFile("configs/cards.json", os.O_RDWR, 0644)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to open cards.json")
 		return
 	}
-	err = json.Unmarshal(cardsDataBin, &cardsData)
+	defer cardFile.Close()
+	jsonDecoder = json.NewDecoder(cardFile)
+	err = jsonDecoder.Decode(&cardsData)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to decode cards.json")
 		return
 	}
 	for i, card := range cardsData.Cards {
@@ -785,14 +783,19 @@ func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	cardsDataBin, err = json.MarshalIndent(cardsData, "", "    ")
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+	if _, err := cardFile.Seek(0, 0); err != nil {
+		serveError(w, http.StatusInternalServerError, "Failed to seek cards.json")
 		return
 	}
-	err = os.WriteFile("configs/cards.json", cardsDataBin, 0644)
+	if err := cardFile.Truncate(0); err != nil { // directly clear file, will be replace as rename later
+		serveError(w, http.StatusInternalServerError, "Failed to truncate cards.json")
+		return
+	}
+	jsonEncoder := json.NewEncoder(cardFile)
+	jsonEncoder.SetIndent("", "    ")
+	err = jsonEncoder.Encode(cardsData)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to encode cards.json")
 		return
 	}
 	// response
@@ -807,13 +810,10 @@ func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
 }
 
 func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
+	articleAPILocker.Lock()
+	defer articleAPILocker.Unlock()
 	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	bodyBin, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	type articlerequest struct {
@@ -827,15 +827,16 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 		} `json:"article"`
 	}
 	var req articlerequest
-	err = json.Unmarshal(bodyBin, &req)
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
 		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
 	if !checkToken(req.Token) {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	if Config.ContentAdvisorCfg.Enabled && Config.ContentAdvisorCfg.FilterArticle {
@@ -857,7 +858,7 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 	// get all article ids
 	articleDir, err := os.ReadDir("configs/articles")
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to read articles directory")
 		return
 	}
 	articleIDList := make([]string, 0)
@@ -868,14 +869,7 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	for {
-		isUnique := true
-		for _, article := range articleIDList {
-			if article == articleID {
-				isUnique = false
-				break // 发现重复立即跳出
-			}
-		}
-
+		isUnique := !slices.Contains(articleIDList, articleID) // => contains => true => not unique => false
 		if isUnique {
 			break // 唯一则退出
 		}
@@ -901,14 +895,17 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 			ReplyTo    string `json:"reply_to"`
 		}, 0),
 	}
-	articleJsonBin, err := json.MarshalIndent(articleJson, "", "    ")
+	ArticleFile, err := os.OpenFile(articleJsonPath, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to create article file")
 		return
 	}
-	err = os.WriteFile(articleJsonPath, articleJsonBin, 0644)
+	defer ArticleFile.Close()
+	jsonEncoder := json.NewEncoder(ArticleFile)
+	jsonEncoder.SetIndent("", "    ")
+	err = jsonEncoder.Encode(articleJson)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to encode article json")
 		return
 	}
 	// response
@@ -918,25 +915,17 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 	response := Response{
 		ArticleID: articleID,
 	}
-	responseBin, err := json.Marshal(response)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	jsonEncoder = json.NewEncoder(w)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(responseBin)
-
+	jsonEncoder.Encode(response) // no error will be returned as string
 }
 
 func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
+	articleAPILocker.Lock()
+	defer articleAPILocker.Unlock()
 	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	bodyBin, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	type articlerequest struct {
@@ -951,15 +940,16 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 		} `json:"article"`
 	}
 	var req articlerequest
-	err = json.Unmarshal(bodyBin, &req)
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
 		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
 	if !checkToken(req.Token) {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	if Config.ContentAdvisorCfg.Enabled && Config.ContentAdvisorCfg.FilterArticle {
@@ -975,16 +965,22 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// update article
-	articleJsonPath := "configs/articles/" + req.Article.ID + ".json"
-	articleJsonBin, err := os.ReadFile(articleJsonPath)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+	if isValidID(req.Article.ID) {
+		serveError(w, http.StatusBadRequest, "Invalid article ID")
 		return
 	}
-	var articleJson articleJsonStruct
-	err = json.Unmarshal(articleJsonBin, &articleJson)
+	articleJsonPath := "configs/articles/" + req.Article.ID + ".json"
+	articleFile, err := os.OpenFile(articleJsonPath, os.O_RDWR, 0644)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusNotFound, "Article not found")
+		return
+	}
+	defer articleFile.Close()
+	var articleJson articleJsonStruct
+	jsonDecoder = json.NewDecoder(articleFile)
+	err = jsonDecoder.Decode(&articleJson)
+	if err != nil {
+		serveError(w, http.StatusInternalServerError, "Failed to decode article json")
 		return
 	}
 	articleJson.Title = req.Article.Title
@@ -993,14 +989,19 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 	articleJson.Author = req.Article.Author
 	articleJson.ExtraFlags = req.Article.ExtraFlags
 	articleJson.Edit_Date = time.Now().Format("2006-01-02 15:04:05")
-	articleJsonBin, err = json.MarshalIndent(articleJson, "", "    ")
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+	if _, err := articleFile.Seek(0, 0); err != nil {
+		serveError(w, http.StatusInternalServerError, "Failed to seek article file")
 		return
 	}
-	err = os.WriteFile(articleJsonPath, articleJsonBin, 0644)
+	if err := articleFile.Truncate(0); err != nil { // directly clear file, will be replace as rename later
+		serveError(w, http.StatusInternalServerError, "Failed to truncate article file")
+		return
+	}
+	jsonEncoder := json.NewEncoder(articleFile)
+	jsonEncoder.SetIndent("", "    ")
+	err = jsonEncoder.Encode(articleJson)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to encode article json")
 		return
 	}
 	// response
@@ -1015,13 +1016,10 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 }
 
 func backendHandler_delete_article(w http.ResponseWriter, r *http.Request) {
+	articleAPILocker.Lock()
+	defer articleAPILocker.Unlock()
 	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	bodyBin, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	type articlerequest struct {
@@ -1029,27 +1027,28 @@ func backendHandler_delete_article(w http.ResponseWriter, r *http.Request) {
 		ID    string `json:"article_id"`
 	}
 	var req articlerequest
-	err = json.Unmarshal(bodyBin, &req)
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
 		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
 	if !checkToken(req.Token) {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	// check if ID is valid
-	if pathTraversalRegex.MatchString(req.ID) {
-		w.WriteHeader(http.StatusBadRequest)
+	if isValidID(req.ID) {
+		serveError(w, http.StatusBadRequest, "Invalid article ID")
 		return
 	}
 	// delete article
 	articleJsonPath := "configs/articles/" + req.ID + ".json"
 	err = os.Remove(articleJsonPath)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to delete article file")
 		return
 	}
 	// response
@@ -1064,13 +1063,10 @@ func backendHandler_delete_article(w http.ResponseWriter, r *http.Request) {
 }
 
 func backendHandler_get_article(w http.ResponseWriter, r *http.Request) {
+	articleAPILocker.Lock()
+	defer articleAPILocker.Unlock()
 	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	bodyBin, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	type articlerequest struct {
@@ -1078,63 +1074,63 @@ func backendHandler_get_article(w http.ResponseWriter, r *http.Request) {
 		ID    string `json:"article_id"`
 	}
 	var req articlerequest
-	err = json.Unmarshal(bodyBin, &req)
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
 		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
 	if !checkToken(req.Token) {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	// check if ID is valid
-	if pathTraversalRegex.MatchString(req.ID) {
-		w.WriteHeader(http.StatusBadRequest)
+	if isValidID(req.ID) {
+		serveError(w, http.StatusBadRequest, "Invalid article ID")
 		return
 	}
 	// get article
 	articleJsonPath := "configs/articles/" + req.ID + ".json"
-	articleJsonBin, err := os.ReadFile(articleJsonPath)
+	articleFile, err := os.OpenFile(articleJsonPath, os.O_RDONLY, 0644)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		serveError(w, http.StatusNotFound, "Article not found")
 		return
 	}
+	defer articleFile.Close()
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(articleJsonBin)
+	io.Copy(w, articleFile)
 }
 
 func backendHandler_get_all_article_id(w http.ResponseWriter, r *http.Request) {
+	articleAPILocker.Lock()
+	defer articleAPILocker.Unlock()
 	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	bodyBin, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	type articlerequest struct {
 		Token string `json:"token"`
 	}
 	var req articlerequest
-	err = json.Unmarshal(bodyBin, &req)
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
 		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
 	if !checkToken(req.Token) {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	// get all articles
 	articleDir, err := os.ReadDir("configs/articles")
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to read articles directory")
 		return
 	}
 	articleIDs := make([]string, 0)
@@ -1144,24 +1140,17 @@ func backendHandler_get_all_article_id(w http.ResponseWriter, r *http.Request) {
 			articleIDs = append(articleIDs, articleID)
 		}
 	}
-	articleIDsJsonBin, err := json.Marshal(articleIDs)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	jsonEncoder := json.NewEncoder(w)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(articleIDsJsonBin)
+	jsonEncoder.Encode(articleIDs) // no error will be returned as []string
 }
 
 func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
+	articleAPILocker.Lock()
+	defer articleAPILocker.Unlock()
 	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	bodyBin, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	type commentrequest struct {
@@ -1170,28 +1159,36 @@ func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
 		CommentID string `json:"comment_id"`
 	}
 	var req commentrequest
-	err = json.Unmarshal(bodyBin, &req)
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
 		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
 	if !checkToken(req.Token) {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Invalid token")
+		return
+	}
+	// check if article ID is valid
+	if isValidID(req.ArticleID) {
+		serveError(w, http.StatusBadRequest, "Invalid article ID")
 		return
 	}
 	// delete comment
 	articleJsonPath := "configs/articles/" + req.ArticleID + ".json"
-	articleJsonBin, err := os.ReadFile(articleJsonPath)
+	articleFile, err := os.OpenFile(articleJsonPath, os.O_RDWR, 0644)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		serveError(w, http.StatusNotFound, "Article not found")
 		return
 	}
+	defer articleFile.Close()
 	var articleJson articleJsonStruct
-	err = json.Unmarshal(articleJsonBin, &articleJson)
+	jsonDecoder = json.NewDecoder(articleFile)
+	err = jsonDecoder.Decode(&articleJson)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to decode article json")
 		return
 	}
 	foundComment := false
@@ -1203,17 +1200,22 @@ func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !foundComment {
-		w.WriteHeader(http.StatusNotFound)
+		serveError(w, http.StatusNotFound, "Comment not found")
 		return
 	}
-	articleJsonBin, err = json.MarshalIndent(articleJson, "", "    ")
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+	if _, err := articleFile.Seek(0, 0); err != nil {
+		serveError(w, http.StatusInternalServerError, "Failed to seek article file")
 		return
 	}
-	err = os.WriteFile(articleJsonPath, articleJsonBin, 0644)
+	if err := articleFile.Truncate(0); err != nil { // directly clear file, will be replace as rename later
+		serveError(w, http.StatusInternalServerError, "Failed to truncate article file")
+		return
+	}
+	jsonEncoder := json.NewEncoder(articleFile)
+	jsonEncoder.SetIndent("", "    ")
+	err = jsonEncoder.Encode(articleJson)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to encode article json")
 		return
 	}
 	// response
@@ -1228,43 +1230,34 @@ func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
 }
 
 func backendHandler_get_custom_settings(w http.ResponseWriter, r *http.Request) {
+	settingsAPILocker.Lock()
+	defer settingsAPILocker.Unlock()
 	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	bodyBin, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	type tokenrequest struct {
 		Token string `json:"token"`
 	}
 	var req tokenrequest
-	err = json.Unmarshal(bodyBin, &req)
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
 		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
 	if !checkToken(req.Token) {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
-	Output := make(map[string]interface{})
+	Output := make(map[string]any)
 	// get global settings
-	NewMap := make(map[string]interface{})
+	NewMap := make(map[string]any)
 	blackList := []string{"cf_site_key", "comment_check_type", "google_site_key"}
 	for k, v := range GlobalMap {
-		inBlackList := false
-		// check if the key is in the black list
-		for blackListKey := range blackList {
-			if k == blackList[blackListKey] {
-				inBlackList = true
-				break
-			}
-		}
+		inBlackList := slices.Contains(blackList, k)
 		if !inBlackList {
 			NewMap[k] = string(v)
 		}
@@ -1285,24 +1278,21 @@ func backendHandler_get_custom_settings(w http.ResponseWriter, r *http.Request) 
 	} else {
 		Output["custom_style"] = ""
 	}
-	customSettingsBin, err := json.Marshal(Output)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	jsonEncoder := json.NewEncoder(w)
+	err = jsonEncoder.Encode(Output)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to encode response")
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(customSettingsBin)
 }
 
 func backendHandler_edit_custom_settings(w http.ResponseWriter, r *http.Request) {
+	settingsAPILocker.Lock()
+	defer settingsAPILocker.Unlock()
 	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	bodyBin, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	type customsettingsrequest struct {
@@ -1314,38 +1304,50 @@ func backendHandler_edit_custom_settings(w http.ResponseWriter, r *http.Request)
 		} `json:"custom_settings"`
 	}
 	var req customsettingsrequest
-	err = json.Unmarshal(bodyBin, &req)
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
 		// fmt.Printf("Failed to parse request body, %s\n", err)
 		return
 	}
 	// check token
 	if !checkToken(req.Token) {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	// write to file
-	jsonData, err := json.MarshalIndent(req.CustomSettings.GlobalSettings, "", "    ")
+	globalFile, err := os.OpenFile("configs/global.json", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to open global.json")
 		return
 	}
-	err = os.WriteFile("configs/global.json", jsonData, 0644)
+	defer globalFile.Close()
+	if _, err := globalFile.Seek(0, 0); err != nil {
+		serveError(w, http.StatusInternalServerError, "Failed to seek global.json")
+		return
+	}
+	if err := globalFile.Truncate(0); err != nil { // directly clear file, will be replace as rename later
+		serveError(w, http.StatusInternalServerError, "Failed to truncate global.json")
+		return
+	}
+	jsonEncoder := json.NewEncoder(globalFile)
+	jsonEncoder.SetIndent("", "    ")
+	err = jsonEncoder.Encode(req.CustomSettings.GlobalSettings)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to encode global settings")
 		return
 	}
 	// update custom script
 	err = os.WriteFile("public/js/inject.js", []byte(req.CustomSettings.CustomScript), 0644)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to write custom script")
 		return
 	}
 	// update custom style
 	err = os.WriteFile("public/css/customizestyle.css", []byte(req.CustomSettings.CustomStyle), 0644)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to write custom style")
 		return
 	}
 	// response
@@ -1361,21 +1363,18 @@ func backendHandler_edit_custom_settings(w http.ResponseWriter, r *http.Request)
 }
 
 func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
+	articleAPILocker.Lock()
+	defer articleAPILocker.Unlock()
 	if !Config.CommentCfg.Enabled {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Comment function is not enabled")
 		return
 	}
 	if LastCommentTime.Add(time.Second * time.Duration(Config.CommentCfg.MinSecondsBetweenComments)).After(time.Now()) { // check if the last comment is too frequent
-		w.WriteHeader(http.StatusTooManyRequests)
+		serveError(w, http.StatusForbidden, "Too frequent comments")
 		return
 	}
 	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	bodyBin, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	type commentRequest struct {
@@ -1388,19 +1387,31 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 		ReplyTo      string `json:"reply_to"`
 	}
 	var req commentRequest
-	err = json.Unmarshal(bodyBin, &req)
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(&req)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
+		return
+	}
+	// check if text is empty
+	if req.Content == "" {
+		serveError(w, http.StatusBadRequest, "Text is empty")
 		return
 	}
 	// check text length
 	if Config.CommentCfg.MaxTextLength != 0 && len(req.Content) > Config.CommentCfg.MaxTextLength {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Text length exceeds the limit")
 		return
 	}
 	// check the email address
 	if !isAvailableEmailAddress(req.Email) {
-		w.WriteHeader(http.StatusBadRequest)
+		serveError(w, http.StatusBadRequest, "Invalid email address")
+		return
+	}
+	// check if article id is valid
+	if isValidID(req.Article_id) {
+		s := "Invalid article ID: " + req.Article_id
+		serveError(w, http.StatusBadRequest, s)
 		return
 	}
 	// check if the verify token is correct
@@ -1412,7 +1423,7 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 		pass = GoogleVerifyCheck(req.Verify_token, getRequestIP(r))
 	}
 	if !pass {
-		w.WriteHeader(http.StatusForbidden)
+		serveError(w, http.StatusForbidden, "Invalid verify token")
 		return
 	}
 
@@ -1426,21 +1437,23 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 	// add comment
 	articleJsonPath := "configs/articles/" + req.Article_id + ".json"
 
-	articleJsonBin, err := os.ReadFile(articleJsonPath)
+	articleFile, err := os.OpenFile(articleJsonPath, os.O_RDWR, 0644)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		serveError(w, http.StatusNotFound, "Article not found")
 		return
 	}
 	var articleJson articleJsonStruct
-	err = json.Unmarshal(articleJsonBin, &articleJson)
+	jsonDecoder = json.NewDecoder(articleFile)
+	err = jsonDecoder.Decode(&articleJson)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to decode article json")
 		return
 	}
 	commentID := generateTraceID()
 	for {
 		isUnique := true
 		// 检查整个列表
+
 		for _, comment := range articleJson.Comments {
 			if comment.ID == commentID {
 				isUnique = false
@@ -1471,14 +1484,19 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 		Pub_Date:   time.Now().Format("2006-01-02 15:04:05"),
 		ReplyTo:    req.ReplyTo,
 	})
-	articleJsonBin, err = json.MarshalIndent(articleJson, "", "    ")
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+	if _, err := articleFile.Seek(0, 0); err != nil {
+		serveError(w, http.StatusInternalServerError, "Failed to seek article file")
 		return
 	}
-	err = os.WriteFile(articleJsonPath, articleJsonBin, 0644)
+	if err := articleFile.Truncate(0); err != nil { // directly clear file, will be replace as rename later
+		serveError(w, http.StatusInternalServerError, "Failed to truncate article file")
+		return
+	}
+	jsonEncoder := json.NewEncoder(articleFile)
+	jsonEncoder.SetIndent("", "    ")
+	err = jsonEncoder.Encode(articleJson)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		serveError(w, http.StatusInternalServerError, "Failed to encode article json")
 		return
 	}
 	// response

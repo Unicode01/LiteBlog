@@ -444,7 +444,7 @@ body {
 
 .card-drag-handle {
     position: absolute;
-    top: 2px;
+    top: 5px;
     left: 50%;
     color: var(--base-black);
     cursor: move;
