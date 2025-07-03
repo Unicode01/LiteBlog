@@ -326,10 +326,24 @@ function addContextMenuListener() {
         }
         DeleteArticleAPI(location.pathname.split('/')[2], function (result) {
             if (result) {
-                console.log("article deleted");
-                location.href = '/';
+                window.Notify.add("Article deleted", {
+                    type: "success",
+                    timeout: 3000,
+                    onClick: function () {
+                        location.href = '/';
+                    },
+                    onTimeout: function () {
+                        location.href = '/';
+                    },
+                    extraStyle: {
+                        "cursor": "pointer"
+                    }
+                });
             } else {
-                console.log("failed to delete article");
+                window.Notify.add("Failed to delete article", {
+                    type: "error",
+                    timeout: 3000,
+                });
             }
         });
     });
