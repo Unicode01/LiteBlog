@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+option go_package = "LiteBlog/utils/plugins/gRPCLoader/grpcloader";
+
+service pluginService {
+    rpc Initialize(Empty) returns (InitializeResponse) {}
+    rpc UnLoad(Verify) returns (Error) {} // Unload plugin
+    rpc GetRegisteredMethods(RegisterMethods) returns (RegisterMethods) {}
+    rpc NewCommandStream(stream Command) returns (stream Command) {}
+    rpc CallServerMethod(CallMethod) returns (Args) {}
+
+}
+
+message InitializeResponse {
+    string version = 1;
+    string id = 2;
+}
+
+message RegisterMethods {
+    repeated MethodDef methods = 1;
+}
+
+message Command {
+    string command = 1;
+    repeated Arg args = 2;
+    string commandId = 3;
+}
+
+message UnregisterMethods {
+    repeated string methods = 1;
+}
+
+message MethodDef {
+    string name = 1;
+    repeated Arg args_names = 2;
+}
+
+message Verify {
+    string id = 1;
+}
+
+message Args {
+    repeated Arg args = 1;
+}
+
+message Arg {
+    string name = 1;
+    string type = 2;
+    bytes arg = 3;
+}
+
+message CallMethod {
+    string method = 1;
+    repeated Arg args = 2;
+}
+
+message ReturnAndError {
+    bool success = 1;
+    string return_value = 2;
+    string error = 3;
+}
+
+message Error {
+    string error = 1;
+}
+
+message Empty {}
