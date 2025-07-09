@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"sync"
 
 	grpcloader "LiteBlog/utils/plugins/gRPCLoader"
 
@@ -52,7 +53,7 @@ type LoaderTypeGRPC struct {
 	grpcLoaderServer *grpcloader.GRPCPluginLoader
 	ctx              context.Context
 	cancle           context.CancelFunc
-	publicMethods    map[string]func([]*Arg) ([]*Arg, error)
+	publicMethods    sync.Map // map[string]func([]*Arg) ([]*Arg, error)
 }
 
 func (ltgrpc *LoaderTypeGRPC) Init() error {
@@ -81,7 +82,9 @@ func (ltgrpc *LoaderTypeGRPC) Load() error {
 }
 
 func (ltgrpc *LoaderTypeGRPC) RegisterMethods(methods map[string]func([]*Arg) ([]*Arg, error)) error {
-	ltgrpc.publicMethods = methods
+	for method, f := range methods {
+		ltgrpc.publicMethods.Store(method, f)
+	}
 	ms := map[string]*grpcloader.MethodDef{}
 	for method := range methods {
 		m := &grpcloader.MethodDef{
@@ -145,7 +148,7 @@ func (ltgrpc *LoaderTypeGRPC) SetUnregisterMethodsHandler(handler func([]string)
 
 func (ltgrpc *LoaderTypeGRPC) UnregisterMethods(methods []string) error {
 	for _, method := range methods {
-		delete(ltgrpc.publicMethods, method)
+		ltgrpc.publicMethods.Delete(method)
 	}
 	return nil
 }
@@ -161,7 +164,11 @@ func (ltgrpc *LoaderTypeGRPC) CallMethod(method string, args []*grpcloader.Arg) 
 			Data: arg.Arg,
 		})
 	}
-	f, ok := ltgrpc.publicMethods[method]
+	fA, ok := ltgrpc.publicMethods.Load(method)
+	if !ok {
+		return nil, ErrMethodNotFound
+	}
+	f, ok := fA.(func([]*Arg) ([]*Arg, error))
 	if !ok {
 		return nil, ErrMethodNotFound
 	}
@@ -210,7 +217,7 @@ func (ltgrpc *LoaderTypeGRPC) Unload() error {
 		ltgrpc.grpcServer.GracefulStop()
 	}
 	ltgrpc.cancle()
-	ltgrpc.publicMethods = nil
+	ltgrpc.publicMethods.Clear()
 	ltgrpc.grpcLoaderServer = nil
 	return nil
 }

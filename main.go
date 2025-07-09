@@ -23,6 +23,7 @@ func main() {
 	ReadFlag()
 
 	AutoAddListener()
+	InitPlugins()
 	err := InitNetManager(&Config.ServerCfg)
 	if err != nil {
 		panic(err)

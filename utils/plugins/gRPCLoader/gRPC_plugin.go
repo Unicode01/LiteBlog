@@ -4,7 +4,8 @@ import (
 	context "context"
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
+	"sync"
+	"time"
 
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -27,18 +28,17 @@ var (
 
 type GRPCPluginLoader struct {
 	UnimplementedPluginServiceServer
-	availableMethods map[string]*MethodDef
-	pluginMethods    map[string]*struct {
-		*MethodDef
-		ID string
-	}
-	status                   int // 0: not started, 1: started, 2: stopped
+	availableMethods         sync.Map // map[string]*MethodDef // key is method name, value is a struct with MethodDef and ID
+	pluginMethods            sync.Map // map[string]*struct {*MethodDef,ID string} // key is method name, value is a struct with MethodDef and ID
+	status                   int      // 0: not started, 1: started, 2: stopped
 	ctx                      context.Context
 	cancle                   context.CancelFunc
 	LoadedIds                []string
-	id2bidStream             map[string]grpc.BidiStreamingServer[Command, Command]
-	id2methods               map[string][]string                                   // key is plugin id, value is a list of method names
-	commandQueueChannel      map[string]chan []*Arg                                // command queue for each bidstream, key is command id
+	idChangeLocker           sync.Mutex
+	id2bidStream             sync.Map                                              // map[string]grpc.BidiStreamingServer[Command, Command]
+	id2methods               sync.Map                                              // map[string][]string // key is plugin id, value is a list of method names
+	commandQueueChannel      sync.Map                                              // map[string]chan []*Arg // command queue for each bidstream, key is command id
+	Id2QueueChannel          sync.Map                                              // map[string]map[string]chan []*Arg // command queue for each command id, key is plugin id, map[commandId]chan []*Arg
 	methodHandler            func(string, []*Arg) ([]*Arg, error)                  // server method handler
 	unregisterMethodsHandler func([]string)                                        // unregister methods handler, used to call unregister methods when plugin is unloaded
 	pluginMethodhandler      func(map[string]func(string, []*Arg) ([]*Arg, error)) // plugin method handler
@@ -46,9 +46,11 @@ type GRPCPluginLoader struct {
 
 // gRPC function
 func (gpl *GRPCPluginLoader) Initialize(ctx context.Context, e *Empty) (*InitializeResponse, error) {
-	fmt.Printf("Initialize called\n")
-	id := generateVerifyCode(4)               // generate plugin id
-	gpl.LoadedIds = append(gpl.LoadedIds, id) // add plugin id to loaded ids
+	gpl.idChangeLocker.Lock()
+	defer gpl.idChangeLocker.Unlock()
+	id := generateVerifyCode(8)                // generate plugin id
+	gpl.LoadedIds = append(gpl.LoadedIds, id)  // add plugin id to loaded ids
+	gpl.Id2QueueChannel.Store(id, &sync.Map{}) // add command queue channel to Id2QueueChannel
 	resp := &InitializeResponse{Id: id, Version: gPRC_Plugin_Interface_Version}
 
 	return resp, nil
@@ -56,6 +58,8 @@ func (gpl *GRPCPluginLoader) Initialize(ctx context.Context, e *Empty) (*Initial
 
 // gRPC function, Unload plugin
 func (gpl *GRPCPluginLoader) UnLoad(ctx context.Context, v *Verify) (*Error, error) {
+	gpl.idChangeLocker.Lock()
+	defer gpl.idChangeLocker.Unlock()
 	sid := v.Id
 	id, err := getIdFromContext(ctx)
 	if err != nil {
@@ -67,24 +71,42 @@ func (gpl *GRPCPluginLoader) UnLoad(ctx context.Context, v *Verify) (*Error, err
 	for i, loadedId := range gpl.LoadedIds {
 		if loadedId == id {
 			// unregister plugin methods
-			methods := gpl.id2methods[loadedId]
+			methodsA, ok := gpl.id2methods.Load(loadedId)
+			if !ok {
+				return nil, ErrIdNotFound
+			}
+			methods := methodsA.([]string)
 			for _, method := range methods {
-				delete(gpl.pluginMethods, method) // delete plugin method
+				gpl.pluginMethods.Delete(method) // delete plugin method
 			}
 			gpl.unregisterMethodsHandler(methods) // broadcast to loader, call unregister methods handler
 			// delete bidstream
-			_, ok := gpl.id2bidStream[loadedId] // get bidstream
+			_, ok = gpl.id2bidStream.Load(loadedId) // get bidstream
 			if ok {
-				delete(gpl.id2bidStream, loadedId) // delete bidstream
+				gpl.id2bidStream.Delete(loadedId) // delete bidstream
 			}
 			// delete command queue channel
-			if ch, ok := gpl.commandQueueChannel[id]; ok {
-				close(ch)
-				delete(gpl.commandQueueChannel, id)
+			if qmapA, ok := gpl.Id2QueueChannel.Load(id); ok {
+				qmap, ok := qmapA.(*sync.Map) // get command queue channel map, map[commandId]chan []*Arg
+				if !ok {
+					return nil, ErrIdNotFound
+				}
+				qmap.Range(func(key, value any) bool {
+					commId := key.(string)
+					gpl.commandQueueChannel.Delete(commId)
+					ch := value.(chan []*Arg)
+					if ch != nil {
+						close(ch)
+					}
+					qmap.Delete(commId)
+					return true
+				})
+				gpl.Id2QueueChannel.Delete(id) // delete command queue channel
 			}
+
 			gpl.LoadedIds = append(gpl.LoadedIds[:i], gpl.LoadedIds[i+1:]...) // remove plugin id from loaded ids
 			// remove plugin methods
-			delete(gpl.id2methods, loadedId)
+			gpl.id2methods.Delete(loadedId)
 			break
 		}
 	}
@@ -97,21 +119,24 @@ func (gpl *GRPCPluginLoader) GetRegisteredMethods(ctx context.Context, pluginMet
 	if err != nil {
 		return nil, err
 	}
-	rm := make([]*MethodDef, 0, len(gpl.availableMethods))
-	for _, method := range gpl.availableMethods { // provide available methods
-		rm = append(rm, method)
-	}
+	rm := make([]*MethodDef, 0, LengthOfMap(&gpl.availableMethods))
+	gpl.availableMethods.Range(func(key, value any) bool {
+		rm = append(rm, value.(*MethodDef))
+		return true
+	})
 	pluginMethodMap := make(map[string]func(string, []*Arg) ([]*Arg, error))
 	for _, method := range pluginMethods.Methods { // record plugin methods
 		// check if method has been registered
-		if _, ok := gpl.pluginMethods[method.Name]; ok {
+		if _, ok := gpl.pluginMethods.Load(method.Name); ok {
 			return nil, ErrMethodRepeated
 		}
-		gpl.id2methods[id] = append(gpl.id2methods[id], method.Name) // record method names
-		gpl.pluginMethods[method.Name] = &struct {
+		listA, _ := gpl.id2methods.LoadOrStore(id, []string{})
+		list := listA.([]string)
+		gpl.id2methods.Store(id, append(list, method.Name)) // record method names
+		gpl.pluginMethods.Store(method.Name, &struct {
 			*MethodDef
 			ID string
-		}{method, id}
+		}{method, id})
 		pluginMethodMap[method.Name] = func(s string, a []*Arg) ([]*Arg, error) {
 			args := []*Arg{}
 			for _, arg := range a {
@@ -137,10 +162,12 @@ func (gpl *GRPCPluginLoader) NewCommandStream(bidstream grpc.BidiStreamingServer
 	if err != nil {
 		return err
 	}
-	if _, ok := gpl.id2bidStream[id]; ok {
+	if _, ok := gpl.id2bidStream.Load(id); ok {
 		return ErrIdExists
 	}
-	gpl.id2bidStream[id] = bidstream
+	gpl.id2bidStream.Store(id, bidstream)
+	// create heartbeat goroutine
+	go gpl.startHeartbeat(bidstream)
 	// create a new goroutine to handle the bidstream
 	gpl.clientCommendListener(bidstream) // isRecv = false, send to client
 	return nil
@@ -159,20 +186,47 @@ func (gpl *GRPCPluginLoader) SetUnregisterMethodsHandler(f func([]string)) {
 }
 
 // original code
+func (gpl *GRPCPluginLoader) startHeartbeat(stream grpc.ServerStream) {
+	ticker := time.NewTicker(30 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			stream.SendMsg(&Command{Command: "heartbeat"})
+		case <-stream.Context().Done():
+			return
+		}
+	}
+}
+
+// original code
 func (gpl *GRPCPluginLoader) CallClientMethod(method string, args []*Arg) ([]*Arg, error) {
 	// get bidstream
-	id := gpl.pluginMethods[method].ID
+	idA, ok := gpl.pluginMethods.Load(method)
+	if !ok {
+		return nil, ErrMethodNotFound
+	}
+	id := idA.(*struct {
+		*MethodDef
+		ID string
+	}).ID
 	if id == "" {
 		return nil, ErrMethodNotFound
 	}
-	bidstream, ok := gpl.id2bidStream[id]
-	ctx := bidstream.Context()
+	bidstreamA, ok := gpl.id2bidStream.Load(id)
 	if !ok {
 		return nil, ErrBidStreamNotFound
 	}
-	commId := generateVerifyCode(4)
+	bidstream := bidstreamA.(grpc.BidiStreamingServer[Command, Command])
+	ctx := bidstream.Context()
+	commId := generateVerifyCode(8)
 	newchan := make(chan []*Arg, 1)
-	gpl.commandQueueChannel[commId] = newchan
+	gpl.commandQueueChannel.Store(commId, newchan) // add command queue channel to commandQueueChannel
+	v, ok := gpl.Id2QueueChannel.Load(id)          // map[string]chan []*Arg
+	if !ok {
+		return nil, ErrIdNotFound
+	}
+	mchan := v.(*sync.Map)
+	mchan.Store(commId, newchan) // add command queue channel to Id2QueueChannel
 	// send command
 	cmd := &Command{
 		Command:   method,
@@ -185,9 +239,12 @@ func (gpl *GRPCPluginLoader) CallClientMethod(method string, args []*Arg) ([]*Ar
 	// wait for response
 	select {
 	case retargs := <-newchan:
-		delete(gpl.commandQueueChannel, commId)
+		gpl.commandQueueChannel.Delete(commId) // delete command queue channel
+		mchan.Delete(commId)                   // delete command queue channel
 		return retargs, nil
 	case <-ctx.Done(): // connection closed
+		gpl.commandQueueChannel.Delete(commId) // delete command queue channel
+		mchan.Delete(commId)                   // delete command queue channel
 		return nil, nil
 	}
 
@@ -199,16 +256,21 @@ func (gpl *GRPCPluginLoader) Shutdown() error {
 	case 0:
 		return nil
 	case 1:
-		for id, ch := range gpl.commandQueueChannel {
-			close(ch)
-			delete(gpl.commandQueueChannel, id)
-		}
+		gpl.commandQueueChannel.Range(func(key, value interface{}) bool {
+			ch := value.(chan []*Arg)
+			if ch != nil {
+				close(ch)
+			}
+			gpl.commandQueueChannel.Delete(key)
+			return true
+		})
 		gpl.cancle()
 		gpl.status = 2
-		gpl.availableMethods = nil
-		gpl.pluginMethods = nil
-		gpl.id2bidStream = nil
-		gpl.id2methods = nil
+		gpl.availableMethods.Clear()
+		gpl.Id2QueueChannel.Clear()
+		gpl.pluginMethods.Clear()
+		gpl.id2bidStream.Clear()
+		gpl.id2methods.Clear()
 	case 2:
 		return nil
 	default:
@@ -220,21 +282,15 @@ func (gpl *GRPCPluginLoader) Shutdown() error {
 // original code
 func (gpl *GRPCPluginLoader) Init() error {
 	gpl.ctx, gpl.cancle = context.WithCancel(context.Background())
-	gpl.availableMethods = make(map[string]*MethodDef)
-	gpl.pluginMethods = make(map[string]*struct {
-		*MethodDef
-		ID string
-	})
-	gpl.id2bidStream = make(map[string]grpc.BidiStreamingServer[Command, Command])
-	gpl.id2methods = make(map[string][]string)
-	gpl.commandQueueChannel = make(map[string]chan []*Arg)
 	gpl.status = 1
 	return nil
 }
 
 // original code
 func (gpl *GRPCPluginLoader) SetMethods(methods map[string]*MethodDef) {
-	gpl.availableMethods = methods
+	for _, method := range methods {
+		gpl.availableMethods.Store(method.Name, method)
+	}
 }
 
 // original code
@@ -248,26 +304,35 @@ func (gpl *GRPCPluginLoader) SetPluginMethodHandler(handler func(map[string]func
 }
 
 func (gpl *GRPCPluginLoader) clientCommendListener(stream grpc.ServerStream) {
-	id, err := getIdFromContext(stream.Context())
+	ctx := stream.Context()
+	id, err := getIdFromContext(ctx)
 	if err != nil {
 		return
 	}
 	for {
-		cmd := &Command{}
-		if err := stream.RecvMsg(cmd); err != nil {
-			// call unload method
-			gpl.UnLoad(stream.Context(), &Verify{Id: id})
-			break
-		}
-		// check commnd id
-		chanback, ok := gpl.commandQueueChannel[cmd.CommandId]
-		if !ok {
-			continue
-		}
-		switch cmd.Command {
-		case "return":
-			chanback <- cmd.Args
+		select {
+		case <-ctx.Done(): // connection closed
+			gpl.UnLoad(ctx, &Verify{Id: id})
+			return
 		default:
+			cmd := &Command{}
+			if err := stream.RecvMsg(cmd); err != nil {
+				// call unload method
+				gpl.UnLoad(ctx, &Verify{Id: id})
+				break
+			}
+			// check commnd id
+			chanbackA, ok := gpl.commandQueueChannel.Load(cmd.CommandId)
+			if !ok {
+				continue
+			}
+			chanback := chanbackA.(chan []*Arg)
+			switch cmd.Command {
+			case "return":
+				chanback <- cmd.Args
+			default:
+
+			}
 		}
 
 	}
@@ -286,14 +351,29 @@ func generateVerifyCode(lenth ...int) string {
 
 // tool function
 func getIdFromContext(ctx context.Context) (string, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return "", ErrMissingMetadata
+	select {
+	case <-ctx.Done(): // connection closed
+		return "", ctx.Err()
+	default:
+		md, ok := metadata.FromIncomingContext(ctx)
+		if !ok {
+			return "", ErrMissingMetadata
+		}
+		idValues := md.Get("id")
+		if len(idValues) == 0 {
+			return "", ErrIdNotFound
+		}
+		id := idValues[0]
+		return id, nil
 	}
-	idValues := md.Get("id")
-	if len(idValues) == 0 {
-		return "", ErrIdNotFound
-	}
-	id := idValues[0]
-	return id, nil
+
+}
+
+func LengthOfMap(m *sync.Map) int {
+	length := 0
+	m.Range(func(key, value any) bool {
+		length++
+		return true
+	})
+	return length
 }
