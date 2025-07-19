@@ -4,7 +4,6 @@
     "RSSChannelLink": "https://example.com/feed/rss.xml",
     "RSSChannelTitle": "LiteBlog RSS Feed",
     "RSSLinkHead": "https://example.com",
-    "TopBarTags": "go tag1",
     "TopBarTitle": "LiteBlog",
     "app_name": "LiteBlog",
     "blog_language_code": "en",

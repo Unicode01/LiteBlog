@@ -435,6 +435,12 @@ function AddEventListener() {
     theme_switch_button?.addEventListener('click', themeSwitchClick);
     // add context menu listener
     addContextMenuListener();
+    // add click event listener to search button
+    const search_button = document.getElementById('search-button');
+    search_button?.addEventListener('click', function (e) {
+        e.preventDefault();
+        OnSearchButtonClick();
+    });
 }
 
 function OnHistoryButtonClick() {
@@ -455,7 +461,7 @@ function OnHistoryButtonClick() {
         menu_doc.classList.remove("context-menu")
         menu_doc.classList.add("history-menu")
         historyItems = JSON.parse(historyItems);
-        max = 7;
+        const max = 7;
         if (historyItems.length > max) {
             historyItems = historyItems.slice(0, max);
             // save
@@ -503,6 +509,128 @@ function OnHistoryButtonClick() {
         menu_doc.style.height = menu_height + 'px';
 
     }
+}
+
+function OnSearchButtonClick() {
+    var search_container = document.getElementById('search-container');
+    if (search_container) {
+        search_container.remove();
+    } else {
+        const dom_parser = new DOMParser();
+        let search_dom = dom_parser.parseFromString(Context_menu_html, "text/html").body.firstChild;
+        search_dom.style.minWidth = "200px";
+        search_dom.id = 'search-container';
+        search_dom.classList.remove("context-menu")
+        search_dom.classList.add("search-menu")
+        // create search dom container 
+        const search_input_container = document.createElement('div');
+        search_input_container.classList.add('search-input-container');
+        search_dom.appendChild(search_input_container);
+        // create search doms
+        const search_input = document.createElement('input');
+        search_input.type = "text";
+        search_input.placeholder = "Search...";
+        search_input.id = "search-input";
+        search_input_container.appendChild(search_input);
+
+        const start_search_button = document.createElement('button');
+        start_search_button.innerHTML = "Search";
+        start_search_button.id = "start-search-button";
+        search_input_container.appendChild(start_search_button);
+
+        clickFunc = function (event) {
+            event.preventDefault();
+            const keyword = document.getElementById("search-input").value;
+            if (keyword == "") {
+                window.Notify.info("Please input keyword");
+                return;
+            }
+            // search articles
+            cards = SearchArticles(keyword);
+            if (cards.length == 0) {
+                window.Notify.info("No result found");
+                return;
+            }
+            // remove old search result
+            const old_search_result = document.querySelectorAll('.menu-item.card-search-result,.menu-item-line');
+            old_search_result.forEach(function (item) {
+                item.remove();
+            });
+            // show search result
+            console.log(cards);
+            var menu_line = document.createElement('div');
+            menu_line.classList.add('menu-item-line');
+            search_dom.appendChild(menu_line);
+            // add to menu item
+            cards.forEach(function (card) {
+                const menu_item = document.createElement('div');
+                menu_item.classList.add('menu-item', 'card-search-result');
+                menu_item.innerHTML = '<a class="link" href="' + card.link + '">' + card.title + '</a>';
+                menu_item.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    window.location.href = card.link;
+                });
+                search_dom.appendChild(menu_item);
+                var menu_line = document.createElement('div');
+                menu_line.classList.add('menu-item-line');
+                search_dom.appendChild(menu_line);
+            });
+            // remove last line
+            if (search_dom.lastElementChild.classList.contains('menu-item-line')) {
+                search_dom.lastElementChild.remove();
+            }
+        }
+        start_search_button.addEventListener('click', function (event) {
+            clickFunc(event);
+        });
+        search_input.addEventListener('keydown', function (event) {
+            if (event.key == "Enter") {
+                clickFunc(event);
+            }
+        });
+
+        // set position
+        const search_menu_button = document.getElementById('search-button');
+        const menu_x = search_menu_button.offsetLeft + search_menu_button.offsetWidth - 200;
+        const menu_y = search_menu_button.offsetTop + search_menu_button.offsetHeight;
+        search_dom.style.left = menu_x + 'px';
+        search_dom.style.top = menu_y + 1 + 'px'; // add 1px to avoid blur border
+
+        // force rerender
+        search_dom.offsetHeight;
+        document.body.appendChild(search_dom);
+        // get menu height
+        const menu_height = search_dom.offsetHeight;
+        // force rerender
+        search_dom.offsetHeight;
+        // set menu height
+        // search_dom.style.height = '0px';
+        // force rerender
+        search_dom.offsetHeight;
+        // set menu height
+        // search_dom.style.height = menu_height + 'px';
+
+    }
+
+}
+
+function SearchArticles(keyword) {
+    // select all cards
+    const cards = document.querySelectorAll('.card-container');
+    let result = [];
+    cards.forEach(card => {
+        const title = card.querySelector('.post-card-header')?.textContent;
+        const description = card.querySelector('.card-description')?.textContent;
+        if ((title && title.toLowerCase().includes(keyword.toLowerCase())) || (description && description.toLowerCase().includes(keyword.toLowerCase()))) {
+            result.push({
+                card: card,
+                title: title,
+                description: description,
+                link: card.querySelector('a.link')?.href
+            });
+        }
+    });
+    return result;
 }
 
 function LogHistory() {

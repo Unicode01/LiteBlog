@@ -102,9 +102,6 @@ func autoRender(ctx context.Context) {
 			cards_bytes := renderCards()
 			RenderedMap["cards"] = cards_bytes
 
-			// render top tag
-			RenderedMap["top_tag"] = renderTopBarTags()
-
 			// render RSS
 			RenderedMap["rss_feed"] = renderRSSFeed()
 
@@ -220,18 +217,6 @@ func renderRSSFeed() []byte {
 		"RSSPosts": rss_posts,
 	})
 	return rss_feed
-}
-
-func renderTopBarTags() []byte {
-	tags := []byte("")
-	tagsarry := strings.Split(string(GlobalMap["TopBarTags"]), " ")
-	for _, tag := range tagsarry {
-		tag_html := RenderPageTemplate("top_tag", map[string][]byte{
-			"tag_name": []byte(tag),
-		})
-		tags = append(tags, tag_html...)
-	}
-	return tags
 }
 
 func renderarticle(articleID string) []byte {

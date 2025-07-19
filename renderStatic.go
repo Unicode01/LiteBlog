@@ -20,9 +20,6 @@ func RenderStatic() {
 	cards_bytes := renderCardsStatic()
 	RenderedMap["cards"] = cards_bytes
 
-	// render top tag
-	RenderedMap["top_tag"] = renderTopBarTags()
-
 	// render context menu
 	RenderedMap["context_menu_html"] = RenderPageTemplate("context_menu", map[string][]byte{})
 
