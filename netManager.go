@@ -88,23 +88,34 @@ func InitNetManager(config *ServerConfig) error {
 			return err
 		}
 		tlsConfig := &tls.Config{
-			Certificates: []tls.Certificate{tlsCert},
-			NextProtos:   []string{"h2", "http/1.1"},
-			MinVersion:   tls.VersionTLS12,
+			Certificates:     []tls.Certificate{tlsCert},
+			CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_CHACHA20_POLY1305_SHA256,
+				tls.TLS_AES_256_GCM_SHA384,
+			},
+			SessionTicketsDisabled: true,
+			ClientSessionCache:     nil,
+			NextProtos:             []string{"h2", "http/1.1"},
+			MinVersion:             tls.VersionTLS12,
 		}
 		httpServer = &http.Server{
-			Addr:         net.JoinHostPort(config.Host, fmt.Sprint(config.Port)),
-			TLSConfig:    tlsConfig,
-			ReadTimeout:  10 * time.Second,
-			WriteTimeout: 10 * time.Second,
-			IdleTimeout:  10 * time.Second,
+			Addr:              net.JoinHostPort(config.Host, fmt.Sprint(config.Port)),
+			TLSConfig:         tlsConfig,
+			ReadTimeout:       10 * time.Second,
+			ReadHeaderTimeout: 2 * time.Second,
+			WriteTimeout:      10 * time.Second,
+			IdleTimeout:       10 * time.Second,
 		}
 	} else {
 		httpServer = &http.Server{
-			Addr:         net.JoinHostPort(config.Host, fmt.Sprint(config.Port)),
-			ReadTimeout:  10 * time.Second,
-			WriteTimeout: 10 * time.Second,
-			IdleTimeout:  10 * time.Second,
+			Addr:              net.JoinHostPort(config.Host, fmt.Sprint(config.Port)),
+			ReadTimeout:       10 * time.Second,
+			ReadHeaderTimeout: 2 * time.Second,
+			WriteTimeout:      10 * time.Second,
+			IdleTimeout:       10 * time.Second,
 		}
 	}
 	httpServer.Handler = http.HandlerFunc(httpHandler)
@@ -163,8 +174,9 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasSuffix(r.URL.Path, "/") { // redirect to index.html
-		http.Redirect(w, r, r.URL.Path+"index.html", http.StatusMovedPermanently)
-		return
+		// http.Redirect(w, r, r.URL.Path+"index.html", http.StatusMovedPermanently)
+		r.URL.Path = r.URL.Path + "index.html"
+		// return
 	}
 
 	// set extra headers

@@ -13,6 +13,11 @@ let draggingoffsetX = 0;
 let draggingoffsetY = 0;
 
 function init() {
+    let isFirstLoad = localStorage.getItem("isFirstLoad");
+    if (isFirstLoad == null) {
+        onFirstLoad();
+    }
+    localStorage.setItem("isFirstLoad", "false");
     ResizeCard();
     AddEventListener();
     LogHistory();
@@ -26,6 +31,13 @@ function init() {
             document.addEventListener('mouseup', onBoxMouseUp);
         }
     });
+}
+
+function onFirstLoad() {
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches? 'dark' : 'light';
+    // set theme
+    SetTheme(systemTheme);
+    console.log("first run, set theme to " + systemTheme);
 }
 
 function ResizeCard() {
@@ -409,7 +421,7 @@ function addContextMenuListener() {
 
 function AddEventListener() {
     // add resize event listener to window if /index
-    if (location.pathname == '/index.html') {
+    if (location.pathname == '/index.html' || location.pathname === '/') {
         window.addEventListener('resize', function () {
             ResizeCard();
         });
@@ -599,16 +611,21 @@ function OnSearchButtonClick() {
         // force rerender
         search_dom.offsetHeight;
         document.body.appendChild(search_dom);
+        // auto height, remove animations
+
         // get menu height
-        const menu_height = search_dom.offsetHeight;
+        // const menu_height = search_dom.offsetHeight;
         // force rerender
-        search_dom.offsetHeight;
+        // search_dom.offsetHeight;
         // set menu height
         // search_dom.style.height = '0px';
         // force rerender
-        search_dom.offsetHeight;
+        // search_dom.offsetHeight;
         // set menu height
         // search_dom.style.height = menu_height + 'px';
+
+        // set focus
+        search_input.focus();
 
     }
 
