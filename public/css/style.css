@@ -458,6 +458,7 @@ body {
     background-color: var(--base-white);
     border-radius: 8px;
     overflow: hidden;
+    z-index: 999;
 
     .search-input-container {
         display: flex;

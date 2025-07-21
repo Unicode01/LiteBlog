@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"runtime"
 	"sync/atomic"
@@ -21,6 +22,23 @@ var (
 		Crits  uint32
 	}
 )
+
+type logRedirector struct{}
+
+func (w *logRedirector) Write(p []byte) (n int, err error) {
+	msg := string(p)
+	if len(msg) > 0 && msg[len(msg)-1] == '\n' {
+		msg = msg[:len(msg)-1]
+	}
+
+	Log(1, msg) // use Log function to log message
+	return len(p), nil
+}
+
+func SetLog() {
+	log.SetOutput(&logRedirector{})
+	log.SetFlags(0)
+}
 
 // Log logs a message with a given level.
 // level: 0-4, 0 is debug, 1 is info, 2 is warning, 3 is error, 4 is critical.

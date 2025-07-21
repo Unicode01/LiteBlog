@@ -941,7 +941,7 @@ function AddEditButtonListener() {
                 location.href = '/editarticle.html?article_id=' + location.pathname.split('/')[2];
             });
         });
-    } else if (location.pathname == "/index.html") {
+    } else if (location.pathname == "/index.html" || location.pathname == "/") {
         editButtons.forEach(button => {
             button.addEventListener("click", function (event) {
                 event.preventDefault();

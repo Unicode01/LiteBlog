@@ -14,6 +14,7 @@ var (
 )
 
 func main() {
+	SetLog()
 	go ExitListener()
 	Config = ReadConfig()
 	SetVarToGlobalMap()
