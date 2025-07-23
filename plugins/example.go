@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	grpcloader "LiteBlog/utils/plugins/gRPCLoader"
@@ -21,7 +23,6 @@ type PluginClient struct {
 }
 
 func NewPluginClient(serverAddr string) (*PluginClient, error) {
-	// 建立gRPC连接
 	conn, err := grpc.NewClient(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to server: %v", err)
@@ -104,26 +105,22 @@ func main() {
 	}
 	serverAddr := os.Args[1]
 
-	// 1. 创建客户端
+	// 创建客户端
 	client, err := NewPluginClient(serverAddr)
 	if err != nil {
 		log.Fatalf("Client creation failed: %v", err)
 	}
 	defer client.Close()
 
-	// 2. 初始化插件
+	// 初始化插件
 	if err := client.Initialize(); err != nil {
 		log.Fatalf("Initialization failed: %v", err)
 	}
 
-	// 3. 注册方法
+	// 注册&加载方法
 	methods := []*grpcloader.MethodDef{
 		{
-			Name: "exampleMethod",
-			ArgsNames: []*grpcloader.Arg{
-				{Name: "param1", Type: "string"},
-				{Name: "param2", Type: "int"},
-			},
+			Name: "Example_Request_Callback",
 		},
 	}
 	if err := client.RegisterMethods(methods); err != nil {
@@ -132,18 +129,7 @@ func main() {
 		log.Println("Methods registered successfully")
 	}
 
-	// 4. 调用服务器方法示例
-	args := []*grpcloader.Arg{
-		{Name: "input", Type: "string", Arg: []byte("Hello from client")},
-	}
-	results, err := client.CallServerMethod("Load", args)
-	if err != nil {
-		log.Printf("Method call failed: %v", err)
-	} else {
-		log.Printf("Method call results: %+v", results)
-	}
-
-	// 5. 创建命令流示例
+	// 创建命令流
 	stream, err := client.NewCommandStream()
 	if err != nil {
 		log.Printf("Command stream creation failed: %v", err)
@@ -151,14 +137,25 @@ func main() {
 		go handleCommandStream(stream)
 	}
 
-	// 6. 卸载插件
-	log.Println("Unloading plugin...")
-	client.CallServerMethod("Unload", nil)
-	if err := client.Unload(); err != nil {
-		log.Printf("Unload failed: %v", err)
-	} else {
-		log.Println("Unloaded successfully")
+	// 调用服务器方法示例
+	args := []*grpcloader.Arg{
+		{Name: "class", Type: "string", Arg: []byte("onRequest")},               // 类名
+		{Name: "func", Type: "string", Arg: []byte("Example_Request_Callback")}, // 方法名
+		{Name: "name", Type: "string", Arg: []byte("/welcome")},                 // 请求路径
 	}
+	results, err := client.CallServerMethod("AddHook", args) // AddHook - 添加一个钩子
+	if err != nil {
+		log.Printf("Method call failed: %v", err)
+	} else {
+		log.Printf("Method call results: %+v", results)
+	}
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	<-c
+	log.Println("Shutting down...")
+	client.CallServerMethod("Unload", nil)
+	client.Unload()
+
 }
 
 func handleCommandStream(stream grpcloader.PluginService_NewCommandStreamClient) {
@@ -170,16 +167,54 @@ func handleCommandStream(stream grpcloader.PluginService_NewCommandStreamClient)
 		}
 
 		log.Printf("Received command: %s", cmd.Command)
-
-		// 处理命令并返回响应
-		if err := stream.Send(&grpcloader.Command{
-			CommandId: cmd.CommandId,
-			Command:   "response",
-			Args: []*grpcloader.Arg{
-				{Name: "result", Type: "string", Arg: []byte("Processed: " + cmd.Command)},
-			},
-		}); err != nil {
-			log.Printf("Failed to send response: %v", err)
+		switch cmd.Command {
+		case "Example_Request_Callback":
+			fmt.Printf("Received request: %s\n", cmd.Args[2].Arg)
+			args, err := onRequest(cmd.Args)
+			if err != nil {
+				log.Printf("Failed to process request: %v", err)
+				continue
+			}
+			if err := stream.Send(&grpcloader.Command{ // send return args
+				CommandId: cmd.CommandId,
+				Command:   "return",
+				Args:      args,
+			}); err != nil {
+				log.Printf("Failed to send response: %v", err)
+			}
+		case "heartbeat":
+			// 处理心跳包
+			if err := stream.Send(&grpcloader.Command{
+				CommandId: cmd.CommandId,
+				Command:   "return",
+				Args: []*grpcloader.Arg{{Name: "status", Type: "int", Arg: []byte("200")},
+					{Name: "timestamp", Type: "int64", Arg: []byte(fmt.Sprintf("%d", time.Now().Unix()))}},
+			}); err != nil {
+				log.Printf("Failed to send heartbeat: %v", err)
+			}
 		}
 	}
+}
+
+func onRequest(args []*grpcloader.Arg) ([]*grpcloader.Arg, error) {
+	// 处理请求
+	ret := []*grpcloader.Arg{
+		{
+			Name: "statusCode",
+			Type: "int",
+			Arg:  []byte("200"),
+		},
+		{
+			Name: "headers",
+			Type: "json-map[string]string",
+			Arg:  []byte(`{"Content-Type": "text/plain"}`),
+		},
+		{
+			Name: "body",
+			Type: "[]byte",
+			Arg:  []byte("Hello, LiteBlog plugin world!"),
+		},
+	}
+	return ret, nil
+
 }
