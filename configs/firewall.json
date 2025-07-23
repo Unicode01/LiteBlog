@@ -11,6 +11,15 @@
                 "block_time=60",
                 "cycle=10"
             ]
+        },
+        {
+            "name": "auto_blocked_by_path_traversal-IP-45.156.87.19",
+            "action": 1,
+            "rule": "45.156.87.19",
+            "type": "ipaddr",
+            "timeout": 1753294677,
+            "reason": "path traversal",
+            "args": null
         }
     ]
 }

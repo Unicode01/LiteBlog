@@ -3,6 +3,7 @@ package main
 import (
 	utils "LiteBlog/utils"
 	"LiteBlog/utils/firewall"
+	"LiteBlog/utils/plugins"
 	"bytes"
 	"context"
 	"crypto/tls"
@@ -15,10 +16,12 @@ import (
 	"path"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	radix "github.com/hashicorp/go-immutable-radix"
 	"github.com/microcosm-cc/bluemonday"
 )
 
@@ -35,6 +38,8 @@ var (
 	settingsAPILocker  = sync.RWMutex{}
 	LastCommentTime    time.Time
 	EncryptTokenKey    string
+
+	RequestHookRadixTree = radix.New() // hook map for request, when
 )
 
 // Init the network manager
@@ -155,6 +160,76 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		response_time := response_end_time.Sub(response_start_time)
 		Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, UA: '%s', %s %s, %s, disk_cached=%t", IP, traceID, r.Header.Get("User-Agent"), r.Method, r.URL.Path, response_time, cached))
 	}()
+
+	// check plugin hook request
+	o, ok := RequestHookRadixTree.Get(bytes.NewBufferString(r.URL.Path).Bytes())
+	if ok {
+		fmt.Printf("plugin hook request: %s\n", r.URL.Path)
+		f := string(o.([]byte))
+		headersBytes, _ := json.Marshal(r.Header)
+		args := []*plugins.Arg{
+			{
+				Name: "path",
+				Type: "string",
+				Data: []byte(r.URL.Path),
+			},
+			{
+				Name: "method",
+				Type: "string",
+				Data: []byte(r.Method),
+			},
+			{
+				Name: "headers",
+				Type: "json-map[string][]string",
+				Data: headersBytes,
+			},
+			{
+				Name: "ip",
+				Type: "string",
+				Data: []byte(IP),
+			},
+			{
+				Name: "traceID",
+				Type: "string",
+				Data: []byte(traceID),
+			},
+		}
+		result, err := pluginManager.CallPluginMethod(f, args)
+		if err != nil {
+			Log(3, fmt.Sprintf("Failed to call plugin method %s, %s", f, err))
+		} else {
+			var statusCode int = 200
+			var body []byte
+			for _, arg := range result {
+				switch arg.Name {
+				case "statusCode":
+					statusCode, err = strconv.Atoi(string(arg.Data))
+					if err != nil {
+						Log(3, fmt.Sprintf("Failed to parse plugin status code, %s", err))
+						statusCode = 500
+					}
+				case "body":
+					body = arg.Data
+				case "header":
+					headers := make(map[string][]string)
+					err := json.Unmarshal(arg.Data, &headers)
+					if err != nil {
+						Log(3, fmt.Sprintf("Failed to parse plugin header, %s", err))
+					} else {
+						for k, v := range headers {
+							for _, val := range v {
+								w.Header().Add(k, val)
+							}
+						}
+					}
+				}
+			}
+			w.WriteHeader(statusCode)
+			w.Write(body)
+			return
+		}
+	}
+
 	firewallAction, blockReason := fireWall.MatchRule(IP, r)
 	if firewallAction == 1 {
 		serveError(w, http.StatusForbidden, blockReason)
