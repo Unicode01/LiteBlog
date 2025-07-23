@@ -26,6 +26,15 @@ function AddMarkdownEditorListener() {
             }
         }
     });
+    // set editor content input event listener
+    editor_content.addEventListener('input', function () {
+        // check if input text is the last character of the content
+        if (editor_content.value.length === editor_content.selectionEnd) {
+            // stroll to the end of the content
+            preview_content = document.querySelector('.preview-content');
+            preview_content.scrollTop = preview_content.scrollHeight;
+        }
+    });
 }
 
 function renderMarkdown() {

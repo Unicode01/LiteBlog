@@ -92,17 +92,24 @@ func RenderPageTemplate(fileRender string, mapRender map[string][]byte) []byte {
 }
 
 func autoRender(ctx context.Context) {
+	const (
+		minInterval      = 500 * time.Millisecond // min backoff interval 500ms
+		maxInterval      = 30 * time.Second       // max backoff interval 30s
+		targetRenderTime = 300 * time.Millisecond // target render time 300ms
+		coolDownFactor   = 1.2                    // cool down factor 1.2
+		recoverFactor    = 0.9                    // recover factor 0.9
+	)
+
+	renderInterval := 1 * time.Second // initial render interval 1s
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			render_start_time := time.Now()
-			// render cards
-			cards_bytes := renderCards()
-			RenderedMap["cards"] = cards_bytes
+			renderStart := time.Now()
 
-			// render RSS
+			RenderedMap["cards"] = renderCards()
 			RenderedMap["rss_feed"] = renderRSSFeed()
 
 			// generate token encrypt key
@@ -133,14 +140,29 @@ func autoRender(ctx context.Context) {
 					EncryptTokenKey = fmt.Sprintf("%x", newToken)
 				}
 			}
-			// fmt.Printf("card rendered\n")
-			render_end_time := time.Now()
-			render_time := render_end_time.Sub(render_start_time)
-			if render_time > 1*time.Second {
-				Log(3, "render time too long: "+render_time.String())
+
+			// calc duration of rendering
+			renderDuration := time.Since(renderStart)
+
+			switch {
+			case renderDuration > targetRenderTime:
+				// add interval if rendering took too long
+				renderInterval = time.Duration(float64(renderInterval) * coolDownFactor)
+				if renderInterval > maxInterval {
+					renderInterval = maxInterval
+					Log(2, "rendering time too long! Set render interval to max: "+renderInterval.String())
+				}
+
+			case renderInterval > minInterval:
+				// reduce interval if rendering took short time
+				renderInterval = time.Duration(float64(renderInterval) * recoverFactor)
+				if renderInterval < minInterval {
+					renderInterval = minInterval
+				}
 			}
+
+			time.Sleep(renderInterval)
 		}
-		time.Sleep(3 * time.Second)
 	}
 }
 
