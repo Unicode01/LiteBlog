@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -139,9 +140,9 @@ func main() {
 
 	// 调用服务器方法示例
 	args := []*grpcloader.Arg{
-		{Name: "class", Type: "string", Arg: []byte("onRequest")},               // 类名
-		{Name: "func", Type: "string", Arg: []byte("Example_Request_Callback")}, // 方法名
-		{Name: "name", Type: "string", Arg: []byte("/welcome")},                 // 请求路径
+		{Name: "class", Type: "string", Arg: []byte("onRequest")},                   // 类名
+		{Name: "callback", Type: "string", Arg: []byte("Example_Request_Callback")}, // 方法名
+		{Name: "name", Type: "string", Arg: []byte("/welcome")},                     // 请求路径
 	}
 	results, err := client.CallServerMethod("AddHook", args) // AddHook - 添加一个钩子
 	if err != nil {
@@ -153,7 +154,26 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 	<-c
 	log.Println("Shutting down...")
-	client.CallServerMethod("Unload", nil)
+	args = []*grpcloader.Arg{
+		{
+			Name: "class",
+			Type: "string",
+			Arg:  []byte("onRequest"),
+		},
+		{
+			Name: "callback",
+			Type: "string",
+			Arg:  []byte("Example_Request_Callback"),
+		},
+		{
+			Name: "name",
+			Type: "string",
+			Arg:  []byte("/welcome"),
+		},
+	}
+	if _, err := client.CallServerMethod("DeleteHook", args); err != nil { // 卸载钩子
+		log.Printf("Method call failed: %v", err)
+	}
 	client.Unload()
 
 }
@@ -166,10 +186,9 @@ func handleCommandStream(stream grpcloader.PluginService_NewCommandStreamClient)
 			return
 		}
 
-		log.Printf("Received command: %s", cmd.Command)
+		// log.Printf("Received command: %s", cmd.Command)
 		switch cmd.Command {
 		case "Example_Request_Callback":
-			fmt.Printf("Received request: %s\n", cmd.Args[2].Arg)
 			args, err := onRequest(cmd.Args)
 			if err != nil {
 				log.Printf("Failed to process request: %v", err)
@@ -197,6 +216,26 @@ func handleCommandStream(stream grpcloader.PluginService_NewCommandStreamClient)
 }
 
 func onRequest(args []*grpcloader.Arg) ([]*grpcloader.Arg, error) {
+	var path string
+	var method string
+	var headers map[string][]string
+	var ip string
+	var traceID string
+	for _, arg := range args {
+		switch arg.Name {
+		case "path":
+			path = string(arg.Arg)
+		case "method":
+			method = string(arg.Arg)
+		case "headers":
+			json.Unmarshal(arg.Arg, &headers)
+		case "ip":
+			ip = string(arg.Arg)
+		case "traceID":
+			traceID = string(arg.Arg)
+		}
+	}
+	fmt.Printf("Received request: path=%s, method=%s, headers=%+v, ip=%s, traceID=%s\n", path, method, headers, ip, traceID)
 	// 处理请求
 	ret := []*grpcloader.Arg{
 		{
@@ -205,9 +244,9 @@ func onRequest(args []*grpcloader.Arg) ([]*grpcloader.Arg, error) {
 			Arg:  []byte("200"),
 		},
 		{
-			Name: "headers",
-			Type: "json-map[string]string",
-			Arg:  []byte(`{"Content-Type": "text/plain"}`),
+			Name: "header",
+			Type: "json-map[string][]string",
+			Arg:  []byte(`{"Content-Type": ["text/plain"], "X-Powered-By": ["LiteBlog-PluginExample"]}`),
 		},
 		{
 			Name: "body",

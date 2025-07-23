@@ -162,7 +162,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// check plugin hook request
-	o, ok := RequestHookRadixTree.Get(bytes.NewBufferString(r.URL.Path).Bytes())
+	o, ok := RequestHookRadixTree.Get([]byte(r.URL.Path))
 	if ok {
 		fmt.Printf("plugin hook request: %s\n", r.URL.Path)
 		f := string(o.([]byte))
@@ -197,6 +197,8 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		result, err := pluginManager.CallPluginMethod(f, args)
 		if err != nil {
 			Log(3, fmt.Sprintf("Failed to call plugin method %s, %s", f, err))
+			// remove plugin hook request
+			RequestHookRadixTree, _, _ = RequestHookRadixTree.Delete([]byte(r.URL.Path))
 		} else {
 			var statusCode int = 200
 			var body []byte

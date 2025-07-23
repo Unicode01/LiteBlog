@@ -14,8 +14,6 @@ func InitPlugins() {
 		ListenerAddress: "127.0.0.1:10800",
 	}
 	methodsMap := map[string]func(args []*plugins.Arg) ([]*plugins.Arg, error){
-		"Unload":          PluginUnload,
-		"Load":            PluginLoad,
 		"AddRenderMap":    AddRenderMap,
 		"GetRenderMap":    GetRenderMap,
 		"DeleteRenderMap": DeleteRenderMap,
@@ -28,17 +26,6 @@ func InitPlugins() {
 		Log(3, fmt.Sprintf("Register plugin loader failed: %s", err))
 	}
 	Log(2, fmt.Sprintf("Register plugin loader success, id: %s", loaderId))
-}
-
-func PluginUnload(args []*plugins.Arg) ([]*plugins.Arg, error) {
-	fmt.Printf("PluginUnload called\n")
-	return nil, nil
-}
-
-func PluginLoad(args []*plugins.Arg) ([]*plugins.Arg, error) {
-	fmt.Printf("PluginLoad called\n")
-	fmt.Printf("Available methods: %v\n", pluginManager.GetPluginMethods())
-	return nil, nil
 }
 
 // plugin interface:
@@ -148,7 +135,7 @@ func AddHook(args []*plugins.Arg) ([]*plugins.Arg, error) {
 	ret := []*plugins.Arg{}
 	hook_name := ""
 	hook_class := ""
-	func_name := ""
+	callback_name := ""
 	result := "false"
 	for _, arg := range args {
 		switch arg.Name {
@@ -156,15 +143,15 @@ func AddHook(args []*plugins.Arg) ([]*plugins.Arg, error) {
 			hook_name = string(arg.Data)
 		case "class":
 			hook_class = string(arg.Data)
-		case "func":
-			func_name = string(arg.Data)
+		case "callback":
+			callback_name = string(arg.Data)
 		}
 	}
 	switch hook_class {
 	case "onRequest":
-		fmt.Printf("new request hook: %s, %s\n", hook_name, func_name)
+		Log(2, fmt.Sprintf("add request hook: %s", hook_name))
 
-		RequestHookRadixTree, _, _ = RequestHookRadixTree.Insert([]byte(hook_name), []byte(func_name))
+		RequestHookRadixTree, _, _ = RequestHookRadixTree.Insert([]byte(hook_name), []byte(callback_name))
 		result = "true"
 	}
 	ret = append(ret, &plugins.Arg{
@@ -191,6 +178,7 @@ func DeleteHook(args []*plugins.Arg) ([]*plugins.Arg, error) {
 	}
 	switch hook_class {
 	case "onRequest":
+		Log(2, fmt.Sprintf("delete request hook: %s", hook_name))
 		RequestHookRadixTree, _, _ = RequestHookRadixTree.Delete([]byte(hook_name))
 		result = "true"
 	}
