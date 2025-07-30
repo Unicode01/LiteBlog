@@ -121,7 +121,7 @@ func main() {
 	// 注册&加载方法
 	methods := []*grpcloader.MethodDef{
 		{
-			Name: "Example_Request_Callback",
+			Name: "Example.Callback.onRequest",
 		},
 	}
 	if err := client.RegisterMethods(methods); err != nil {
@@ -140,9 +140,9 @@ func main() {
 
 	// 调用服务器方法示例
 	args := []*grpcloader.Arg{
-		{Name: "class", Type: "string", Arg: []byte("onRequest")},                   // 类名
-		{Name: "callback", Type: "string", Arg: []byte("Example_Request_Callback")}, // 方法名
-		{Name: "name", Type: "string", Arg: []byte("/welcome")},                     // 请求路径
+		{Name: "class", Type: "string", Arg: []byte("onRequest")},                     // 类名
+		{Name: "callback", Type: "string", Arg: []byte("Example.Callback.onRequest")}, // 方法名
+		{Name: "name", Type: "string", Arg: []byte("/welcome")},                       // 请求路径
 	}
 	results, err := client.CallServerMethod("AddHook", args) // AddHook - 添加一个钩子
 	if err != nil {
@@ -163,7 +163,7 @@ func main() {
 		{
 			Name: "callback",
 			Type: "string",
-			Arg:  []byte("Example_Request_Callback"),
+			Arg:  []byte("Example.Callback.onRequest"),
 		},
 		{
 			Name: "name",
@@ -188,7 +188,7 @@ func handleCommandStream(stream grpcloader.PluginService_NewCommandStreamClient)
 
 		// log.Printf("Received command: %s", cmd.Command)
 		switch cmd.Command {
-		case "Example_Request_Callback":
+		case "Example.Callback.onRequest":
 			args, err := onRequest(cmd.Args)
 			if err != nil {
 				log.Printf("Failed to process request: %v", err)
@@ -211,6 +211,14 @@ func handleCommandStream(stream grpcloader.PluginService_NewCommandStreamClient)
 			}); err != nil {
 				log.Printf("Failed to send heartbeat: %v", err)
 			}
+		default: // unknown command
+			log.Printf("Unknown command: %s", cmd.Command)
+			stream.Send(&grpcloader.Command{
+				CommandId: cmd.CommandId,
+				Command:   "return",
+				Args: []*grpcloader.Arg{{Name: "status", Type: "int", Arg: []byte("400")},
+					{Name: "message", Type: "string", Arg: []byte("Unknown command: " + cmd.Command)}},
+			})
 		}
 	}
 }

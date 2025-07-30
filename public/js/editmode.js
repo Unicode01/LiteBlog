@@ -259,6 +259,7 @@ function GetCardJsonAPI(cardID, callback) {
         })
         .catch(error => {
             console.log(error);
+            window.Notify.error(error.message);
             callback("");
         });
 }
@@ -298,6 +299,7 @@ function EditCardAPI(cardJson, callback) {
         })
         .catch(error => {
             console.log(error);
+            window.Notify.error(error.message);
             callback("");
         });
 }
@@ -335,6 +337,7 @@ function GetCustomSettingsAPI(callback) {
         })
         .catch(error => {
             console.log(error);
+            window.Notify.error(error.message);
             callback("");
         });
 }
@@ -374,6 +377,7 @@ function EditCustomSettingsAPI(customSettings, callback) {
         })
         .catch(error => {
             console.log(error);
+            window.Notify.error(error.message);
             callback("");
         });
 }

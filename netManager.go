@@ -164,7 +164,6 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	// check plugin hook request
 	o, ok := RequestHookRadixTree.Get([]byte(r.URL.Path))
 	if ok {
-		fmt.Printf("plugin hook request: %s\n", r.URL.Path)
 		f := string(o.([]byte))
 		headersBytes, _ := json.Marshal(r.Header)
 		args := []*plugins.Arg{

@@ -13,7 +13,7 @@ import (
 )
 
 type NotifyManager struct {
-	notifyType                   NotifyType // available types: email
+	notifyType                   NotifyType // available types: NotifyTypeSMTP, NotifyTypeTelegramBot
 	minDelayBetweenNotifications int        // seconds
 	lastNotificationTime         int64      // Unix timestamp
 	notifyTimeout                int        // seconds
