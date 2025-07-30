@@ -48,6 +48,7 @@ function AddArticleAPI(title, author, content, contentHTML, extraFlags, callback
         })
         .catch(error => {
             console.log(error);
+            window.Notify.error(error.message);
             callback("");
         });
 }
@@ -94,6 +95,7 @@ function EditArticleAPI(article_id, title, author, content, contentHTML, extraFl
         })
         .catch(error => {
             console.log(error);
+            window.Notify.error(error.message);
             callback("");
         });
 }
@@ -132,6 +134,7 @@ function GetArticleAPI(article_id, callback) {
         })
         .catch(error => {
             console.log(error);
+            window.Notify.error(error.message);
             callback("");
         });
 }
@@ -169,6 +172,7 @@ function AddCommentAPI(article_id, reply_to, author, email, content, subscribed,
         })
         .catch(error => {
             console.log(error);
+            window.Notify.error(error.message);
             callback("");
         });
 }
@@ -209,6 +213,7 @@ function DeleteCommentAPI(comment_id, callback) {
         })
         .catch(error => {
             console.log(error);
+            window.Notify.error(error.message);
             callback("");
         });
 }
@@ -248,6 +253,7 @@ function DeleteArticleAPI(article_id, callback) {
         })
         .catch(error => {
             console.log(error);
+            window.Notify.error(error.message);
             callback("");
         });
 }

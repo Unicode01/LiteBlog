@@ -213,6 +213,9 @@ func (ltgrpc *LoaderTypeGRPC) CallPluginMethod(method string, args []*Arg) ([]*A
 }
 
 func (ltgrpc *LoaderTypeGRPC) Unload() error {
+	for _, id := range ltgrpc.grpcLoaderServer.LoadedIds {
+		ltgrpc.UnloadPlugin(id)
+	}
 	if ltgrpc.grpcServer != nil {
 		ltgrpc.grpcServer.GracefulStop()
 	}

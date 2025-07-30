@@ -150,7 +150,6 @@ func AddHook(args []*plugins.Arg) ([]*plugins.Arg, error) {
 	switch hook_class {
 	case "onRequest":
 		Log(2, fmt.Sprintf("add request hook: %s", hook_name))
-
 		RequestHookRadixTree, _, _ = RequestHookRadixTree.Insert([]byte(hook_name), []byte(callback_name))
 		result = "true"
 	}
