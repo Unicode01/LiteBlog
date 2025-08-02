@@ -23,6 +23,7 @@ type AllConfig struct {
 	LoggerCfg         LoggerConfig         `json:"logger_config"`
 	ContentAdvisorCfg ContentAdvisorConfig `json:"contentAdvisor_config"`
 	NotifyCfg         NotifyConfig         `json:"notify_config"`
+	PluginCfg         PluginConfig         `json:"plugin_config"`
 }
 
 type ServerConfig struct {
@@ -107,6 +108,10 @@ type NotifyConfig struct {
 		Token  string `json:"token"`
 		ChatID string `json:"chat_id"`
 	} `json:"telegrambot_config"`
+}
+
+type PluginConfig struct {
+	Enabled bool `json:"enabled"`
 }
 
 func ReadConfig() AllConfig {

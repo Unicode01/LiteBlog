@@ -18,12 +18,29 @@ function AddMarkdownEditorListener() {
                 case "s": // ctrl + s
                     event.preventDefault();
                     if (location.pathname === "/addarticle.html") {
-                        window.Notify.add("Article saved to local.",{type: "success"})
+                        window.Notify.add("Article saved to local.", { type: "success" })
                     } else if (location.pathname === "/editarticle.html") {
                         SaveArticle(true);
                     }
                     break;
             }
+        }
+        if (event.key === "Tab") { // turn tab into 4 spaces
+            event.preventDefault();
+            selectionStart = editor_content.selectionStart;
+            selectionEnd = editor_content.selectionEnd;
+            const tab = "    ";
+            editor_content.value =
+                editor_content.value.substring(0, selectionStart) +
+                tab +
+                editor_content.value.substring(selectionEnd);
+            editor_content.selectionStart = selectionStart + tab.length;
+            editor_content.selectionEnd = selectionStart + tab.length;
+            // rerender markdown
+            renderMarkdown();
+            const articleDom = document.querySelector('.article-content');
+            const outlineList = document.querySelector('.outline-list');
+            generateOutline(articleDom, outlineList)
         }
     });
     // set editor content input event listener
@@ -185,7 +202,7 @@ function onToolbarButtonClick(buttontype) {
                 const match = selectedText.match(/!\[(.*?)\]\((.*?)\)/);
                 insertText(match[1]);
             } else {
-                insertText('!['+selectedText+'](https://)');
+                insertText('![' + selectedText + '](https://)');
             }
             break;
         case "title":

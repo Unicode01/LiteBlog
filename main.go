@@ -10,7 +10,7 @@ import (
 
 var (
 	Config  AllConfig
-	Version = "v0.0.5"
+	Version = "v0.0.6"
 )
 
 func main() {
@@ -24,7 +24,9 @@ func main() {
 	ReadFlag()
 
 	AutoAddListener()
-	InitPlugins()
+	if Config.PluginCfg.Enabled {
+		InitPlugins()
+	}
 	err := InitNetManager(&Config.ServerCfg)
 	if err != nil {
 		panic(err)
