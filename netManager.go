@@ -452,7 +452,7 @@ func serveError(w http.ResponseWriter, statusCode int, message string) {
 		404: []byte("404 Not Found"),
 		500: []byte("500 Internal Server Error"),
 	}
-	Log(1, fmt.Sprintf("Serve error: %d, %s", statusCode, message))
+	Log(2, fmt.Sprintf("Serve error: %d, %s", statusCode, message))
 	// open error page
 	f, err := os.OpenFile(fmt.Sprintf("public/%d.html", statusCode), os.O_RDONLY, 0)
 	if err != nil {
