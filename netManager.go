@@ -31,6 +31,7 @@ var (
 	cacheManager       *utils.CacheManager
 	deliverManager     *utils.DeliverManager
 	notifyManager      *utils.NotifyManager
+	snifferManager     *utils.SnifferManager
 	notifyTriggerMap   = make(map[string]bool)
 	pathTraversalRegex = regexp.MustCompile(`(?i)(\.\./|\.\.\\)|(/etc/passwd|/bin/sh|/bin/bash|/\.env)`)
 	cardAPILocker      = sync.RWMutex{}
@@ -50,6 +51,10 @@ func InitNetManager(config *ServerConfig) error {
 	fireWall = firewall.NewFirewall(ctx)
 	// build cache manager
 	cacheManager = utils.NewCacheManager(Config.CacheCfg.MaxCacheSize, Config.CacheCfg.MaxCacheItems) // 2GB cache, 1 million cache item
+	// build sniffer manager
+	if Config.SnifferCfg.Enabled {
+		snifferManager = utils.NewSnifferManager()
+	}
 	// build deliver manager
 	deliverManager = utils.NewDeliverManager(Config.DeliverCfg.Buffer, Config.DeliverCfg.Threads, context.Background())
 	// build notification manager
@@ -155,79 +160,92 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	cached := false
+	var pw *utils.ProxyResponseWriter
+	if Config.SnifferCfg.Enabled {
+		// proxy response writer
+		pw := snifferManager.ProxyResponseWriter(w, r)
+		w = &pw
+	}
 	defer func() {
 		response_end_time := time.Now()
 		response_time := response_end_time.Sub(response_start_time)
-		Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, UA: '%s', %s %s, %s, disk_cached=%t", IP, traceID, r.Header.Get("User-Agent"), r.Method, r.URL.Path, response_time, cached))
+		if pw == nil {
+			Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, UA: '%s', %s %s, %s, disk_cached=%t", IP, traceID, r.Header.Get("User-Agent"), r.Method, r.URL.Path, response_time, cached))
+		} else {
+			Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, UA: '%s', %s %s %d, %s, disk_cached=%t", IP, traceID, r.Header.Get("User-Agent"), r.Method, r.URL.Path, pw.StatusCode(), response_time, cached))
+		}
+
 	}()
 
-	// check plugin hook request
-	o, ok := RequestHookRadixTree.Get([]byte(r.URL.Path))
-	if ok {
-		f := string(o.([]byte))
-		headersBytes, _ := json.Marshal(r.Header)
-		args := []*plugins.Arg{
-			{
-				Name: "path",
-				Type: "string",
-				Data: []byte(r.URL.Path),
-			},
-			{
-				Name: "method",
-				Type: "string",
-				Data: []byte(r.Method),
-			},
-			{
-				Name: "headers",
-				Type: "json-map[string][]string",
-				Data: headersBytes,
-			},
-			{
-				Name: "ip",
-				Type: "string",
-				Data: []byte(IP),
-			},
-			{
-				Name: "traceID",
-				Type: "string",
-				Data: []byte(traceID),
-			},
-		}
-		result, err := pluginManager.CallPluginMethod(f, args)
-		if err != nil {
-			Log(3, fmt.Sprintf("Failed to call plugin method %s, %s", f, err))
-			// remove plugin hook request
-			RequestHookRadixTree, _, _ = RequestHookRadixTree.Delete([]byte(r.URL.Path))
-		} else {
-			var statusCode int = 200
-			var body []byte
-			for _, arg := range result {
-				switch arg.Name {
-				case "statusCode":
-					statusCode, err = strconv.Atoi(string(arg.Data))
-					if err != nil {
-						Log(3, fmt.Sprintf("Failed to parse plugin status code, %s", err))
-						statusCode = 500
-					}
-				case "body":
-					body = arg.Data
-				case "header":
-					headers := make(map[string][]string)
-					err := json.Unmarshal(arg.Data, &headers)
-					if err != nil {
-						Log(3, fmt.Sprintf("Failed to parse plugin header, %s", err))
-					} else {
-						for k, v := range headers {
-							for _, val := range v {
-								w.Header().Add(k, val)
+	if Config.PluginCfg.Enabled {
+		// check plugin hook request
+		o, ok := RequestHookRadixTree.Get([]byte(r.URL.Path))
+		if ok {
+			f := string(o.([]byte))
+			headersBytes, _ := json.Marshal(r.Header)
+			args := []*plugins.Arg{
+				{
+					Name: "path",
+					Type: "string",
+					Data: []byte(r.URL.Path),
+				},
+				{
+					Name: "method",
+					Type: "string",
+					Data: []byte(r.Method),
+				},
+				{
+					Name: "headers",
+					Type: "json-map[string][]string",
+					Data: headersBytes,
+				},
+				{
+					Name: "ip",
+					Type: "string",
+					Data: []byte(IP),
+				},
+				{
+					Name: "traceID",
+					Type: "string",
+					Data: []byte(traceID),
+				},
+			}
+			result, err := pluginManager.CallPluginMethod(f, args)
+			if err != nil {
+				Log(3, fmt.Sprintf("Failed to call plugin method %s, %s", f, err))
+				// remove plugin hook request
+				RequestHookRadixTree, _, _ = RequestHookRadixTree.Delete([]byte(r.URL.Path))
+			} else {
+				var statusCode int = 200
+				var body []byte
+				for _, arg := range result {
+					switch arg.Name {
+					case "statusCode":
+						statusCode, err = strconv.Atoi(string(arg.Data))
+						if err != nil {
+							Log(3, fmt.Sprintf("Failed to parse plugin status code, %s", err))
+							statusCode = 500
+						}
+					case "body":
+						body = arg.Data
+					case "header":
+						headers := make(map[string][]string)
+						err := json.Unmarshal(arg.Data, &headers)
+						if err != nil {
+							Log(3, fmt.Sprintf("Failed to parse plugin header, %s", err))
+						} else {
+							for k, v := range headers {
+								for _, val := range v {
+									w.Header().Add(k, val)
+								}
 							}
 						}
 					}
 				}
+				w.WriteHeader(statusCode)
+				w.Write(body)
+				return
 			}
-			w.WriteHeader(statusCode)
-			w.Write(body)
-			return
 		}
 	}
 
@@ -438,6 +456,9 @@ func servePublicAPI(w http.ResponseWriter, r *http.Request) {
 	case "/add_comment":
 		public_api_add_comment(w, r)
 		return
+	case Config.SnifferCfg.PublicProvider:
+		public_api_get_sniffer_info(w, r)
+		return
 	default:
 		serveError(w, http.StatusNotFound, "API not found")
 		return
@@ -452,7 +473,6 @@ func serveError(w http.ResponseWriter, statusCode int, message string) {
 		404: []byte("404 Not Found"),
 		500: []byte("500 Internal Server Error"),
 	}
-	Log(2, fmt.Sprintf("Serve error: %d, %s", statusCode, message))
 	// open error page
 	f, err := os.OpenFile(fmt.Sprintf("public/%d.html", statusCode), os.O_RDONLY, 0)
 	if err != nil {
@@ -1639,5 +1659,34 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 				}
 			})
 		}
+	}
+}
+
+func public_api_get_sniffer_info(w http.ResponseWriter, r *http.Request) {
+	if !Config.SnifferCfg.Enabled {
+		serveError(w, http.StatusForbidden, "Sniffer function is not enabled")
+		return
+	}
+	if r.Method != "GET" {
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	ret := make(map[string]any)
+	// check params
+	params := r.URL.Query()
+	path := "/"
+	if len(params["path"]) > 0 {
+		path = params.Get("path")
+	}
+	ret["count"] = snifferManager.PathRequestCount(path)
+	ret["all_requests"] = snifferManager.AllRequestCount()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	jsonEncoder := json.NewEncoder(w)
+	err := jsonEncoder.Encode(ret)
+	if err != nil {
+		serveError(w, http.StatusInternalServerError, "Failed to encode response")
+		return
 	}
 }

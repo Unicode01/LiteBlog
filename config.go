@@ -24,6 +24,7 @@ type AllConfig struct {
 	ContentAdvisorCfg ContentAdvisorConfig `json:"contentAdvisor_config"`
 	NotifyCfg         NotifyConfig         `json:"notify_config"`
 	PluginCfg         PluginConfig         `json:"plugin_config"`
+	SnifferCfg        SnifferConfig        `json:"sniffer_config"`
 }
 
 type ServerConfig struct {
@@ -112,6 +113,11 @@ type NotifyConfig struct {
 
 type PluginConfig struct {
 	Enabled bool `json:"enabled"`
+}
+
+type SnifferConfig struct {
+	Enabled        bool   `json:"enabled"`
+	PublicProvider string `json:"public_provider"`
 }
 
 func ReadConfig() AllConfig {
