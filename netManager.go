@@ -163,8 +163,8 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	var pw *utils.ProxyResponseWriter
 	if Config.SnifferCfg.Enabled {
 		// proxy response writer
-		pw := snifferManager.ProxyResponseWriter(w, r)
-		w = &pw
+		pw = snifferManager.ProxyResponseWriter(w, r)
+		w = pw
 	}
 	defer func() {
 		response_end_time := time.Now()

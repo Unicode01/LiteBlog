@@ -71,8 +71,8 @@ func (sm *SnifferManager) OnNewRequest(path string, respondCode int) {
 	}
 }
 
-func (sm *SnifferManager) ProxyResponseWriter(w http.ResponseWriter, r *http.Request) ProxyResponseWriter {
-	pw := ProxyResponseWriter{w, 200, sm.OnNewRequest, r}
+func (sm *SnifferManager) ProxyResponseWriter(w http.ResponseWriter, r *http.Request) *ProxyResponseWriter {
+	pw := &ProxyResponseWriter{w, 200, sm.OnNewRequest, r}
 	return pw
 }
 
