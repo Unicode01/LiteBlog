@@ -88,5 +88,10 @@
     },
     "plugins_config": {
         "enabled": false
+    },
+    "sniffer_config":{
+        "enabled": true,
+        "public_provider": "/sniffer",
+        "//": "which url to provide info, default is /sniffer, means you can use /api/v1/sniffer?path=/index.html to show the index page sniffer info"
     }
 }
