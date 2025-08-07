@@ -1540,6 +1540,8 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 		// NewPolicy() creates a new policy with the default settings.
 		p := bluemonday.NewPolicy()
 		req.Content = p.Sanitize(req.Content)
+		req.ReplyTo = p.Sanitize(req.ReplyTo)
+		req.Email = p.Sanitize(req.Email)
 		req.Author = p.Sanitize(req.Author)
 	}
 	// add comment
