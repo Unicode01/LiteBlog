@@ -824,7 +824,7 @@ function GetAccessPathAndToken(DisableAsk) {
         let expireTime = localStorage.getItem("login_token_expire_time");
         let serverIdentify = localStorage.getItem("server_identify");
         if (expireTime != null) {
-            let currentTime = new Date().getTime();
+            let currentTime = new Date().getTime()/1000;
             if (currentTime < expireTime && serverIdentify == ThisServerIdentify) {
                 return { path, token: loginToken }; // token is still valid
             }
