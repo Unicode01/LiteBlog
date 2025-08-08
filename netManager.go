@@ -39,6 +39,10 @@ var (
 	settingsAPILocker  = sync.RWMutex{}
 	LastCommentTime    time.Time
 	EncryptTokenKey    string
+	LoginTokens        = make(map[string]struct {
+		timeout time.Time
+		genOn   time.Time
+	}) // key: generatedToken, value: struct{}
 
 	RequestHookRadixTree = radix.New() // hook map for request, when
 )
@@ -131,6 +135,7 @@ func InitNetManager(config *ServerConfig) error {
 	httpServer.Handler = http.HandlerFunc(httpHandler)
 	// start auto render
 	go autoRender(context.Background())
+	go autoCleanLoginTokens(context.Background())
 	// start http server
 	var err error
 	if config.TlsConfig.Enabled {
@@ -443,6 +448,9 @@ func serveBackend(w http.ResponseWriter, r *http.Request) {
 		return
 	case "/edit_custom_settings":
 		backendHandler_edit_custom_settings(w, r)
+		return
+	case "/login":
+		backendHandler_login(w, r)
 		return
 	default:
 		serveError(w, http.StatusNotFound, "Backend API not found")
@@ -1470,6 +1478,55 @@ func backendHandler_edit_custom_settings(w http.ResponseWriter, r *http.Request)
 	})
 }
 
+func backendHandler_login(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	type loginRequest struct {
+		AccessToken string `json:"access_token"`
+	}
+	var req loginRequest
+	jsonDecoder := json.NewDecoder(r.Body)
+	err := jsonDecoder.Decode(&req)
+	if err != nil {
+		serveError(w, http.StatusBadRequest, "Failed to parse request body")
+		// fmt.Printf("Failed to parse request body, %s\n", err)
+		return
+	}
+	// check access token
+	if !checkToken(req.AccessToken) {
+		serveError(w, http.StatusForbidden, "Invalid access token")
+		return
+	}
+	// generate token
+	token := generateTraceID() + generateTraceID() + generateTraceID() + generateTraceID() // 4*16
+	LoginTokens[token] = struct {
+		timeout time.Time
+		genOn   time.Time
+	}{
+		timeout: time.Now().Add(time.Hour * 1), // 1 hour
+		genOn:   time.Now(),
+	} // add token to the map
+	type loginResponse struct {
+		Token   string `json:"token"`
+		Timeout int64  `json:"timeout"`
+	}
+	Output := loginResponse{
+		Token:   token,
+		Timeout: time.Now().Add(time.Hour * 1).Unix(), // 1 hour
+	}
+	// response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	jsonEncoder := json.NewEncoder(w)
+	err = jsonEncoder.Encode(Output)
+	if err != nil {
+		serveError(w, http.StatusInternalServerError, "Failed to encode response")
+		return
+	}
+}
+
 func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 	articleAPILocker.Lock()
 	defer articleAPILocker.Unlock()
@@ -1676,7 +1733,7 @@ func public_api_get_sniffer_info(w http.ResponseWriter, r *http.Request) {
 	ret := make(map[string]any)
 	// check params
 	params := r.URL.Query()
-	path := "/"
+	path := "/index.html"
 	if len(params["path"]) > 0 {
 		path = params.Get("path")
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -12,6 +13,7 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -203,6 +205,15 @@ func isAvailableEmailAddress(email string) bool {
 }
 
 func checkToken(token string) bool {
+	// check token by login
+	if v, ok := LoginTokens[token]; ok {
+		if v.timeout.After(time.Now()) { // token not expired
+			return true
+		} else {
+			delete(LoginTokens, token) // token expired, remove it
+		}
+		return false
+	}
 	// generate 5 tokens for check ( allow now ± 20s token expired )
 	nowTimestamp := (time.Now().Unix() / 10)
 	befTs1 := nowTimestamp - 1
@@ -221,13 +232,7 @@ func checkToken(token string) bool {
 	tokens = append(tokens, generateEncryptToken(Config.AccessCfg.AccessToken, EncryptTokenKey, befTs2Base64))
 	tokens = append(tokens, generateEncryptToken(Config.AccessCfg.AccessToken, EncryptTokenKey, aftTs2Base64))
 	// fmt.Printf("token: %v\n", token)
-	for _, t := range tokens {
-		// fmt.Printf("check token: %s|%s\n", t, token)
-		if t == token {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(tokens, token)
 }
 
 func generateEncryptToken(token, encryptKey string, timestampBase64 string) string {
@@ -298,4 +303,21 @@ func generateEncryptToken(token, encryptKey string, timestampBase64 string) stri
 
 func isValidID(id string) bool {
 	return idRegex.MatchString(id)
+}
+
+func autoCleanLoginTokens(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			for token, v := range LoginTokens {
+				if v.timeout.Before(time.Now()) {
+					delete(LoginTokens, token)
+				}
+			}
+			time.Sleep(time.Minute)
+		}
+	}
+
 }

@@ -655,7 +655,7 @@ function onImportButtonClick() {
     let jsonData = {};
     try {
         decodedInput = JSON.parse(decodeURIComponent(atob(input)));
-    } catch(error) {
+    } catch (error) {
         window.Notify.error("Invalid encoded data.");
         return;
     }
@@ -700,8 +700,8 @@ function onImportButtonClick() {
             }
         });
         if (keyExist) continue;
-        
-        
+
+
         const customFieldGroup = document.createElement('div');
         customFieldGroup.className = 'custom-field-group';
 
@@ -761,7 +761,7 @@ function onExportButtonClick() {
     const jsondata = JSON.stringify(GetCardJson())
     console.log(jsondata);
     copyText(btoa(encodeURIComponent(jsondata)));
-    
+
 }
 
 function CancelInputBox() {
@@ -816,35 +816,57 @@ function AddCardAPI(cardJson, callback) {
 }
 
 function GetAccessPathAndToken(DisableAsk) {
+    let loginToken = localStorage.getItem("login_token");
     let path = localStorage.getItem("access_path");
-    let token = localStorage.getItem("access_token");
-    if (path === null || token === null) {
-        if (DisableAsk) {
+    let ThisServerIdentify = "{{rendered:token_encrypt_key}}";
+    if (loginToken != null) {
+        // check expire time
+        let expireTime = localStorage.getItem("login_token_expire_time");
+        let serverIdentify = localStorage.getItem("server_identify");
+        if (expireTime != null) {
+            let currentTime = new Date().getSeconds();
+            if (currentTime < expireTime && serverIdentify == ThisServerIdentify) {
+                return { path, token: loginToken }; // token is still valid
+            }
+        }
+    }
+    console.log("Login token expired or not found.");
+    localStorage.removeItem("login_token");
+    localStorage.removeItem("login_token_expire_time");
+
+    if (DisableAsk) {
+        return null;
+    }
+    const newPath = prompt("Enter the access path (e.g. accessBackend):");
+    if (newPath === null) {
+        window.Notify.alert("Access path is required.");
+        return null;
+    };
+    const newToken = prompt("Enter the access token:");
+    if (newToken === null) {
+        window.Notify.alert("Access token is required.");
+        return null;
+    };
+    // try login
+    LogInAPI(newPath, newToken, function (data) {
+        if (data === "") {
+            console.log("Login failed.");
+            window.Notify.alert("Login failed.");
             return null;
         }
-        const newPath = prompt("Enter the access path (e.g. accessBackend):");
-        if (newPath === null) {
-            window.Notify.alert("Access path is required.");
-            return null;
-        };
-        const newToken = prompt("Enter the access token:");
-        if (newToken === null) {
-            window.Notify.alert("Access token is required.");
-            return null;
-        };
-
+        localStorage.setItem("login_token", data.token);
+        localStorage.setItem("login_token_expire_time", data.timeout);
         localStorage.setItem("access_path", newPath);
-        localStorage.setItem("access_token", newToken);
-        path = newPath;
-        token = newToken;
-    }
-    token = generateEncryptToken(token);
-    return { path, token };
+        localStorage.setItem("server_identify", ThisServerIdentify);
+        window.Notify.add("Login successfully.", {
+            type: "success"
+        });
+    });
 }
 
 function generateEncryptToken(token) {
     var encryptKey = `{{rendered:token_encrypt_key}}`;
-    const timestamp = parseInt((new Date().getTime())/10000); // 时间梯度10s
+    const timestamp = parseInt((new Date().getTime()) / 10000); // 时间梯度10s
     // console.log(timestamp);
     const timestampB64 = btoa(timestamp.toString());
     // console.log(timestampB64);
@@ -858,8 +880,8 @@ function generateEncryptToken(token) {
     }
     // console.log("XorshiftSeed: " + XorshiftSeed);
     const xorshift = new Xorshift32(XorshiftSeed);
-    
-    const getRandomChar = (seed) => String.fromCharCode(33 + ((seed+xorshift.next()) % 94));
+
+    const getRandomChar = (seed) => String.fromCharCode(33 + ((seed + xorshift.next()) % 94));
 
     for (let i = 0; i < encryptKey.length; i++) {
         const charCode = encryptKey.charCodeAt(i);
@@ -878,7 +900,7 @@ function generateEncryptToken(token) {
                 break;
 
             case 2:
-                mod = xorshift.next() % (tokenArray.length+1);
+                mod = xorshift.next() % (tokenArray.length + 1);
                 if (mod == 0) {
                     mod = 1;
                 }
@@ -961,6 +983,33 @@ function AddEditButtonListener() {
             })
         });
     }
+}
+
+async function LogInAPI(accesspath, rawToken, callback) {
+    token = generateEncryptToken(rawToken);
+    await fetch(window.location.origin + "/" + accesspath + "/login", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            access_token: token
+        })
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ERR，Code：${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log(data);
+            callback(data);
+        })
+        .catch(error => {
+            console.log(error);
+            callback("");
+        });
 }
 
 AddEditButtonListener();
