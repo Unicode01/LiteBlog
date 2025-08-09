@@ -121,6 +121,18 @@ e.g.
     "chat_id": "your_chat_id"
 }
 ```
+#### plugins_config
+This is the plugins configuration.
+- `enabled`: This is a boolean value to enable or disable the plugins.
+#### sniffer_config
+This is the sniffer configuration. It will sniff the request and response.
+- `enabled`: This is a boolean value to enable or disable the sniffer.
+- `public_provider`: Used to def the request url. If it is `/sniffer`, means you can use `/api/v1/sniffer?path=/index.html` to show the index page sniffer info.
+#### render_config
+This is the render configuration. It configures the render engine.
+- `render`: A map to point out which need to be rendered.
+- `min_render_interval`: The minimum seconds between render opration.
+- `max_render_interval`: The maximum seconds between render opration.
 #### configs/global.json
 This configs are used to customize the front-end.
 #### configs/articles/*.json
