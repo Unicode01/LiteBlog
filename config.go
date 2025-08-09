@@ -6,12 +6,17 @@ import (
 	"os"
 	"time"
 
+	_ "embed"
+
 	"github.com/fsnotify/fsnotify"
 )
 
 var (
 	BackupThreadCancel context.CancelFunc
 )
+
+//go:embed configs/config.json
+var DefaultConfig []byte
 
 type AllConfig struct {
 	ServerCfg         ServerConfig         `json:"server_config"`
@@ -25,6 +30,7 @@ type AllConfig struct {
 	NotifyCfg         NotifyConfig         `json:"notify_config"`
 	PluginCfg         PluginConfig         `json:"plugin_config"`
 	SnifferCfg        SnifferConfig        `json:"sniffer_config"`
+	RenderCfg         RenderConfig         `json:"render_config"`
 }
 
 type ServerConfig struct {
@@ -120,12 +126,22 @@ type SnifferConfig struct {
 	PublicProvider string `json:"public_provider"`
 }
 
+type RenderConfig struct {
+	Render struct {
+		RssFeed bool `json:"rss_feed"`
+		SiteMap bool `json:"site_map"`
+	} `json:"render"`
+	MinRenderInterval int `json:"min_render_interval"`
+	MaxRenderInterval int `json:"max_render_interval"`
+}
+
 func ReadConfig() AllConfig {
 	configFile, err := os.ReadFile("configs/config.json")
 	if err != nil {
 		panic(err)
 	}
 	var config AllConfig
+	json.Unmarshal(DefaultConfig, &config) // load default config
 	err = json.Unmarshal(configFile, &config)
 	if err != nil {
 		panic(err)

@@ -1505,7 +1505,7 @@ func backendHandler_login(w http.ResponseWriter, r *http.Request) {
 		timeout time.Time
 		genOn   time.Time
 	}{
-		timeout: time.Now().Add(time.Hour * 1), // 1 hour
+		timeout: time.Now().Add(time.Hour * 3), // 3 hour
 		genOn:   time.Now(),
 	} // add token to the map
 	type loginResponse struct {
@@ -1514,7 +1514,7 @@ func backendHandler_login(w http.ResponseWriter, r *http.Request) {
 	}
 	Output := loginResponse{
 		Token:   token,
-		Timeout: time.Now().Add(time.Hour * 1).Unix(), // 1 hour
+		Timeout: time.Now().Add(time.Hour * 3).Unix(), // 3 hour
 	}
 	// response
 	w.Header().Set("Content-Type", "application/json")

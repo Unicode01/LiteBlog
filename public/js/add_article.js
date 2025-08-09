@@ -106,7 +106,7 @@ function RenderLocalData() {
         article_id = getQueryVariable("article_id");
         console.log(article_id);
         GetArticleAPI(article_id, function (data) {
-            if (data || data.article_type === "markdown") {
+            if (data) {
                 storageTitle = data.title;
                 storageAuthor = data.author;
                 storageContent = data.content;
@@ -119,6 +119,8 @@ function RenderLocalData() {
                     const outlineList = document.querySelector('.outline-list');
                     generateOutline(articleDom, outlineList)
                 }
+            } else {
+                window.Notify.add("Article not found or not logged in.", { type: "error" })
             }
         })
     }
