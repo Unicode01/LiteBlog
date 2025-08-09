@@ -837,31 +837,8 @@ function GetAccessPathAndToken(DisableAsk) {
     if (DisableAsk) {
         return null;
     }
-    const newPath = prompt("Enter the access path (e.g. accessBackend):");
-    if (newPath === null) {
-        window.Notify.alert("Access path is required.");
-        return null;
-    };
-    const newToken = prompt("Enter the access token:");
-    if (newToken === null) {
-        window.Notify.alert("Access token is required.");
-        return null;
-    };
-    // try login
-    LogInAPI(newPath, newToken, function (data) {
-        if (data === "") {
-            console.log("Login failed.");
-            window.Notify.alert("Login failed.");
-            return null;
-        }
-        localStorage.setItem("login_token", data.token);
-        localStorage.setItem("login_token_expire_time", data.timeout);
-        localStorage.setItem("access_path", newPath);
-        localStorage.setItem("server_identify", ThisServerIdentify);
-        window.Notify.add("Login successfully.", {
-            type: "success"
-        });
-    });
+    window.open("/login.html?redirect="+location.href+"&blank=true", "_blank");
+    // window.location.href = "/login.html?redirect="+location.href;
 }
 
 function generateEncryptToken(token) {

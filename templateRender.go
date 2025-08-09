@@ -92,12 +92,12 @@ func RenderPageTemplate(fileRender string, mapRender map[string][]byte) []byte {
 }
 
 func autoRender(ctx context.Context) {
-	const (
-		minInterval      = 500 * time.Millisecond // min backoff interval 500ms
-		maxInterval      = 30 * time.Second       // max backoff interval 30s
-		targetRenderTime = 300 * time.Millisecond // target render time 300ms
-		coolDownFactor   = 1.2                    // cool down factor 1.2
-		recoverFactor    = 0.9                    // recover factor 0.9
+	var (
+		minInterval      = time.Duration(Config.RenderCfg.MinRenderInterval) * time.Millisecond // min backoff interval
+		maxInterval      = time.Duration(Config.RenderCfg.MaxRenderInterval) * time.Millisecond // max backoff interval
+		targetRenderTime = 300 * time.Millisecond                                               // target render time 300ms
+		coolDownFactor   = 1.2                                                                  // cool down factor 1.2
+		recoverFactor    = 0.9                                                                  // recover factor 0.9
 	)
 
 	renderInterval := 1 * time.Second // initial render interval 1s
@@ -110,7 +110,12 @@ func autoRender(ctx context.Context) {
 			renderStart := time.Now()
 
 			RenderedMap["cards"] = renderCards()
-			RenderedMap["rss_feed"] = renderRSSFeed()
+			if Config.RenderCfg.Render.RssFeed {
+				RenderedMap["rss_feed"] = renderRSSFeed()
+			}
+			if Config.RenderCfg.Render.SiteMap {
+				RenderedMap["site_map"] = renderSiteMap()
+			}
 
 			// generate token encrypt key
 			if EncryptTokenKey == "" {
@@ -182,21 +187,22 @@ func renderCards() []byte {
 		Log(3, "error parsing card config file: "+err.Error())
 		return []byte("")
 	}
+	cardConfigPrev = cardcfg
+	cards := cardcfg.Cards
 	// sort cards by order
-	sort.Slice(cardcfg.Cards, func(i, j int) bool {
-		a, e := strconv.Atoi(cardcfg.Cards[i]["order"])
+	sort.Slice(cards, func(i, j int) bool {
+		a, e := strconv.Atoi(cards[i]["order"])
 		if e != nil {
 			return false
 		}
-		b, e := strconv.Atoi(cardcfg.Cards[j]["order"])
+		b, e := strconv.Atoi(cards[j]["order"])
 		if e != nil {
 			return true
 		}
 		return a < b
 	})
-	cardConfigPrev = cardcfg
 	cards_bytes := []byte("")
-	for _, card := range cardcfg.Cards {
+	for _, card := range cards {
 		card_opt := map[string][]byte{}
 		for k, v := range card {
 			card_opt[k] = []byte(v)
@@ -209,15 +215,23 @@ func renderCards() []byte {
 }
 
 func renderRSSFeed() []byte {
-	cardcfg := cardConfigPrev
+	cards := cardConfigPrev.Cards
 	rss_posts := []byte("")
-	for _, card := range cardcfg.Cards {
+	// sort
+	for i, j := 0, len(cards)-1; i < j; i, j = i+1, j-1 {
+		cards[i], cards[j] = cards[j], cards[i] // reverse order
+	}
+
+	s := 0
+	for i := 0; s < 15 && i < len(cards); i++ {
+		card := cards[i]
 		card_title := card["card_title"]
 		card_description := card["card_description"]
 		card_link := card["card_link"]
 		if card_link == "" {
 			continue
 		}
+		s++
 		if GlobalMap["RSSLinkHead"][len(GlobalMap["RSSLinkHead"])-1] == '/' {
 			GlobalMap["RSSLinkHead"] = GlobalMap["RSSLinkHead"][:len(GlobalMap["RSSLinkHead"])-1] // remove last '/'
 		}
@@ -239,6 +253,37 @@ func renderRSSFeed() []byte {
 		"RSSPosts": rss_posts,
 	})
 	return rss_feed
+}
+
+func renderSiteMap() []byte {
+	articles, err := os.ReadDir("configs/articles")
+	if err != nil {
+		Log(3, "error reading article config files: "+err.Error())
+		return []byte("")
+	}
+	siteMap := []byte("")
+	for _, article := range articles {
+		link := string(GlobalMap["SiteMapLinkHead"]) + "/articles/" + article.Name()[:len(article.Name())-5] // remove ".json"
+		fileStat, err := os.Stat("configs/articles/" + article.Name())
+		if err != nil {
+			Log(3, "error reading article file: "+err.Error())
+			continue
+		}
+		lastMod := fileStat.ModTime().Format("2006-01-02")
+
+		sitemap_item := RenderPageTemplate("sitemap_item", map[string][]byte{
+			"SITEMAP_CHANGEFREQ": []byte("daily"),
+			"SITEMAP_LOC":        []byte(link),
+			"SITEMAP_LASTMOD":    []byte(lastMod),
+			"SITEMAP_PRIORITY":   []byte("0.5"),
+		})
+		siteMap = append(siteMap, sitemap_item...)
+	}
+	// RenderedMap["RSSPosts"] = rss_posts
+	site_map := RenderPageTemplate("sitemap", map[string][]byte{
+		"SITEMAP_ITEMS": siteMap,
+	})
+	return site_map
 }
 
 func renderarticle(articleID string) []byte {

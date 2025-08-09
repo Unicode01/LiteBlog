@@ -6,7 +6,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 )
@@ -27,7 +26,14 @@ func RenderStatic() {
 	RenderedMap["bottom_bar"] = RenderPageTemplate("bottom_bar", map[string][]byte{})
 
 	// render RSS
-	RenderedMap["rss_feed"] = renderRSSFeedStatic()
+	if Config.RenderCfg.Render.RssFeed {
+		RenderedMap["rss_feed"] = renderRSSFeedStatic()
+	}
+
+	// render sitemap
+	if Config.RenderCfg.Render.SiteMap {
+		RenderedMap["site_map"] = renderSiteMap()
+	}
 
 	// fmt.Printf("card rendered\n")
 	render_end_time := time.Now()
@@ -208,11 +214,13 @@ func renderRSSFeedStatic() []byte {
 		return []byte("")
 	}
 	rss_posts := []byte("")
-	// sort cards by order
-	sort.Slice(cardcfg.Cards, func(i, j int) bool {
-		return cardcfg.Cards[i]["order"] < cardcfg.Cards[j]["order"]
-	})
-	for _, card := range cardcfg.Cards {
+
+	cards := cardcfg.Cards
+	// sort
+	for i, j := 0, len(cards)-1; i < j; i, j = i+1, j-1 {
+		cards[i], cards[j] = cards[j], cards[i] // reverse order
+	}
+	for _, card := range cards {
 		card_title := card["card_title"]
 		card_description := card["card_description"]
 		card_link := card["card_link"]

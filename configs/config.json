@@ -93,5 +93,13 @@
         "enabled": true,
         "public_provider": "/sniffer",
         "//": "which url to provide info, default is /sniffer, means you can use /api/v1/sniffer?path=/index.html to show the index page sniffer info"
+    },
+    "render_config": {
+        "render": {
+            "rss_feed": true,
+            "site_map": true
+        },
+        "min_render_interval": 300,
+        "max_render_interval": 30000
     }
 }

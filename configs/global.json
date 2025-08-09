@@ -1,9 +1,10 @@
 {
     "IndexPageTitle": "Welcome to LiteBlog",
-    "RSSChannelDescription": "Latest posts from LiteBlog",
+    "RSSChannelDescription": "Latest 15 posts from LiteBlog",
     "RSSChannelLink": "https://example.com/feed/rss.xml",
     "RSSChannelTitle": "LiteBlog RSS Feed",
     "RSSLinkHead": "https://example.com",
+    "SiteMapLinkHead": "https://example.com",
     "TopBarTitle": "LiteBlog",
     "app_name": "LiteBlog",
     "blog_language_code": "en",
