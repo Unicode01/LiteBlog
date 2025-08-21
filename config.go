@@ -28,7 +28,7 @@ type AllConfig struct {
 	LoggerCfg         LoggerConfig         `json:"logger_config"`
 	ContentAdvisorCfg ContentAdvisorConfig `json:"contentAdvisor_config"`
 	NotifyCfg         NotifyConfig         `json:"notify_config"`
-	PluginCfg         PluginConfig         `json:"plugin_config"`
+	PluginCfg         PluginConfig         `json:"plugins_config"`
 	SnifferCfg        SnifferConfig        `json:"sniffer_config"`
 	RenderCfg         RenderConfig         `json:"render_config"`
 }

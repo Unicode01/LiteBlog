@@ -824,7 +824,7 @@ function GetAccessPathAndToken(DisableAsk) {
         let expireTime = localStorage.getItem("login_token_expire_time");
         let serverIdentify = localStorage.getItem("server_identify");
         if (expireTime != null) {
-            let currentTime = new Date().getTime()/1000;
+            let currentTime = new Date().getTime() / 1000;
             if (currentTime < expireTime && serverIdentify == ThisServerIdentify) {
                 return { path, token: loginToken }; // token is still valid
             }
@@ -833,11 +833,13 @@ function GetAccessPathAndToken(DisableAsk) {
     console.log("Login token expired or not found.");
     localStorage.removeItem("login_token");
     localStorage.removeItem("login_token_expire_time");
-
     if (DisableAsk) {
         return null;
     }
-    window.open("/login.html?redirect="+location.href+"&blank=true", "_blank");
+    window.Notify.add("Please finish login in new window.", {
+        type: "info"
+    })
+    window.open("/login.html?" + "blank=true" + "&redirect=" + location.href, "_blank");
     // window.location.href = "/login.html?redirect="+location.href;
 }
 

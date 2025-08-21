@@ -41,13 +41,13 @@ func (pm *PluginManager) RegisterLoader(loader LoaderType) (id string, err error
 	if err != nil {
 		return "", err
 	}
+	tmpID := pm.newID()
+	loader.SetID(tmpID)
 	// load plugin
 	err = loader.Load()
 	if err != nil {
 		return "", err
 	}
-	tmpID := pm.newID()
-	loader.SetID(tmpID)
 	pm.loaders[tmpID] = loader
 	// register public methods
 	methodsMap := make(map[string]func(args []*Arg) ([]*Arg, error))
