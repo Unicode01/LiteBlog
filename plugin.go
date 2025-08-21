@@ -25,7 +25,13 @@ func InitPlugins() {
 	if err != nil {
 		Log(3, fmt.Sprintf("Register plugin loader failed: %s", err))
 	}
-	Log(2, fmt.Sprintf("Register plugin loader success, id: %s", loaderId))
+	Log(2, fmt.Sprintf("Register gRPC plugin loader success, id: %s", loaderId))
+	jsLoader := &plugins.LoaderTypeJS{}
+	loaderId, err = pluginManager.RegisterLoader(jsLoader)
+	if err != nil {
+		Log(3, fmt.Sprintf("Register plugin loader failed: %s", err))
+	}
+	Log(2, fmt.Sprintf("Register JavaScript plugin loader success, id: %s", loaderId))
 }
 
 // plugin interface:

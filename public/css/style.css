@@ -693,3 +693,6 @@ body {
     overflow: auto;
 }
 
+.user-select-none {
+    user-select: none;
+}
