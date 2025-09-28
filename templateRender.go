@@ -1,6 +1,7 @@
 package main
 
 import (
+	utils "LiteBlog/utils"
 	"bytes"
 	"context"
 	"crypto/rand"
@@ -65,7 +66,7 @@ func RenderTemplate(template []byte, ReplaceMap map[string][]byte) []byte {
 			case "file":
 				valueRead, err := os.ReadFile("templates/" + string(key[l2Index+1:]) + ".html")
 				if err != nil {
-					Log(3, "error reading file: "+err.Error())
+					utils.Log(3, "error reading file: "+err.Error())
 				}
 				value = valueRead
 			}
@@ -84,7 +85,7 @@ func RenderPageTemplate(fileRender string, mapRender map[string][]byte) []byte {
 	file := dir + "/" + fileRender + ".html"
 	template, err := os.ReadFile(file)
 	if err != nil {
-		Log(3, "error reading template file: "+err.Error())
+		utils.Log(3, "error reading template file: "+err.Error())
 		return []byte("")
 	}
 	newTemplate := RenderTemplate(template, mapRender)
@@ -155,7 +156,7 @@ func autoRender(ctx context.Context) {
 				renderInterval = time.Duration(float64(renderInterval) * coolDownFactor)
 				if renderInterval > maxInterval {
 					renderInterval = maxInterval
-					Log(2, "rendering time too long! Set render interval to max: "+renderInterval.String())
+					utils.Log(2, "rendering time too long! Set render interval to max: "+renderInterval.String())
 				}
 
 			case renderInterval > minInterval:
@@ -179,12 +180,12 @@ func renderCards() []byte {
 	card_config_filepath := "configs/cards.json"
 	card_file, err := os.ReadFile(card_config_filepath)
 	if err != nil {
-		Log(3, "error reading card config file: "+err.Error())
+		utils.Log(3, "error reading card config file: "+err.Error())
 		return []byte("")
 	}
 	err = json.Unmarshal(card_file, &cardcfg)
 	if err != nil {
-		Log(3, "error parsing card config file: "+err.Error())
+		utils.Log(3, "error parsing card config file: "+err.Error())
 		return []byte("")
 	}
 	cardConfigPrev = cardcfg
@@ -258,7 +259,7 @@ func renderRSSFeed() []byte {
 func renderSiteMap() []byte {
 	articles, err := os.ReadDir("configs/articles")
 	if err != nil {
-		Log(3, "error reading article config files: "+err.Error())
+		utils.Log(3, "error reading article config files: "+err.Error())
 		return []byte("")
 	}
 	siteMap := []byte("")
@@ -266,7 +267,7 @@ func renderSiteMap() []byte {
 		link := string(GlobalMap["SiteMapLinkHead"]) + "/articles/" + article.Name()[:len(article.Name())-5] // remove ".json"
 		fileStat, err := os.Stat("configs/articles/" + article.Name())
 		if err != nil {
-			Log(3, "error reading article file: "+err.Error())
+			utils.Log(3, "error reading article file: "+err.Error())
 			continue
 		}
 		lastMod := fileStat.ModTime().Format("2006-01-02")
@@ -292,14 +293,14 @@ func renderarticle(articleID string) []byte {
 	// open article file
 	article_file, err := os.Open(articleSaveFile)
 	if err != nil {
-		Log(3, "error reading article file: "+err.Error())
+		utils.Log(3, "error reading article file: "+err.Error())
 		return []byte("")
 	}
 	jsonParser := json.NewDecoder(article_file)
 	var articlecfg articleJsonStruct
 	err = jsonParser.Decode(&articlecfg)
 	if err != nil {
-		Log(3, "error parsing article file: "+err.Error())
+		utils.Log(3, "error parsing article file: "+err.Error())
 		return []byte("")
 	}
 	// sort comments by date

@@ -114,7 +114,7 @@ func (ltgrpc *LoaderTypeGRPC) SetPluginMethodHandler(handler func(map[string]fun
 					inArgs[i] = &grpcloader.Arg{
 						Name: arg.Name,
 						Type: arg.Type,
-						Arg:  arg.Data, // Data -> Arg
+						Arg:  getBytes_safe(arg.Data), // Data -> Arg
 					}
 				}
 
@@ -181,7 +181,7 @@ func (ltgrpc *LoaderTypeGRPC) CallMethod(method string, args []*grpcloader.Arg) 
 		rtArgs = append(rtArgs, &grpcloader.Arg{
 			Name: arg.Name,
 			Type: arg.Type,
-			Arg:  arg.Data,
+			Arg:  getBytes_safe(arg.Data),
 		})
 	}
 	return rtArgs, err
@@ -193,7 +193,7 @@ func (ltgrpc *LoaderTypeGRPC) CallPluginMethod(method string, args []*Arg) ([]*A
 		inArgs = append(inArgs, &grpcloader.Arg{
 			Name: arg.Name,
 			Type: arg.Type,
-			Arg:  arg.Data,
+			Arg:  getBytes_safe(arg.Data),
 		})
 	}
 	returnArgs, err := ltgrpc.grpcLoaderServer.CallClientMethod(method, inArgs)

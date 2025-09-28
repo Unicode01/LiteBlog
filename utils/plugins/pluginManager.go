@@ -3,9 +3,11 @@
 package plugins
 
 import (
+	"LiteBlog/utils"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -23,7 +25,7 @@ type PluginManager struct {
 type Arg struct {
 	Name string
 	Type string
-	Data []byte
+	Data any
 }
 
 func NewPluginManager() *PluginManager {
@@ -85,6 +87,11 @@ func (pm *PluginManager) RegisterMethods(methods map[string]func(args []*Arg) ([
 func (pm *PluginManager) registerPluginMethods(methods map[string]func(args []*Arg) ([]*Arg, error)) {
 	// merge plugin methods
 	for n, m := range methods {
+		_, ok := pm.pluginMethods.Load(n)
+		if ok {
+			utils.Log(2, fmt.Sprintf("plugin method '%s' has been registered!", n))
+			continue
+		}
 		pm.pluginMethods.Store(n, m)
 	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	utils "LiteBlog/utils"
 	"encoding/json"
 	"io"
 	"os"
@@ -39,7 +40,7 @@ func RenderStatic() {
 	render_end_time := time.Now()
 	render_time := render_end_time.Sub(render_start_time)
 	if render_time > 1*time.Second {
-		Log(3, "render time too long: "+render_time.String())
+		utils.Log(3, "render time too long: "+render_time.String())
 	}
 	// done render
 	// render static files
@@ -64,7 +65,7 @@ func RenderStatic() {
 		if file_ext == "" || !strings.Contains(strings.Join(renderList, "|"), file_ext) {
 			// no render
 			// direct copy file to static file
-			Log(1, "direct copy file: "+Fpath)
+			utils.Log(1, "direct copy file: "+Fpath)
 			inFile, err := os.OpenFile(Fpath, os.O_RDONLY, 0644)
 			if err != nil {
 				panic(err)
@@ -96,7 +97,7 @@ func RenderStatic() {
 			if err != nil {
 				return err
 			}
-			Log(1, "render static file: "+Fpath)
+			utils.Log(1, "render static file: "+Fpath)
 			fileBin := RenderTemplate(NeedRender, nil)
 			// check if output file exist
 			if _, err := os.Stat(destPath); err == nil {
@@ -138,7 +139,7 @@ func RenderStatic() {
 		articleName := article.Name()
 		// articlePath := articlesDir + articleName
 		articleID := articleName[:len(articleName)-len(".json")]
-		Log(1, "render article: "+articleName)
+		utils.Log(1, "render article: "+articleName)
 		// build article
 		fileBin := renderarticle(articleID)
 		// check if output file exist
@@ -173,12 +174,12 @@ func renderCardsStatic() []byte {
 	card_config_filepath := "configs/cards.json"
 	card_file, err := os.ReadFile(card_config_filepath)
 	if err != nil {
-		Log(3, "error reading card config file: "+err.Error())
+		utils.Log(3, "error reading card config file: "+err.Error())
 		return []byte("")
 	}
 	err = json.Unmarshal(card_file, &cardcfg)
 	if err != nil {
-		Log(3, "error parsing card config file: "+err.Error())
+		utils.Log(3, "error parsing card config file: "+err.Error())
 		return []byte("")
 	}
 	cards_bytes := []byte("")
@@ -205,12 +206,12 @@ func renderRSSFeedStatic() []byte {
 	card_config_filepath := "configs/cards.json"
 	card_file, err := os.ReadFile(card_config_filepath)
 	if err != nil {
-		Log(3, "error reading card config file: "+err.Error())
+		utils.Log(3, "error reading card config file: "+err.Error())
 		return []byte("")
 	}
 	err = json.Unmarshal(card_file, &cardcfg)
 	if err != nil {
-		Log(3, "error parsing card config file: "+err.Error())
+		utils.Log(3, "error parsing card config file: "+err.Error())
 		return []byte("")
 	}
 	rss_posts := []byte("")

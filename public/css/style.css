@@ -48,6 +48,7 @@ body {
     border-bottom: 1px solid var(--base-gray-200);
     z-index: 999;
     overflow: hidden;
+    transition: transform 0.3s ease;
 }
 
 .logo {

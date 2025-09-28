@@ -311,6 +311,10 @@ input.email-subscribe-button[type="checkbox"] {
     }
 }
 
+#top-bar.shrinked {
+    transform: translateY(-51px);
+}
+
 /* 以下为文章内容的样式 */
 
 /* 基础段落 */

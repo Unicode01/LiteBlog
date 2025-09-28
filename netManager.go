@@ -16,7 +16,6 @@ import (
 	"path"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -175,9 +174,9 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		response_end_time := time.Now()
 		response_time := response_end_time.Sub(response_start_time)
 		if pw == nil {
-			Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, UA: '%s', %s %s, %s, disk_cached=%t", IP, traceID, r.Header.Get("User-Agent"), r.Method, r.URL.Path, response_time, cached))
+			utils.Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, UA: '%s', %s %s, %s, disk_cached=%t", IP, traceID, r.Header.Get("User-Agent"), r.Method, r.URL.Path, response_time, cached))
 		} else {
-			Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, UA: '%s', %s %s %d, %s, disk_cached=%t", IP, traceID, r.Header.Get("User-Agent"), r.Method, r.URL.Path, pw.StatusCode(), response_time, cached))
+			utils.Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, UA: '%s', %s %s %d, %s, disk_cached=%t", IP, traceID, r.Header.Get("User-Agent"), r.Method, r.URL.Path, pw.StatusCode(), response_time, cached))
 		}
 
 	}()
@@ -192,32 +191,32 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 				{
 					Name: "path",
 					Type: "string",
-					Data: []byte(r.URL.Path),
+					Data: r.URL.Path,
 				},
 				{
 					Name: "method",
 					Type: "string",
-					Data: []byte(r.Method),
+					Data: r.Method,
 				},
 				{
 					Name: "headers",
-					Type: "json-map[string][]string",
-					Data: headersBytes,
+					Type: "json",
+					Data: string(headersBytes),
 				},
 				{
 					Name: "ip",
 					Type: "string",
-					Data: []byte(IP),
+					Data: IP,
 				},
 				{
 					Name: "traceID",
 					Type: "string",
-					Data: []byte(traceID),
+					Data: traceID,
 				},
 			}
 			result, err := pluginManager.CallPluginMethod(f, args)
 			if err != nil {
-				Log(3, fmt.Sprintf("Failed to call plugin method %s, %s", f, err))
+				utils.Log(3, fmt.Sprintf("Failed to call plugin method %s, %s", f, err))
 				// remove plugin hook request
 				RequestHookRadixTree, _, _ = RequestHookRadixTree.Delete([]byte(r.URL.Path))
 			} else {
@@ -226,23 +225,21 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 				for _, arg := range result {
 					switch arg.Name {
 					case "statusCode":
-						statusCode, err = strconv.Atoi(string(arg.Data))
-						if err != nil {
-							Log(3, fmt.Sprintf("Failed to parse plugin status code, %s", err))
+						statusCode = getInt_safe(arg.Data)
+						if statusCode == 0 {
+							utils.Log(3, fmt.Sprintf("Failed to parse plugin status code, %s", getString_safe(arg.Data)))
 							statusCode = 500
 						}
 					case "body":
-						body = arg.Data
+						body = getBytes_safe(arg.Data)
 					case "header":
-						headers := make(map[string][]string)
-						err := json.Unmarshal(arg.Data, &headers)
+						headers := make(map[string]string)
+						err := json.Unmarshal(getBytes_safe(arg.Data), &headers)
 						if err != nil {
-							Log(3, fmt.Sprintf("Failed to parse plugin header, %s", err))
+							utils.Log(3, fmt.Sprintf("Failed to parse plugin header, %s", err))
 						} else {
 							for k, v := range headers {
-								for _, val := range v {
-									w.Header().Add(k, val)
-								}
+								w.Header().Add(k, v)
 							}
 						}
 					}
@@ -326,7 +323,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			deliverManager.AddTask(func() {
 				err = cacheManager.AddCacheItem(r.URL.Path, bytes.NewReader(filebin), Config.CacheCfg.ExpireTime)
 				if err != nil {
-					Log(1, fmt.Sprintf("Failed to add cache item for %s, %s", r.URL.Path, err))
+					utils.Log(1, fmt.Sprintf("Failed to add cache item for %s, %s", r.URL.Path, err))
 				}
 			})
 		}
@@ -394,7 +391,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		deliverManager.AddTask(func() {
 			err = cacheManager.AddCacheItem(r.URL.Path, bytes.NewReader(fileBin), Config.CacheCfg.ExpireTime)
 			if err != nil {
-				Log(1, fmt.Sprintf("Failed to add cache item for %s, %s", r.URL.Path, err))
+				utils.Log(1, fmt.Sprintf("Failed to add cache item for %s, %s", r.URL.Path, err))
 			}
 		})
 	}
