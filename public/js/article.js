@@ -722,7 +722,7 @@ function generateOutline(articleDom, outlineList) {
 
         // 添加点击事件
         itemDiv.addEventListener('click', function () {
-            heading.style.scrollMarginTop = '50px';
+            // heading.style.scrollMarginTop = '50px';
             // 滚动到对应标题
             heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -816,6 +816,7 @@ window.addEventListener('DOMContentLoaded', function () {
     RenderHighlight();
     SwitchToRemoveEditDate();
     AddImgEventListener();
+    AddShrinkTopBarListener();
 });
 
 addThemeSwitchBroadcastListener(function (theme) {
@@ -942,5 +943,18 @@ function show_big_photo(photo_url) {
         // prevent event transfer to parent
         // event.preventDefault();
         event.stopPropagation();
+    });
+}
+
+function AddShrinkTopBarListener() {
+    const top_bar = document.querySelector('#top-bar');
+    if (!top_bar) return;
+    addEventListener('scroll', function () {
+        const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+        if (scrollTop > 100) {
+            top_bar.classList.add('shrinked');
+        } else {
+            top_bar.classList.remove('shrinked');
+        }
     });
 }

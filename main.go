@@ -1,6 +1,7 @@
 package main
 
 import (
+	utils "LiteBlog/utils"
 	"flag"
 	"fmt"
 	"os"
@@ -14,7 +15,7 @@ var (
 )
 
 func main() {
-	SetLog()
+	utils.SetLog()
 	go ExitListener()
 	Config = ReadConfig()
 	SetVarToGlobalMap()
@@ -42,7 +43,7 @@ func ReadFlag() {
 	flag.Parse()
 	if generateStatic {
 		RenderStatic()
-		Log(1, "Static files generated")
+		utils.Log(1, "Static files generated")
 		os.Exit(0)
 	}
 	if version {
@@ -56,8 +57,8 @@ func ExitListener() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 	sig := <-c
-	Log(1, "Exiting with signal: "+sig.String())
-	CloseLogger()
+	utils.Log(1, "Exiting with signal: "+sig.String())
+	utils.CloseLogger()
 	fireWall.SaveRules()
 	deliverManager.Shutdown()
 	os.Exit(0)
