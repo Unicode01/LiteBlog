@@ -11,6 +11,15 @@
                 "block_time=60",
                 "cycle=10"
             ]
+        },
+        {
+            "name": "auto_blocked_by_path_traversal-IP-120.48.45.123",
+            "action": 1,
+            "rule": "120.48.45.123",
+            "type": "ipaddr",
+            "timeout": 1759314422,
+            "reason": "path traversal",
+            "args": null
         }
     ]
 }
