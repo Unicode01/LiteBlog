@@ -7,6 +7,7 @@
     display: grid;
     grid-template-areas: "stack";
     overflow: hidden;
+    min-width: 250px;
 }
 
 .card-music-player #image-container {

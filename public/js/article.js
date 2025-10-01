@@ -946,14 +946,47 @@ function show_big_photo(photo_url) {
     });
 }
 
+let scroll_struct = {
+    direction: 'down',
+    offsetTop: 0,
+    distance: 0,
+    last: {
+        direction: 'down',
+        offsetTop: 0
+    }
+}
 function AddShrinkTopBarListener() {
     const top_bar = document.querySelector('#top-bar');
     if (!top_bar) return;
+    scroll_struct.offsetTop = window.scrollY;
+    scroll_struct.last.offsetTop = window.scrollY;
+    
     addEventListener('scroll', function () {
-        const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-        if (scrollTop > 100) {
+        const currentScrollTop = window.scrollY;
+        
+        if (currentScrollTop > scroll_struct.last.offsetTop) { // down
+            if (scroll_struct.direction === 'down') {
+                scroll_struct.distance += (currentScrollTop - scroll_struct.last.offsetTop);
+            } else {
+                scroll_struct.direction = 'down';
+                scroll_struct.distance = currentScrollTop - scroll_struct.last.offsetTop;
+            }
+        } else if (currentScrollTop < scroll_struct.last.offsetTop) { // up
+            if (scroll_struct.direction === 'up') {
+                scroll_struct.distance += (scroll_struct.last.offsetTop - currentScrollTop);
+            } else {
+                scroll_struct.direction = 'up';
+                scroll_struct.distance = scroll_struct.last.offsetTop - currentScrollTop;
+            }
+        }
+        
+        scroll_struct.offsetTop = currentScrollTop;
+        scroll_struct.last.direction = scroll_struct.direction;
+        scroll_struct.last.offsetTop = currentScrollTop;
+        
+        if (scroll_struct.direction === 'down' && scroll_struct.distance > 100) {
             top_bar.classList.add('shrinked');
-        } else {
+        } else if (scroll_struct.direction === 'up' || scroll_struct.distance < 100) {
             top_bar.classList.remove('shrinked');
         }
     });
