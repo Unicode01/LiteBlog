@@ -1,6 +1,7 @@
 package main
 
 import (
+	utils "LiteBlog/utils"
 	"context"
 	"encoding/json"
 	"os"
@@ -25,10 +26,10 @@ type AllConfig struct {
 	DeliverCfg        DeliverConfig        `json:"deliver_config"`
 	BackupCfg         BackupsConfig        `json:"backup_config"`
 	CommentCfg        CommentConfig        `json:"comment_config"`
-	LoggerCfg         LoggerConfig         `json:"logger_config"`
+	LoggerCfg         utils.LoggerConfig   `json:"logger_config"`
 	ContentAdvisorCfg ContentAdvisorConfig `json:"contentAdvisor_config"`
 	NotifyCfg         NotifyConfig         `json:"notify_config"`
-	PluginCfg         PluginConfig         `json:"plugin_config"`
+	PluginCfg         PluginConfig         `json:"plugins_config"`
 	SnifferCfg        SnifferConfig        `json:"sniffer_config"`
 	RenderCfg         RenderConfig         `json:"render_config"`
 }
@@ -85,14 +86,6 @@ type CommentConfig struct {
 	MaxTextLength             int    `json:"max_text_length"`
 }
 
-type LoggerConfig struct {
-	Level            int    `json:"level"`
-	LogFile          string `json:"log_file"`
-	FileSyncInterval int    `json:"file_sync_interval"`
-	DisableStdout    bool   `json:"disable_stdout"`
-	MaxLogFileSize   int    `json:"max_log_file_size"`
-}
-
 type ContentAdvisorConfig struct {
 	Enabled       bool `json:"enabled"`
 	FilterComment bool `json:"filter_comment"`
@@ -146,6 +139,7 @@ func ReadConfig() AllConfig {
 	if err != nil {
 		panic(err)
 	}
+	utils.LoggerCfg = config.LoggerCfg
 	return config
 }
 
@@ -168,20 +162,20 @@ func ReadGolbalConfig() {
 
 func AutoAddListener() {
 	err := AddConfigListener("configs/config.json", func() {
-		Log(1, "Config file(configs/config.json) changed, reloading...")
+		utils.Log(1, "Config file(configs/config.json) changed, reloading...")
 		Config = ReadConfig()
 		BackupConfigures()
 		SetVarToGlobalMap()
 	})
 	if err != nil {
-		Log(3, "Config watcher error:"+err.Error())
+		utils.Log(3, "Config watcher error:"+err.Error())
 	}
 	err = AddConfigListener("configs/global.json", func() {
-		Log(1, "Global file(configs/global.json) changed, reloading...")
+		utils.Log(1, "Global file(configs/global.json) changed, reloading...")
 		ReadGolbalConfig()
 	})
 	if err != nil {
-		Log(3, "Config watcher error:"+err.Error())
+		utils.Log(3, "Config watcher error:"+err.Error())
 	}
 }
 
@@ -219,7 +213,7 @@ func AddConfigListener(filePath string, function func()) error {
 					})
 				}
 			case err := <-watcher.Errors:
-				Log(3, "Config watcher error:"+err.Error())
+				utils.Log(3, "Config watcher error:"+err.Error())
 				return
 			}
 		}

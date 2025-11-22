@@ -253,8 +253,8 @@ func onRequest(args []*grpcloader.Arg) ([]*grpcloader.Arg, error) {
 		},
 		{
 			Name: "header",
-			Type: "json-map[string][]string",
-			Arg:  []byte(`{"Content-Type": ["text/plain"], "X-Powered-By": ["LiteBlog-PluginExample"]}`),
+			Type: "json-map[string]string",
+			Arg:  []byte(`{"Content-Type": "text/plain", "X-Powered-By": "LiteBlog-PluginExample"}`),
 		},
 		{
 			Name: "body",

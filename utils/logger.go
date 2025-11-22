@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"context"
@@ -9,6 +9,14 @@ import (
 	"sync/atomic"
 	"time"
 )
+
+type LoggerConfig struct {
+	Level            int    `json:"level"`
+	LogFile          string `json:"log_file"`
+	FileSyncInterval int    `json:"file_sync_interval"`
+	DisableStdout    bool   `json:"disable_stdout"`
+	MaxLogFileSize   int    `json:"max_log_file_size"`
+}
 
 var (
 	LoggedFileHandler *os.File
@@ -21,6 +29,7 @@ var (
 		Errors uint32
 		Crits  uint32
 	}
+	LoggerCfg LoggerConfig
 )
 
 type logRedirector struct{}
@@ -71,7 +80,7 @@ func Log(level int, msg string) {
 		atomic.AddUint32(&LogData.Crits, 1)
 	}
 	// check log level
-	if level < Config.LoggerCfg.Level {
+	if level < LoggerCfg.Level {
 		return
 	}
 
@@ -88,20 +97,20 @@ func Log(level int, msg string) {
 			output += "at unknown location "
 		}
 	}
-	if !Config.LoggerCfg.DisableStdout {
+	if !LoggerCfg.DisableStdout {
 		fmt.Println(output)
 	}
-	if Config.LoggerCfg.LogFile != "" {
-		if LastLogFile == Config.LoggerCfg.LogFile {
+	if LoggerCfg.LogFile != "" {
+		if LastLogFile == LoggerCfg.LogFile {
 			LoggedFileHandler.WriteString(output + "\n")
 		} else {
 			if LoggedFileHandler != nil {
 				LoggedFileHandler.Close()
 			}
-			LoggedFileHandler, _ = os.OpenFile(Config.LoggerCfg.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+			LoggedFileHandler, _ = os.OpenFile(LoggerCfg.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 			LoggedFileHandler.WriteString(output + "\n")
 		}
-		LastLogFile = Config.LoggerCfg.LogFile
+		LastLogFile = LoggerCfg.LogFile
 	}
 }
 
@@ -115,35 +124,35 @@ func autoSync(ctx context.Context) {
 			}
 			return
 		default:
-			if Config.LoggerCfg.LogFile != "" && LoggedFileHandler != nil {
+			if LoggerCfg.LogFile != "" && LoggedFileHandler != nil {
 				LoggedFileHandler.Sync()
 			}
-			if Config.LoggerCfg.FileSyncInterval < 1 {
-				Config.LoggerCfg.FileSyncInterval = 1
+			if LoggerCfg.FileSyncInterval < 1 {
+				LoggerCfg.FileSyncInterval = 1
 			}
 			CheckLogFileSize()
-			time.Sleep(time.Duration(Config.LoggerCfg.FileSyncInterval) * time.Second)
+			time.Sleep(time.Duration(LoggerCfg.FileSyncInterval) * time.Second)
 		}
 	}
 }
 
 func CheckLogFileSize() {
-	if Config.LoggerCfg.LogFile != "" && LoggedFileHandler != nil {
+	if LoggerCfg.LogFile != "" && LoggedFileHandler != nil {
 		// check log file size
 		fileInfo, err := LoggedFileHandler.Stat()
 		if err != nil {
 			return
 		}
-		if fileInfo.Size() > int64(Config.LoggerCfg.MaxLogFileSize) {
+		if fileInfo.Size() > int64(LoggerCfg.MaxLogFileSize) {
 			// close old log file
 			LoggedFileHandler.Close()
 			// rename old log file
-			if _, err := os.Stat(Config.LoggerCfg.LogFile + ".old"); err == nil {
-				os.Remove(Config.LoggerCfg.LogFile + ".old")
+			if _, err := os.Stat(LoggerCfg.LogFile + ".old"); err == nil {
+				os.Remove(LoggerCfg.LogFile + ".old")
 			}
-			os.Rename(Config.LoggerCfg.LogFile, Config.LoggerCfg.LogFile+".old")
+			os.Rename(LoggerCfg.LogFile, LoggerCfg.LogFile+".old")
 			// create new log file
-			LoggedFileHandler, _ = os.OpenFile(Config.LoggerCfg.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+			LoggedFileHandler, _ = os.OpenFile(LoggerCfg.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 		}
 	}
 }

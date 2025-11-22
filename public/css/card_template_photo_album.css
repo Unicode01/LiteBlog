@@ -36,12 +36,15 @@
                 object-fit: cover;
             }
         }
+
         .prev {
             transform: scale(0.8);
         }
-        .current {
 
+        .current {
+            /* Current photo - no additional transform */
         }
+
         .next {
             transform: scale(0.8);
         }
@@ -58,19 +61,69 @@
         pointer-events: none;
 
         .prev-btn {
-            width: 40px;
+            width: 60px;
             height: 100%;
             color: var(--base-gray-200);
             cursor: pointer;
             pointer-events: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease-in-out;
+            position: relative;
+
+            .hover-indicator {
+                position: absolute;
+                width: 3px;
+                height: 0%;
+                background-color: rgba(255, 255, 255, 0.6);
+                transition: all 0.3s ease-in-out;
+                opacity: 0;
+                border-radius: 2px;
+                box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            }
+
+            .hover-indicator-left {
+                left: 10px;
+            }
+
+            &:hover .hover-indicator {
+                height: 60%;
+                opacity: 1;
+            }
         }
 
         .next-btn {
-            width: 40px;
+            width: 60px;
             height: 100%;
             color: var(--base-gray-200);
             cursor: pointer;
             pointer-events: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease-in-out;
+            position: relative;
+
+            .hover-indicator {
+                position: absolute;
+                width: 3px;
+                height: 0%;
+                background-color: rgba(255, 255, 255, 0.6);
+                transition: all 0.3s ease-in-out;
+                opacity: 0;
+                border-radius: 2px;
+                box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            }
+
+            .hover-indicator-right {
+                right: 10px;
+            }
+
+            &:hover .hover-indicator {
+                height: 60%;
+                opacity: 1;
+            }
         }
     }
 }
@@ -81,12 +134,78 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.9);
     z-index: 9999;
     overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
     img {
         width: 100%;
         height: 100%;
         object-fit: scale-down;
+    }
+
+    .big-photo-image {
+        max-width: 90%;
+        max-height: 90%;
+        object-fit: contain;
+        transition: none;
+        user-select: none;
+        cursor: grab;
+    }
+
+    .big-photo-image:active {
+        cursor: grabbing;
+    }
+
+    .big-photo-control-bar {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 4px;
+        padding: 6px;
+        background-color: rgba(0, 0, 0, 0.5);
+        border-radius: 8px;
+        z-index: 10000;
+        backdrop-filter: blur(8px);
+
+        .control-btn {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 4px;
+            background-color: transparent;
+            color: rgba(255, 255, 255, 0.8);
+            transition: all 0.15s ease;
+
+            svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            &:hover {
+                background-color: rgba(255, 255, 255, 0.15);
+                color: #fff;
+            }
+
+            &:active {
+                background-color: rgba(255, 255, 255, 0.25);
+            }
+
+            &.close-btn:hover {
+                color: #ff5252;
+            }
+
+            &.reset-btn:hover {
+                color: #64b5f6;
+            }
+        }
     }
 }
