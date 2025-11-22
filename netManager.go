@@ -398,6 +398,46 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// authMiddleware 鉴权中间件：验证请求方法和token
+func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
+			return
+		}
+
+		// 读取请求体
+		bodyBytes, err := io.ReadAll(r.Body)
+		if err != nil {
+			serveError(w, http.StatusBadRequest, "Failed to read request body")
+			return
+		}
+		defer r.Body.Close()
+
+		// 解析token
+		var tokenReq struct {
+			Token string `json:"token"`
+		}
+		err = json.Unmarshal(bodyBytes, &tokenReq)
+		if err != nil {
+			serveError(w, http.StatusBadRequest, "Failed to parse request body")
+			return
+		}
+
+		// 验证token
+		if !checkToken(tokenReq.Token) {
+			serveError(w, http.StatusForbidden, "Invalid token")
+			return
+		}
+
+		// 恢复请求体供后续handler使用
+		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+		// 调用下一个handler
+		next(w, r)
+	}
+}
+
 func serveBackend(w http.ResponseWriter, r *http.Request) {
 	backendPrefix := "/" + Config.AccessCfg.BackendPath + "/"
 	// enter backend
@@ -405,46 +445,46 @@ func serveBackend(w http.ResponseWriter, r *http.Request) {
 	// fmt.Printf("Enter backend url: %s\n", backendUrl)
 	switch backendUrl {
 	case "/edit_order":
-		backendHandler_edit_order(w, r)
+		authMiddleware(backendHandler_edit_order)(w, r)
 		return
 	case "/delete_card":
-		backendHandler_delete_card(w, r)
+		authMiddleware(backendHandler_delete_card)(w, r)
 		return
 	case "/add_card":
-		backendHandler_add_card(w, r)
+		authMiddleware(backendHandler_add_card)(w, r)
 		return
 	case "/add_article":
-		backendHandler_add_article(w, r)
+		authMiddleware(backendHandler_add_article)(w, r)
 		return
 	case "/edit_article":
-		backendHandler_edit_article(w, r)
+		authMiddleware(backendHandler_edit_article)(w, r)
 		return
 	case "/get_article":
-		backendHandler_get_article(w, r)
+		authMiddleware(backendHandler_get_article)(w, r)
 		return
 	case "/get_all_article_id":
-		backendHandler_get_all_article_id(w, r)
+		authMiddleware(backendHandler_get_all_article_id)(w, r)
 		return
 	case "/delete_article":
-		backendHandler_delete_article(w, r)
+		authMiddleware(backendHandler_delete_article)(w, r)
 		return
 	case "/get_card":
-		backendHandler_get_card(w, r)
+		authMiddleware(backendHandler_get_card)(w, r)
 		return
 	case "/get_all_cards":
-		backendHandler_get_all_cards(w, r)
+		authMiddleware(backendHandler_get_all_cards)(w, r)
 		return
 	case "/edit_card":
-		backendHandler_edit_card(w, r)
+		authMiddleware(backendHandler_edit_card)(w, r)
 		return
 	case "/delete_comment":
-		backendHandler_delete_comment(w, r)
+		authMiddleware(backendHandler_delete_comment)(w, r)
 		return
 	case "/get_custom_settings":
-		backendHandler_get_custom_settings(w, r)
+		authMiddleware(backendHandler_get_custom_settings)(w, r)
 		return
 	case "/edit_custom_settings":
-		backendHandler_edit_custom_settings(w, r)
+		authMiddleware(backendHandler_edit_custom_settings)(w, r)
 		return
 	case "/login":
 		backendHandler_login(w, r)
@@ -493,27 +533,17 @@ func serveError(w http.ResponseWriter, statusCode int, message string) {
 func backendHandler_edit_order(w http.ResponseWriter, r *http.Request) {
 	cardAPILocker.Lock()
 	defer cardAPILocker.Unlock()
-	if r.Method != "POST" {
-		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-	jsonDecoder := json.NewDecoder(r.Body)
+
 	type orderrequest struct {
-		Token   string `json:"token"`
 		Changes []struct {
 			ID    string `json:"cardID"`
 			Order int    `json:"order"`
 		} `json:"changes"`
 	}
 	var req orderrequest
-	err := jsonDecoder.Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		serveError(w, http.StatusBadRequest, "Failed to parse request body")
-		return
-	}
-	// check token
-	if !checkToken(req.Token) {
-		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	// read cards data
@@ -578,25 +608,14 @@ func backendHandler_edit_order(w http.ResponseWriter, r *http.Request) {
 func backendHandler_delete_card(w http.ResponseWriter, r *http.Request) {
 	cardAPILocker.Lock()
 	defer cardAPILocker.Unlock()
-	if r.Method != "POST" {
-		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-	jsonDecoder := json.NewDecoder(r.Body)
+
 	type cardrequest struct {
-		Token string `json:"token"`
-		ID    string `json:"cardID"`
+		ID string `json:"cardID"`
 	}
 	var req cardrequest
-	err := jsonDecoder.Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		serveError(w, http.StatusBadRequest, "Failed to parse request body")
-		// fmt.Printf("Failed to parse request body, %s\n", err)
-		return
-	}
-	// check token
-	if !checkToken(req.Token) {
-		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	// delete card
@@ -651,25 +670,14 @@ func backendHandler_delete_card(w http.ResponseWriter, r *http.Request) {
 func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
 	cardAPILocker.Lock()
 	defer cardAPILocker.Unlock()
-	if r.Method != "POST" {
-		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
+
 	type cardrequest struct {
-		Token    string            `json:"token"`
 		CardJson map[string]string `json:"card"`
 	}
 	var req cardrequest
-	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		serveError(w, http.StatusBadRequest, "Failed to parse request body")
-		// fmt.Printf("Failed to parse request body, %s\n", err)
-		return
-	}
-	// check token
-	if !checkToken(req.Token) {
-		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	if Config.ContentAdvisorCfg.Enabled && Config.ContentAdvisorCfg.FilterCard {
@@ -691,8 +699,7 @@ func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer cardFile.Close()
-	jsonDecoder = json.NewDecoder(cardFile)
-	err = jsonDecoder.Decode(&cardsData)
+	err = json.NewDecoder(cardFile).Decode(&cardsData)
 	if err != nil {
 		serveError(w, http.StatusInternalServerError, "Failed to decode cards.json")
 		return
@@ -746,25 +753,14 @@ func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
 func backendHandler_get_card(w http.ResponseWriter, r *http.Request) {
 	cardAPILocker.Lock()
 	defer cardAPILocker.Unlock()
-	if r.Method != "POST" {
-		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
+
 	type cardrequest struct {
-		Token string `json:"token"`
-		ID    string `json:"cardID"`
+		ID string `json:"cardID"`
 	}
 	var req cardrequest
-	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		serveError(w, http.StatusBadRequest, "Failed to parse request body")
-		// fmt.Printf("Failed to parse request body, %s\n", err)
-		return
-	}
-	// check token
-	if !checkToken(req.Token) {
-		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	// get card
@@ -799,26 +795,6 @@ func backendHandler_get_card(w http.ResponseWriter, r *http.Request) {
 func backendHandler_get_all_cards(w http.ResponseWriter, r *http.Request) {
 	cardAPILocker.Lock()
 	defer cardAPILocker.Unlock()
-	if r.Method != "POST" {
-		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-	type cardrequest struct {
-		Token string `json:"token"`
-	}
-	var req cardrequest
-	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(&req)
-	if err != nil {
-		serveError(w, http.StatusBadRequest, "Failed to parse request body")
-		// fmt.Printf("Failed to parse request body, %s\n", err)
-		return
-	}
-	// check token
-	if !checkToken(req.Token) {
-		serveError(w, http.StatusForbidden, "Invalid token")
-		return
-	}
 	// get card
 	type cards struct {
 		Cards []map[string]string `json:"cards"`
@@ -844,25 +820,14 @@ func backendHandler_get_all_cards(w http.ResponseWriter, r *http.Request) {
 func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
 	cardAPILocker.Lock()
 	defer cardAPILocker.Unlock()
-	if r.Method != "POST" {
-		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
+
 	type cardrequest struct {
-		Token    string            `json:"token"`
 		CardJson map[string]string `json:"card"`
 	}
 	var req cardrequest
-	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		serveError(w, http.StatusBadRequest, "Failed to parse request body")
-		// fmt.Printf("Failed to parse request body, %s\n", err)
-		return
-	}
-	// check token
-	if !checkToken(req.Token) {
-		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	if Config.ContentAdvisorCfg.Enabled && Config.ContentAdvisorCfg.FilterCard {
@@ -884,8 +849,7 @@ func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer cardFile.Close()
-	jsonDecoder = json.NewDecoder(cardFile)
-	err = jsonDecoder.Decode(&cardsData)
+	err = json.NewDecoder(cardFile).Decode(&cardsData)
 	if err != nil {
 		serveError(w, http.StatusInternalServerError, "Failed to decode cards.json")
 		return
@@ -925,12 +889,8 @@ func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
 func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 	articleAPILocker.Lock()
 	defer articleAPILocker.Unlock()
-	if r.Method != "POST" {
-		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
+
 	type articlerequest struct {
-		Token   string `json:"token"`
 		Article struct {
 			Title       string            `json:"title"`
 			Content     string            `json:"content"`
@@ -940,16 +900,9 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 		} `json:"article"`
 	}
 	var req articlerequest
-	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		serveError(w, http.StatusBadRequest, "Failed to parse request body")
-		// fmt.Printf("Failed to parse request body, %s\n", err)
-		return
-	}
-	// check token
-	if !checkToken(req.Token) {
-		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	if Config.ContentAdvisorCfg.Enabled && Config.ContentAdvisorCfg.FilterArticle {
@@ -1037,12 +990,8 @@ func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 	articleAPILocker.Lock()
 	defer articleAPILocker.Unlock()
-	if r.Method != "POST" {
-		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
+
 	type articlerequest struct {
-		Token   string `json:"token"`
 		Article struct {
 			ID          string            `json:"article_id"`
 			Title       string            `json:"title"`
@@ -1053,16 +1002,9 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 		} `json:"article"`
 	}
 	var req articlerequest
-	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		serveError(w, http.StatusBadRequest, "Failed to parse request body")
-		// fmt.Printf("Failed to parse request body, %s\n", err)
-		return
-	}
-	// check token
-	if !checkToken(req.Token) {
-		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	if Config.ContentAdvisorCfg.Enabled && Config.ContentAdvisorCfg.FilterArticle {
@@ -1090,8 +1032,7 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 	}
 	defer articleFile.Close()
 	var articleJson articleJsonStruct
-	jsonDecoder = json.NewDecoder(articleFile)
-	err = jsonDecoder.Decode(&articleJson)
+	err = json.NewDecoder(articleFile).Decode(&articleJson)
 	if err != nil {
 		serveError(w, http.StatusInternalServerError, "Failed to decode article json")
 		return
@@ -1131,25 +1072,14 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 func backendHandler_delete_article(w http.ResponseWriter, r *http.Request) {
 	articleAPILocker.Lock()
 	defer articleAPILocker.Unlock()
-	if r.Method != "POST" {
-		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
+
 	type articlerequest struct {
-		Token string `json:"token"`
-		ID    string `json:"article_id"`
+		ID string `json:"article_id"`
 	}
 	var req articlerequest
-	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		serveError(w, http.StatusBadRequest, "Failed to parse request body")
-		// fmt.Printf("Failed to parse request body, %s\n", err)
-		return
-	}
-	// check token
-	if !checkToken(req.Token) {
-		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	// check if ID is valid
@@ -1178,25 +1108,14 @@ func backendHandler_delete_article(w http.ResponseWriter, r *http.Request) {
 func backendHandler_get_article(w http.ResponseWriter, r *http.Request) {
 	articleAPILocker.Lock()
 	defer articleAPILocker.Unlock()
-	if r.Method != "POST" {
-		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
+
 	type articlerequest struct {
-		Token string `json:"token"`
-		ID    string `json:"article_id"`
+		ID string `json:"article_id"`
 	}
 	var req articlerequest
-	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		serveError(w, http.StatusBadRequest, "Failed to parse request body")
-		// fmt.Printf("Failed to parse request body, %s\n", err)
-		return
-	}
-	// check token
-	if !checkToken(req.Token) {
-		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	// check if ID is valid
@@ -1220,26 +1139,6 @@ func backendHandler_get_article(w http.ResponseWriter, r *http.Request) {
 func backendHandler_get_all_article_id(w http.ResponseWriter, r *http.Request) {
 	articleAPILocker.Lock()
 	defer articleAPILocker.Unlock()
-	if r.Method != "POST" {
-		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-	type articlerequest struct {
-		Token string `json:"token"`
-	}
-	var req articlerequest
-	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(&req)
-	if err != nil {
-		serveError(w, http.StatusBadRequest, "Failed to parse request body")
-		// fmt.Printf("Failed to parse request body, %s\n", err)
-		return
-	}
-	// check token
-	if !checkToken(req.Token) {
-		serveError(w, http.StatusForbidden, "Invalid token")
-		return
-	}
 	// get all articles
 	articleDir, err := os.ReadDir("configs/articles")
 	if err != nil {
@@ -1262,26 +1161,15 @@ func backendHandler_get_all_article_id(w http.ResponseWriter, r *http.Request) {
 func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
 	articleAPILocker.Lock()
 	defer articleAPILocker.Unlock()
-	if r.Method != "POST" {
-		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
+
 	type commentrequest struct {
-		Token     string `json:"token"`
 		ArticleID string `json:"article_id"`
 		CommentID string `json:"comment_id"`
 	}
 	var req commentrequest
-	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		serveError(w, http.StatusBadRequest, "Failed to parse request body")
-		// fmt.Printf("Failed to parse request body, %s\n", err)
-		return
-	}
-	// check token
-	if !checkToken(req.Token) {
-		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	// check if article ID is valid
@@ -1298,8 +1186,7 @@ func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
 	}
 	defer articleFile.Close()
 	var articleJson articleJsonStruct
-	jsonDecoder = json.NewDecoder(articleFile)
-	err = jsonDecoder.Decode(&articleJson)
+	err = json.NewDecoder(articleFile).Decode(&articleJson)
 	if err != nil {
 		serveError(w, http.StatusInternalServerError, "Failed to decode article json")
 		return
@@ -1345,26 +1232,6 @@ func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
 func backendHandler_get_custom_settings(w http.ResponseWriter, r *http.Request) {
 	settingsAPILocker.Lock()
 	defer settingsAPILocker.Unlock()
-	if r.Method != "POST" {
-		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-	type tokenrequest struct {
-		Token string `json:"token"`
-	}
-	var req tokenrequest
-	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(&req)
-	if err != nil {
-		serveError(w, http.StatusBadRequest, "Failed to parse request body")
-		// fmt.Printf("Failed to parse request body, %s\n", err)
-		return
-	}
-	// check token
-	if !checkToken(req.Token) {
-		serveError(w, http.StatusForbidden, "Invalid token")
-		return
-	}
 	Output := make(map[string]any)
 	// get global settings
 	NewMap := make(map[string]any)
@@ -1404,12 +1271,8 @@ func backendHandler_get_custom_settings(w http.ResponseWriter, r *http.Request) 
 func backendHandler_edit_custom_settings(w http.ResponseWriter, r *http.Request) {
 	settingsAPILocker.Lock()
 	defer settingsAPILocker.Unlock()
-	if r.Method != "POST" {
-		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
+
 	type customsettingsrequest struct {
-		Token          string `json:"token"`
 		CustomSettings struct {
 			GlobalSettings map[string]string `json:"global_settings"`
 			CustomScript   string            `json:"custom_script"`
@@ -1417,16 +1280,9 @@ func backendHandler_edit_custom_settings(w http.ResponseWriter, r *http.Request)
 		} `json:"custom_settings"`
 	}
 	var req customsettingsrequest
-	jsonDecoder := json.NewDecoder(r.Body)
-	err := jsonDecoder.Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		serveError(w, http.StatusBadRequest, "Failed to parse request body")
-		// fmt.Printf("Failed to parse request body, %s\n", err)
-		return
-	}
-	// check token
-	if !checkToken(req.Token) {
-		serveError(w, http.StatusForbidden, "Invalid token")
 		return
 	}
 	// write to file
@@ -1591,12 +1447,15 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 
 	if Config.ContentAdvisorCfg.Enabled && Config.ContentAdvisorCfg.FilterComment {
 		// sanitize input, use bluemonday to prevent XSS attack
-		// NewPolicy() creates a new policy with the default settings.
-		p := bluemonday.NewPolicy()
+		// UGCPolicy() creates a policy suitable for user generated content (comments, forum posts, etc.)
+		// It allows common HTML tags like <p>, <a>, <strong>, <em>, <ul>, <li>, <code>, <pre>, <blockquote>, etc.
+		p := bluemonday.UGCPolicy()
 		req.Content = p.Sanitize(req.Content)
-		req.ReplyTo = p.Sanitize(req.ReplyTo)
-		req.Email = p.Sanitize(req.Email)
-		req.Author = p.Sanitize(req.Author)
+		// Use strict policy for non-content fields
+		pStrict := bluemonday.StrictPolicy()
+		req.ReplyTo = pStrict.Sanitize(req.ReplyTo)
+		req.Email = pStrict.Sanitize(req.Email)
+		req.Author = pStrict.Sanitize(req.Author)
 	}
 	// add comment
 	articleJsonPath := "configs/articles/" + req.Article_id + ".json"

@@ -34,7 +34,7 @@ function init() {
 }
 
 function onFirstLoad() {
-    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches? 'dark' : 'light';
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     // set theme
     SetTheme(systemTheme);
     console.log("first run, set theme to " + systemTheme);
