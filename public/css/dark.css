@@ -24,7 +24,7 @@ body {
 }
 
 .img {
-	filter: invert(1);
+    filter: invert(1);
 }
 
 .history-menu,
@@ -53,7 +53,7 @@ body {
 
 .add-card-button,
 .cancel-button,
-.add-comment-button{
+.add-comment-button {
     background: var(--base-gray-200);
     color: var(--base-black);
 }
@@ -68,12 +68,12 @@ body {
 
 .markdown-editor {
     background: #1A1A1A;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
-  
+
 .article-preview {
     background: #1A1A1A;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .title-input {
@@ -127,7 +127,7 @@ body {
 
 #article-comment {
     background: #1A1A1A;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 #comment-Author {
@@ -140,6 +140,84 @@ body {
 
 #comment-Content {
     color: rgba(255, 255, 255, 0.89);
+}
+
+/* 评论内容markdown样式 - 暗色模式 */
+#comment-Content h1,
+#comment-Content h2,
+#comment-Content h3,
+#comment-Content h4 {
+    color: rgba(255, 255, 255, 0.89);
+}
+
+#comment-Content h1 {
+    border-bottom: 2px solid #3A3A3A;
+}
+
+#comment-Content h2 {
+    border-bottom: 1px solid #3A3A3A;
+}
+
+#comment-Content blockquote {
+    border-left: 4px solid #4A90E2;
+    background-color: #1A1A1A;
+    color: #A0A0A0;
+}
+
+#comment-Content code {
+    background-color: #424242;
+    color: #87ccff;
+}
+
+#comment-Content pre {
+    background-color: #1A1A1A;
+    border: 1px solid #3A3A3A;
+}
+
+#comment-Content pre code {
+    color: #E0E0E0;
+}
+
+#comment-Content table {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+#comment-Content th,
+#comment-Content td {
+    border: 1px solid #3A3A3A;
+}
+
+#comment-Content th {
+    background-color: #1A1A1A;
+    color: rgba(255, 255, 255, 0.89);
+}
+
+#comment-Content tr:nth-child(even) {
+    background-color: #212529;
+}
+
+#comment-Content a {
+    color: #4A90E2;
+}
+
+#comment-Content a:hover {
+    color: #66BB6A;
+}
+
+#comment-Content img {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+#comment-Content strong {
+    color: rgba(255, 255, 255, 0.95);
+}
+
+#comment-Content del {
+    color: #6C757D;
+}
+
+#comment-Content hr {
+    background: #3A3A3A;
 }
 
 
@@ -179,7 +257,7 @@ body {
 }
 
 .article-content table {
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .article-content th,
@@ -193,11 +271,11 @@ body {
 }
 
 .article-content img {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    background-image: 
-        linear-gradient(90deg, 
-            rgba(255, 255, 255, 0) 0%, 
-            rgba(255, 255, 255, 0.1) 50%, 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    background-image:
+        linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
             rgba(255, 255, 255, 0) 100%),
         linear-gradient(45deg, #2c3e50 0%, #4a6491 100%);
 }
@@ -225,4 +303,25 @@ body {
             filter: invert(1);
         }
     }
+}
+
+/* 工具箱暗色主题 */
+.toolbox-container {
+    background: rgba(26, 26, 26, 0.95);
+    border: 1px solid #3A3A3A;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+.toolbox-item {
+    color: rgba(255, 255, 255, 0.89);
+}
+
+.toolbox-item:hover {
+    background: #3A3A3A;
+}
+
+.toolbox-item::after {
+    background: rgba(255, 255, 255, 0.95);
+    color: #212529;
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
 }

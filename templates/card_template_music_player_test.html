@@ -1,42 +1,122 @@
 <div id="card-container" card-id="{{id}}" class="card-container card-music-player" style="order:{{order}}">
     <link rel="stylesheet" href="/css/card_template_music_player.css">
-    <div id="image-container"></div> <!-- Z-index of 1-->
+    <div id="image-container"></div>
     <div id="player-container" class="player-container">
         <div id="player-header" class="player-header display-flex justify-content-space-between align-items-center">
-            <div id="player-title" class="player-title">{{music_title}}</div>
-            <div id="player-artist" class="player-artist">{{music_artist}}</div>
-
+            <div id="player-title" class="player-title"></div>
+            <div id="player-artist" class="player-artist"></div>
         </div>
         <div id="player-controls" class="player-controls display-flex justify-content-space-between align-items-center">
             <div id="player-prev" class="player-prev player-control">
-                ⏮
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 6h2v12H6V6zm3.5 6l8.5 6V6l-8.5 6z" />
+                </svg>
             </div>
             <div id="player-pause" class="player-pause player-control">
-                ▶
+                <svg viewBox="0 0 24 24" fill="currentColor" class="icon-play">
+                    <path d="M8 5v14l11-7z" />
+                </svg>
+                <svg viewBox="0 0 24 24" fill="currentColor" class="icon-pause" style="display: none;">
+                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                </svg>
             </div>
             <div id="player-next" class="player-next player-control">
-                ⏭
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 18l8.5-6L6 6v12zm10-12v12h2V6h-2z" />
+                </svg>
             </div>
         </div>
         <div id="player-progress" class="player-progress">
-            <div id="player-progress-bar" class="player-progress-bar"></div>
+            <div id="player-progress-bar" class="player-progress-bar" draggable="false">
+                <div id="player-progress-handle" class="player-progress-handle" draggable="false"></div>
+            </div>
             <div id="player-time" class="player-time">
                 <div id="player-current-time" class="player-current-time">00:00</div>
                 <div id="player-duration" class="player-duration">00:00</div>
             </div>
         </div>
-    </div> <!-- Z-index of 3-->
-    <div id="player-shift-container" class="player-shift-container">
-        <div id="player-lyric-container" class="player-lyric-container">
-            <div id="player-lyric-pre" class="player-lyric-pre"></div>
-            <div id="player-lyric-current" class="player-lyric-current"></div>
-            <div id="player-lyric-next" class="player-lyric-next"></div>
+    </div>
+
+    <div id="player-bottom-controls" class="player-bottom-controls">
+        <div class="control-indicator control-indicator-left" id="left-control-indicator">
+            <div class="indicator-line"></div>
         </div>
-    </div> <!-- Z-index of 4-->
-    <div id="player-hover-line" class="player-hover-line">
-        <div id="player-hover-line-bottom" class="player-hover-line-bottom"></div>
-    </div> <!-- Z-index of 2-->
+        <div class="control-indicator control-indicator-center" id="center-control-indicator">
+            <div class="indicator-line"></div>
+        </div>
+        <div class="control-indicator control-indicator-right" id="right-control-indicator">
+            <div class="indicator-line"></div>
+        </div>
+    </div>
+
+    <!-- 左侧控制面板 -->
+    <div id="left-control-panel" class="control-panel left-panel">
+        <!-- 音量控制 -->
+        <div class="control-section">
+            <div class="control-label">Volume</div>
+            <div class="volume-control">
+                <svg viewBox="0 0 24 24" fill="currentColor" class="volume-icon">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
+                </svg>
+                <input type="range" id="volume-slider" class="volume-slider" min="0" max="100" value="30">
+                <span id="volume-value" class="volume-value">30%</span>
+            </div>
+        </div>
+
+        <!-- 播放模式 -->
+        <div class="control-section">
+            <div class="control-label">Play Mode</div>
+            <div class="mode-buttons">
+                <button class="mode-btn" id="mode-sequence" title="Sequential">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" />
+                    </svg>
+                </button>
+                <button class="mode-btn active" id="mode-repeat-one" title="Repeat One">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z" />
+                    </svg>
+                </button>
+                <button class="mode-btn" id="mode-repeat-all" title="Repeat All">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" />
+                    </svg>
+                </button>
+                <button class="mode-btn" id="mode-shuffle" title="Shuffle">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧控制面板：播放列表 -->
+    <div id="right-control-panel" class="control-panel right-panel">
+        <div class="control-label">Playlist</div>
+        <div id="playlist-container" class="playlist-container">
+            <!-- 播放列表项将通过JS动态生成 -->
+        </div>
+    </div>
+
+    <!-- 歌词面板 -->
+    <div id="lyrics-panel" class="lyrics-panel">
+        <div class="lyrics-header">
+            <span>Lyrics</span>
+            <button class="lyrics-close-btn">×</button>
+        </div>
+        <div class="auto-scroll-indicator" id="auto-scroll-indicator">
+            <span id="auto-scroll-text">Auto-scroll paused</span>
+        </div>
+        <div id="lyrics-scroll-container" class="lyrics-scroll-container">
+            <!-- 歌词将通过JS动态生成 -->
+        </div>
+    </div>
+
     <div id="music-info-container" data-music-link="{{music_link}}" data-music-title="{{music_title}}"
-        data-music-artist="{{music_artist}}" data-music-image="{{music_image}}" data-music-lyric="{{music_lyric_link}}" data-image-theme="{{bg_image_theme}}" data-auto-play="{{auto_play}}" class="music-info-container"></div>
+        data-music-artist="{{music_artist}}" data-music-image="{{music_image}}" data-music-lyric="{{music_lyric_link}}"
+        data-image-theme="{{bg_image_theme}}" data-auto-play="{{auto_play}}" class="music-info-container"></div>
     <script src="/js/card_template_music_player.js"></script>
 </div>
