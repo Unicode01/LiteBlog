@@ -11,15 +11,6 @@
                 "block_time=60",
                 "cycle=10"
             ]
-        },
-        {
-            "name": "auto_blocked_by_path_traversal-IP-78.153.140.93",
-            "action": 1,
-            "rule": "78.153.140.93",
-            "type": "ipaddr",
-            "timeout": 1754751347,
-            "reason": "path traversal",
-            "args": null
         }
     ]
 }

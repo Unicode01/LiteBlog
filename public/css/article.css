@@ -143,9 +143,199 @@ input.email-subscribe-button[type="checkbox"] {
     margin-bottom: 1rem;
 }
 
+/* 评论内容的markdown样式 - 与文章内容保持一致 */
 #comment-Content {
     color: #4a5568;
-    line-height: 1.6;
+    line-height: 1.7;
+}
+
+/* 基础段落 */
+#comment-Content p {
+    margin: 1em 0;
+    word-break: break-word;
+}
+
+/* 标题层级 */
+#comment-Content h1 {
+    font-size: 1.6rem;
+    color: #2d3748;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 0.5rem;
+    margin: 1.8rem 0 1.2rem;
+}
+
+#comment-Content h2 {
+    font-size: 1.4rem;
+    color: #2d3748;
+    margin: 1.5rem 0 1rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid #edf2f7;
+}
+
+#comment-Content h3 {
+    font-size: 1.2rem;
+    color: #3c4858;
+    margin: 1.2rem 0 0.8rem;
+}
+
+#comment-Content h4 {
+    font-size: 1.1rem;
+    color: #3c4858;
+    margin: 1rem 0 0.6rem;
+}
+
+/* 引用块 */
+#comment-Content blockquote {
+    border-left: 4px solid #e2e8f0;
+    margin: 1.2rem 0;
+    padding: 0.8rem 1.2rem;
+    background-color: #f8fafc;
+    color: #718096;
+}
+
+#comment-Content blockquote p {
+    margin: 0.5em 0;
+}
+
+#comment-Content blockquote p:first-child {
+    margin-top: 0;
+}
+
+#comment-Content blockquote p:last-child {
+    margin-bottom: 0;
+}
+
+/* 行内代码 */
+#comment-Content code {
+    background-color: #f8fafc;
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    color: #dd4b78;
+    font-size: 0.9em;
+    font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+/* 代码块 */
+#comment-Content pre {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 1em;
+    margin: 1.2rem 0;
+    overflow: auto;
+    font-size: 0.9em;
+    max-height: 400px;
+}
+
+#comment-Content pre code {
+    background: transparent;
+    padding: 0;
+    color: #4a5568;
+    font-size: 0.95em;
+}
+
+/* 列表 */
+#comment-Content ul,
+#comment-Content ol {
+    margin: 1rem 0;
+    padding-left: 2em;
+}
+
+#comment-Content li {
+    margin: 0.4em 0;
+    padding-left: 0.3em;
+}
+
+#comment-Content ul {
+    list-style: disc;
+}
+
+#comment-Content ol {
+    list-style: decimal;
+}
+
+#comment-Content ul ul {
+    list-style: circle;
+}
+
+#comment-Content ul ul ul {
+    list-style: square;
+}
+
+/* 表格 */
+#comment-Content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.2rem 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+#comment-Content th,
+#comment-Content td {
+    padding: 0.6rem 0.8rem;
+    border: 1px solid #e2e8f0;
+    text-align: left;
+}
+
+#comment-Content th {
+    background-color: #f8fafc;
+    color: #2d3748;
+    font-weight: 600;
+}
+
+#comment-Content tr:nth-child(even) {
+    background-color: #fafbfc;
+}
+
+/* 链接 */
+#comment-Content a {
+    color: #4299e1;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    transition: color 0.2s ease;
+}
+
+#comment-Content a:hover {
+    color: #3182ce;
+}
+
+/* 图片 */
+#comment-Content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1.2rem auto;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* 强调样式 */
+#comment-Content strong {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+#comment-Content em {
+    font-style: italic;
+}
+
+/* 删除线 */
+#comment-Content del {
+    text-decoration: line-through;
+    color: #a0aec0;
+}
+
+/* 分割线 */
+#comment-Content hr {
+    border: 0;
+    height: 1px;
+    background: #e2e8f0;
+    margin: 2rem 0;
+}
+
+/* 任务列表 */
+#comment-Content input[type="checkbox"] {
+    margin-right: 0.5em;
 }
 
 /* 响应式设计 */
@@ -195,6 +385,82 @@ input.email-subscribe-button[type="checkbox"] {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 
     z-index: 1000;
+}
+
+/* 左侧工具箱样式 - Docker 栏风格 */
+.toolbox-container {
+    position: fixed;
+    top: 50%;
+    left: 15px;
+    transform: translateY(-50%) translateX(-150%);
+    background: var(--base-white);
+    box-shadow: 0 2px 12px var(--base-gray-200);
+    border: 1px solid var(--base-gray-200);
+    border-radius: 14px;
+    padding: 8px;
+    z-index: 100;
+    transition: transform 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+/* 工具箱内容 */
+.toolbox-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 工具箱项目 */
+.toolbox-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--base-black);
+    background: transparent;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.toolbox-item:hover {
+    background: var(--base-gray-200);
+}
+
+.toolbox-item svg {
+    width: 24px;
+    height: 24px;
+    display: block;
+}
+
+/* Hover 提示气泡 */
+.toolbox-item::after {
+    content: attr(title);
+    position: absolute;
+    left: calc(100% + 18px);
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 6px 12px;
+    background: #2d3748;
+    color: #fff;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 1000;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    font-weight: 500;
+}
+
+.toolbox-item:hover::after {
+    opacity: 1;
 }
 
 /* 大纲容器样式 */
@@ -304,11 +570,16 @@ input.email-subscribe-button[type="checkbox"] {
     background-color: rgba(0, 0, 0, 0.8);
     z-index: 9999;
     overflow: hidden;
+
     img {
         width: 100%;
         height: 100%;
         object-fit: scale-down;
     }
+}
+
+#top-bar.shrinked {
+    transform: translateY(-51px);
 }
 
 /* 以下为文章内容的样式 */
@@ -432,10 +703,10 @@ input.email-subscribe-button[type="checkbox"] {
     margin: 1.5rem auto;
     border-radius: 6px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    background-image: 
-        linear-gradient(90deg, 
-            rgba(255, 255, 255, 0) 0%, 
-            rgba(255, 255, 255, 0.9) 50%, 
+    background-image:
+        linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.9) 50%,
             rgba(255, 255, 255, 0) 100%),
         linear-gradient(120deg, #f0f4f8 0%, #e0e7f0 100%);
     background-size: 200% 100%, cover;
@@ -474,7 +745,417 @@ input.email-subscribe-button[type="checkbox"] {
     from {
         background-position: -150% 0, center;
     }
+
     to {
         background-position: 250% 0, center;
+    }
+}
+
+/* 大图预览容器 */
+.big-photo-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 9999;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.big-photo-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: scale-down;
+}
+
+.big-photo-container .big-photo-image {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    transition: none;
+    user-select: none;
+    cursor: grab;
+}
+
+.big-photo-container .big-photo-image:active {
+    cursor: grabbing;
+}
+
+.big-photo-container .big-photo-control-bar {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    z-index: 10000;
+    backdrop-filter: blur(8px);
+}
+
+.big-photo-container .big-photo-control-bar .control-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 4px;
+    background-color: transparent;
+    color: rgba(255, 255, 255, 0.8);
+    transition: all 0.15s ease;
+}
+
+.big-photo-container .big-photo-control-bar .control-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.big-photo-container .big-photo-control-bar .control-btn:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.big-photo-container .big-photo-control-bar .control-btn:active {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+.big-photo-container .big-photo-control-bar .control-btn.close-btn:hover {
+    color: #ff5252;
+}
+
+.big-photo-container .big-photo-control-bar .control-btn.reset-btn:hover {
+    color: #64b5f6;
+}
+
+/* 笔记栏样式 */
+.notes-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40vh;
+    background: var(--base-white);
+    border-top: 1px solid var(--base-gray-200);
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+    z-index: 999;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.notes-panel.active {
+    transform: translateY(0);
+}
+
+/* 笔记栏头部 */
+.notes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--base-gray-200);
+    background: var(--base-white);
+    flex-shrink: 0;
+}
+
+.notes-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--base-black);
+}
+
+.notes-title svg {
+    width: 20px;
+    height: 20px;
+}
+
+.notes-controls {
+    display: flex;
+    gap: 6px;
+}
+
+.notes-control-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--base-black);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.notes-control-btn:hover {
+    background: var(--base-gray-200);
+}
+
+.notes-control-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* 笔记内容区域 */
+.notes-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.notes-empty {
+    text-align: center;
+    color: var(--base-gray-700);
+    padding: 40px;
+    font-size: 0.95rem;
+}
+
+/* 单个笔记项 */
+.note-item {
+    background: var(--base-white);
+    border: 1px solid var(--base-gray-200);
+    border-radius: 8px;
+    padding: 12px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.note-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.note-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.note-item-time {
+    font-size: 0.8rem;
+    color: var(--base-gray-700);
+}
+
+.note-item-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.note-item-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--base-gray-700);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.note-item-btn:hover {
+    background: var(--base-gray-200);
+}
+
+.note-item-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.note-item-btn.delete-btn:hover {
+    color: #f44336;
+}
+
+.note-item-content {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--base-black);
+    word-break: break-word;
+}
+
+.note-item-content.editable {
+    border: 1px solid var(--base-gray-200);
+    border-radius: 4px;
+    padding: 8px;
+    background: var(--base-white);
+    min-height: 60px;
+    outline: none;
+}
+
+.note-item-content.editable:focus {
+    border-color: var(--base-gray-700);
+}
+
+.note-item-image {
+    max-width: 100%;
+    border-radius: 6px;
+    margin-top: 8px;
+    cursor: pointer;
+}
+
+/* 笔记输入弹窗 */
+.note-input-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--base-white);
+    border: 1px solid var(--base-gray-200);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 20px;
+    z-index: 1001;
+    min-width: 400px;
+    max-width: 600px;
+    width: 90%;
+    box-sizing: border-box;
+}
+
+.note-input-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+.note-input-header {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--base-black);
+}
+
+.note-input-textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 12px;
+    border: 1px solid var(--base-gray-200);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    background: var(--base-white);
+    color: var(--base-black);
+}
+
+.note-input-textarea:focus {
+    border-color: var(--base-gray-700);
+}
+
+.note-input-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.note-input-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.note-input-btn.cancel {
+    background: var(--base-gray-200);
+    color: var(--base-black);
+}
+
+.note-input-btn.cancel:hover {
+    background: var(--base-gray-300);
+}
+
+.note-input-btn.confirm {
+    background: var(--base-black);
+    color: var(--base-white);
+}
+
+.note-input-btn.confirm:hover {
+    opacity: 0.85;
+}
+
+/* 笔记引用块 */
+.note-quote {
+    background: var(--base-gray-100);
+    border-left: 3px solid var(--base-gray-300);
+    padding: 8px 12px;
+    margin: 8px 0;
+    font-size: 0.9rem;
+    color: var(--base-gray-700);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-style: italic;
+}
+
+.note-quote:hover {
+    background: var(--base-gray-200);
+    border-left-color: var(--base-gray-700);
+}
+
+.note-quote::before {
+    content: "Quote: ";
+    font-style: normal;
+    font-weight: 600;
+}
+
+/* 高亮选中的文本 */
+.text-highlight {
+    background-color: rgba(255, 193, 7, 0.35);
+    transition: background-color 0.3s ease;
+    border-radius: 2px;
+}
+
+.text-highlight.flash {
+    animation: highlightFlash 1s ease;
+}
+
+@keyframes highlightFlash {
+
+    0%,
+    100% {
+        background-color: rgba(255, 193, 7, 0.35);
+    }
+
+    50% {
+        background-color: rgba(255, 193, 7, 0.6);
+    }
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .notes-panel {
+        height: 50vh;
+    }
+
+    .note-input-dialog {
+        min-width: 90%;
+        max-width: 90%;
     }
 }

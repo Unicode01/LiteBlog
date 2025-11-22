@@ -1,13 +1,18 @@
 <div id="card-container" card-id="{{id}}" class="card-container card-photo-album" style="order:{{order}}">
-    <link rel="stylesheet" href="/css/card_template_photo_album.css"/>
+    <link rel="stylesheet" href="/css/card_template_photo_album.css" />
     <div class="photo-container">
-        
+
     </div>
     <div class="controll-container">
-        <div class="prev-btn"></div>
-        <div class="next-btn"></div>
+        <div class="prev-btn">
+            <div class="hover-indicator hover-indicator-left"></div>
+        </div>
+        <div class="next-btn">
+            <div class="hover-indicator hover-indicator-right"></div>
+        </div>
     </div>
 
-    <div class="album-info-container" data-album="{{album}}" data-auto-shift="{{auto_shift}}" data-preload-all="{{preload_all}}" style="display: none;"></div>
+    <div class="album-info-container" data-album="{{album}}" data-auto-shift="{{auto_shift}}"
+        data-preload-all="{{preload_all}}" style="display: none;"></div>
     <script src="/js/card_template_photo_album.js"></script>
 </div>

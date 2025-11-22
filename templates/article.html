@@ -1,76 +1,106 @@
 <!DOCTYPE html>
 <html lang="{{language_code}}">
-    <head>
-        <title>{{article_title}}</title>
-        <link rel="stylesheet" type="text/css" href="/css/style.css"></link>
-        <link rel="stylesheet" type="text/css" href="/css/article.css"></link>
-        <link rel="stylesheet" type="text/css" href="/css/customizestyle.css"></link>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="description" content="{{article_description}}">
-        <script>
-            // 在加载CSS前设置初始主题
-            function loadStyleString(css) {
-                var style = document.createElement("style");
-                style.type = "text/css";
-                style.id = "preloaded-theme";
-                try {
-                    style.appendChild(document.createTextNode(css));
-                } catch (ex) {
-                    style.textContent = css;
-                }
-                var head = document.getElementsByTagName("head")[0];
-                head.appendChild(style);
+
+<head>
+    <title>{{article_title}}</title>
+    <link rel="stylesheet" type="text/css" href="/css/style.css">
+    </link>
+    <link rel="stylesheet" type="text/css" href="/css/article.css">
+    </link>
+    <link rel="stylesheet" type="text/css" href="/css/customizestyle.css">
+    </link>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{{article_description}}">
+    <script>
+        // 在加载CSS前设置初始主题
+        function loadStyleString(css) {
+            var style = document.createElement("style");
+            style.type = "text/css";
+            style.id = "preloaded-theme";
+            try {
+                style.appendChild(document.createTextNode(css));
+            } catch (ex) {
+                style.textContent = css;
             }
-            const Theme = localStorage.getItem('theme');
-            // console.log(Theme);
-            if (Theme == 'dark') {
-                const css = localStorage.getItem('dark-theme-css');
-                // console.log(css);
-                loadStyleString(css)
-            }
-        </script>
-    </head>
-    <body>
-        <div id="app">
-            <div id="top-bar" class="top-bar display-flex justify-content-space-between align-items-center height-50px width-100">
-                <div id="logo" class="logo display-flex align-items-center justify-content-center height-50px">
-                    <a href="/" class="link width-30px height-30px padding-10px"><img src="/img/logo.webp" class="logo img width-30px height-30px" alt="logo"></a>
-                    <span class="logo text padding-10px">{{global:TopBarTitle}}</span>
-                </div>
-                
+            var head = document.getElementsByTagName("head")[0];
+            head.appendChild(style);
+        }
+        const Theme = localStorage.getItem('theme');
+        // console.log(Theme);
+        if (Theme == 'dark') {
+            const css = localStorage.getItem('dark-theme-css');
+            // console.log(css);
+            loadStyleString(css)
+        }
+    </script>
+</head>
 
-                <div id="function-bar" class="function-bar display-flex align-items-center justify-content-center height-30px padding-10px">
-
-                    <a href="#switch-theme" id="switch-theme-button" class="switch-theme-button button padding-10px width-30px height-30px">
-                        <img src="/img/switchTheme.svg" class="switch-theme-icon img width-30px height-30px" alt="switch-theme">
-                    </a>
-                    
-                    <a href="/feed/rss.xml" id="rss-button" class="rss-button button padding-10px width-30px height-30px">
-                        <img src="/img/rss.webp" class="rss-icon img width-30px height-30px" alt="rss feed">
-                    </a>
-
-                    <a href="#history" id="history-button" class="history-button button padding-10px width-30px height-30px">
-                        <img src="/img/history.webp" class="history-icon img width-30px height-30px" alt="hisotry">
-                    </a>
-                    
-                    <a href="#edit" id="edit-button" class="edit-button button padding-10px width-30px height-30px">
-                        <img src="/img/editmode.webp" class="edit-icon img width-30px height-30px" alt="edit article">
-                    </a>
-                    
-                </div>
+<body>
+    <div id="app">
+        <div id="top-bar"
+            class="top-bar display-flex justify-content-space-between align-items-center height-50px width-100">
+            <div id="logo" class="logo display-flex align-items-center justify-content-center height-50px">
+                <a href="/" class="link width-30px height-30px padding-10px user-select-none"><img src="/img/logo.webp"
+                        class="logo img width-30px height-30px" alt="logo"></a>
+                <span class="logo text padding-10px">{{global:TopBarTitle}}</span>
             </div>
 
-            <div id="content-container" class="content-container display-flex justify-content-center width-100 height-100">
-                <div id="article-container" class="article-container">
+
+            <div id="function-bar"
+                class="function-bar display-flex align-items-center justify-content-center height-30px padding-10px">
+
+                <a href="#switch-theme" id="switch-theme-button"
+                    class="switch-theme-button button padding-10px width-30px height-30px user-select-none">
+                    <img src="/img/switchTheme.svg" class="switch-theme-icon img width-30px height-30px"
+                        alt="switch-theme">
+                </a>
+
+                <a href="/feed/rss.xml" id="rss-button"
+                    class="rss-button button padding-10px width-30px height-30px user-select-none">
+                    <img src="/img/rss.webp" class="rss-icon img width-30px height-30px" alt="rss feed">
+                </a>
+
+                <a href="#history" id="history-button"
+                    class="history-button button padding-10px width-30px height-30px user-select-none">
+                    <img src="/img/history.webp" class="history-icon img width-30px height-30px" alt="hisotry">
+                </a>
+
+                <a href="#edit" id="edit-button"
+                    class="edit-button button padding-10px width-30px height-30px user-select-none">
+                    <img src="/img/editmode.webp" class="edit-icon img width-30px height-30px" alt="edit article">
+                </a>
+
+            </div>
+        </div>
+
+        <div id="content-container" class="content-container display-flex justify-content-center width-100 height-100">
+            <div id="toolbox-container" class="toolbox-container">
+                <div id="toolbox-content" class="toolbox-content">
+                    <div class="toolbox-item" id="save-html-btn" title="Save Article as HTML">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" />
+                        </svg>
+                    </div>
+                    <div class="toolbox-item" id="note-btn" title="Notes">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            <div id="article-container" class="article-container">
                 <div id="article-header">
                     <div id="article-title" class="article-title">{{article_title}}</div>
                     <div id="article-info" class="article-info">
                         <div id="article-author" class="article-author">{{article_author}}</div>
                         <div id="article-date" class="article-date">pub. {{article_date}}
-                            <div id="article-edit-date" class="article-edit-date" style="opacity: 0;">ed. {{article_edit_date}}</div>
+                            <div id="article-edit-date" class="article-edit-date" style="opacity: 0;">ed.
+                                {{article_edit_date}}</div>
                         </div>
-                       
+
                     </div>
                 </div>
                 <div id="article-content" class="article-content">
@@ -78,25 +108,67 @@
                 </div>
                 <div id="article-comments" class="article-comments">
                     <!-- Comments here -->
-                     {{comments}}
-                </div>
-                </div>
-                <div id="outline-container" class="outline-container">
-                    <div id="outline-content" class="outline-content">
-                        <div id="outline-title" class="outline-title"></div>
-                        <div id="outline-list" class="outline-list"></div>
-                    </div>
+                    {{comments}}
                 </div>
             </div>
-            <div id="bottom-bar" class="bottom-bar display-flex flex-wrap justify-content-center height-50px width-100">
-                {{file:bottom_bar}}
+            <div id="outline-container" class="outline-container">
+                <div id="outline-content" class="outline-content">
+                    <div id="outline-title" class="outline-title"></div>
+                    <div id="outline-list" class="outline-list"></div>
+                </div>
             </div>
         </div>
+        <div id="bottom-bar" class="bottom-bar display-flex flex-wrap justify-content-center height-50px width-100">
+            {{file:bottom_bar}}
+        </div>
 
-        <script src="/js/app.js"></script>
-        <script src="/js/inject.js"></script>
-        <script src="/js/article.js"></script>
-        <script src="/js/editmode.js"></script>
-        <script src="/js/tags.js"></script>
-    </body>
+        <!-- 笔记栏 -->
+        <div id="notes-panel" class="notes-panel">
+            <div class="notes-header">
+                <div class="notes-title">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                    </svg>
+                    <span>My Notes</span>
+                </div>
+                <div class="notes-controls">
+                    <button class="notes-control-btn" id="add-text-note-btn" title="Add Text Note">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 14h-3v3h-2v-3H8v-2h3v-3h2v3h3v2zm-3-7V3.5L18.5 9H13z" />
+                        </svg>
+                    </button>
+                    <button class="notes-control-btn" id="save-notes-btn" title="Save Notes to Local">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2z" />
+                        </svg>
+                    </button>
+                    <button class="notes-control-btn" id="clear-notes-btn" title="Clear All Notes">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                        </svg>
+                    </button>
+                    <button class="notes-control-btn" id="close-notes-btn" title="Close Notes Panel">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="notes-content" id="notes-content">
+                <div class="notes-empty">No notes yet. Click the button above to add notes.</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script src="/js/inject.js"></script>
+    <script src="/js/article.js"></script>
+    <script src="/js/editmode.js"></script>
+    <script src="/js/tags.js"></script>
+</body>
+
 </html>

@@ -1,6 +1,7 @@
 package main
 
 import (
+	utils "LiteBlog/utils"
 	"archive/tar"
 	"compress/gzip"
 	"context"
@@ -37,16 +38,16 @@ func BackupNow() {
 		os.MkdirAll(Config.BackupCfg.BackupDir, 0755)
 	}
 	if err := TarDir(srcs, dst); err != nil {
-		Log(3, "Error while backing up: "+err.Error())
+		utils.Log(3, "Error while backing up: "+err.Error())
 	} else {
-		Log(1, "Backup successful: "+dst)
+		utils.Log(1, "Backup successful: "+dst)
 	}
 }
 
 func DeleteObsoleteBackups() {
 	files, err := filepath.Glob(Config.BackupCfg.BackupDir + "/backup-*.tar.gz")
 	if err != nil {
-		Log(3, "Error while deleting obsolete backups: "+err.Error())
+		utils.Log(3, "Error while deleting obsolete backups: "+err.Error())
 		return
 	}
 
@@ -64,7 +65,7 @@ func DeleteObsoleteBackups() {
 
 		t, err := time.Parse("2006-01-02_15-04-05", timeStr)
 		if err != nil {
-			Log(3, fmt.Sprintf("Cant parse backup time from file name: %s, error: %v", fileName, err))
+			utils.Log(3, fmt.Sprintf("Cant parse backup time from file name: %s, error: %v", fileName, err))
 			continue
 		}
 
@@ -102,9 +103,9 @@ func DeleteObsoleteBackups() {
 	for _, path := range toDelete {
 		if !seen[path] {
 			if err := os.Remove(path); err != nil {
-				Log(3, fmt.Sprintf("Delete backup file error: %s, error: %v", path, err))
+				utils.Log(3, fmt.Sprintf("Delete backup file error: %s, error: %v", path, err))
 			} else {
-				Log(1, fmt.Sprintf("Deleted obsolete backup file: %s", path))
+				utils.Log(1, fmt.Sprintf("Deleted obsolete backup file: %s", path))
 			}
 			seen[path] = true
 		}

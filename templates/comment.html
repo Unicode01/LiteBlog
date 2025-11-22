@@ -14,6 +14,9 @@
         var reply_to = "{{comment_reply_to}}";
         var thisE = document.querySelector(`#article-comment[comment-id="${comment_id}"]`);
         var reply_to_element = document.querySelector(`#article-comment[comment-id="${reply_to}"]`)
+        if (reply_to == "") {
+            thisE.querySelector('.comment-reply-to').remove();
+        }
         if (reply_to_element) {
             var replyedCommentAuthor = reply_to_element.querySelector('.comment-author').textContent.trim();
             thisE.querySelector('.comment-reply-to').textContent = `(@${replyedCommentAuthor})`;

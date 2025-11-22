@@ -87,7 +87,7 @@
         }
     },
     "plugins_config": {
-        "enabled": false
+        "enabled": true
     },
     "sniffer_config":{
         "enabled": true,
