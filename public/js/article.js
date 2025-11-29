@@ -778,17 +778,30 @@ function generateOutline(articleDom, outlineList) {
 
         // 添加点击事件
         itemDiv.addEventListener('click', function () {
-            // heading.style.scrollMarginTop = '50px';
-            // 滚动到对应标题
-            heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // 获取当前滚动位置
+            const currentScrollPosition = window.pageYOffset || document.documentElement.scrollTop;
 
-            // 高亮显示
-            // document.querySelectorAll('.list-item').forEach(el => {
-            //     // el.style.background = 'none';
-            //     el.classList.remove('active');
-            // });
-            // listItem.querySelector('.list-item').classList.add('active');
-            // this.style.background = '#e3f2fd';
+            // 获取目标标题的位置
+            const headingPosition = heading.getBoundingClientRect().top + currentScrollPosition;
+
+            // 判断滚动方向（目标位置是否在当前位置上方）
+            const isScrollingUp = headingPosition < currentScrollPosition;
+
+            // 获取顶栏高度
+            const topBar = document.getElementById('top-bar') || document.querySelector('.top-bar');
+            const topBarHeight = topBar ? topBar.offsetHeight : 50; // 默认50px
+
+            if (isScrollingUp) {
+                // 向上滚动：需要减去顶栏高度，避免被遮挡
+                const targetScrollPosition = headingPosition - topBarHeight - 10; // 额外10px边距
+                window.scrollTo({
+                    top: Math.max(0, targetScrollPosition), // 确保不会滚动到负数位置
+                    behavior: 'smooth'
+                });
+            } else {
+                // 向下滚动：使用默认的 scrollIntoView
+                heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         });
 
         // // 添加展开/折叠事件
@@ -1371,6 +1384,32 @@ function AddShrinkTopBarListener() {
     });
 }
 
+// 初始化滚动到顶部按钮
+function InitScrollToTopButton() {
+    const scrollToTopBtn = document.querySelector('#scroll-to-top-btn');
+    if (!scrollToTopBtn) return;
+
+    // 监听滚动事件，控制按钮显示/隐藏
+    window.addEventListener('scroll', function () {
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        
+        // 滚动超过300px时显示按钮
+        if (scrollTop > 300) {
+            scrollToTopBtn.classList.add('visible');
+        } else {
+            scrollToTopBtn.classList.remove('visible');
+        }
+    });
+
+    // 点击按钮，平滑滚动到顶部
+    scrollToTopBtn.addEventListener('click', function () {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+}
+
 // 初始化所有功能
 if (typeof window !== 'undefined') {
     if (document.readyState === 'loading') {
@@ -1382,6 +1421,7 @@ if (typeof window !== 'undefined') {
             AddImgEventListener();
             AddShrinkTopBarListener();
             InitToolbox();
+            InitScrollToTopButton();
         });
     } else {
         // DOM 已加载完成，直接初始化
@@ -1392,6 +1432,7 @@ if (typeof window !== 'undefined') {
         AddImgEventListener();
         AddShrinkTopBarListener();
         InitToolbox();
+        InitScrollToTopButton();
     }
 }
 
@@ -2047,3 +2088,204 @@ function escapeHTML(str) {
     div.textContent = str;
     return div.innerHTML.replace(/\n/g, '<br>');
 }
+
+// ===== 代码块复制功能 =====
+
+/**
+ * 初始化所有代码块的复制按钮
+ */
+function initCodeBlockCopyButtons() {
+    // 查找所有代码块 (pre > code)
+    const codeBlocks = document.querySelectorAll('.article-content pre, .comment-content pre');
+
+    codeBlocks.forEach(preElement => {
+        // 检查是否已经添加过按钮
+        if (preElement.querySelector('.code-block-copy-btn')) {
+            return;
+        }
+
+        // 创建复制按钮
+        const copyBtn = createCopyButton();
+
+        // 添加点击事件
+        copyBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await copyCodeToClipboard(preElement, copyBtn);
+        });
+
+        // 将按钮添加到代码块
+        preElement.style.position = 'relative';
+        preElement.appendChild(copyBtn);
+    });
+
+    // 监听主题切换，更新所有按钮的主题类
+    updateButtonsTheme();
+}
+
+/**
+ * 更新所有复制按钮的主题类
+ */
+function updateButtonsTheme() {
+    const currentTheme = GetTheme();
+    const buttons = document.querySelectorAll('.code-block-copy-btn');
+
+    buttons.forEach(button => {
+        if (currentTheme === 'dark') {
+            button.classList.add('dark-theme');
+        } else {
+            button.classList.remove('dark-theme');
+        }
+    });
+}
+
+/**
+ * 创建复制按钮元素
+ * @returns {HTMLElement} 复制按钮元素
+ */
+function createCopyButton() {
+    const button = document.createElement('button');
+    button.className = 'code-block-copy-btn';
+
+    // 根据当前主题添加类名
+    const currentTheme = GetTheme();
+    if (currentTheme === 'dark') {
+        button.classList.add('dark-theme');
+    }
+
+    button.setAttribute('title', 'Copy code');
+    button.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+        </svg>
+    `;
+    return button;
+}
+
+/**
+ * 复制代码到剪贴板
+ * @param {HTMLElement} preElement - pre 元素
+ * @param {HTMLElement} button - 复制按钮元素
+ */
+async function copyCodeToClipboard(preElement, button) {
+    try {
+        // 获取代码内容
+        const codeElement = preElement.querySelector('code');
+        const code = codeElement ? codeElement.textContent : preElement.textContent;
+
+        // 使用现代 Clipboard API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(code);
+        } else {
+            // 降级方案：使用 textarea
+            fallbackCopyToClipboard(code);
+        }
+
+        // 显示复制成功状态
+        showCopySuccess(button);
+
+        // 显示通知（如果有 Notify 系统）
+        if (window.Notify && window.Notify.add) {
+            window.Notify.add("Code copied to clipboard", { type: "success", timeout: 1500 });
+        }
+    } catch (error) {
+        console.error('Failed to copy code:', error);
+
+        // 显示复制失败状态
+        showCopyError(button);
+
+        if (window.Notify && window.Notify.add) {
+            window.Notify.add("Failed to copy code", { type: "error", timeout: 2000 });
+        }
+    }
+}
+
+/**
+ * 降级方案：使用 textarea 复制
+ * @param {string} text - 要复制的文本
+ */
+function fallbackCopyToClipboard(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.top = '-9999px';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    try {
+        document.execCommand('copy');
+    } finally {
+        document.body.removeChild(textarea);
+    }
+}
+
+/**
+ * 显示复制成功状态
+ * @param {HTMLElement} button - 复制按钮
+ */
+function showCopySuccess(button) {
+    const originalHTML = button.innerHTML;
+    const originalTitle = button.getAttribute('title');
+    button.classList.add('copied');
+    button.setAttribute('title', 'Copied!');
+    button.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+        </svg>
+    `;
+
+    // 2秒后恢复原状
+    setTimeout(() => {
+        button.classList.remove('copied');
+        button.setAttribute('title', originalTitle);
+        button.innerHTML = originalHTML;
+    }, 2000);
+}
+
+/**
+ * 显示复制失败状态
+ * @param {HTMLElement} button - 复制按钮
+ */
+function showCopyError(button) {
+    const originalHTML = button.innerHTML;
+    const originalTitle = button.getAttribute('title');
+    button.style.background = 'rgba(220, 38, 38, 0.95)';
+    button.style.borderColor = 'rgba(220, 38, 38, 0.3)';
+    button.style.color = 'white';
+    button.setAttribute('title', 'Copy failed!');
+    button.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+        </svg>
+    `;
+
+    // 2秒后恢复原状
+    setTimeout(() => {
+        button.style.background = '';
+        button.style.borderColor = '';
+        button.style.color = '';
+        button.setAttribute('title', originalTitle);
+        button.innerHTML = originalHTML;
+    }, 2000);
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', () => {
+    initCodeBlockCopyButtons();
+});
+
+// 也在窗口加载时初始化（确保所有内容都加载完成）
+window.addEventListener('load', () => {
+    initCodeBlockCopyButtons();
+});
+
+// 监听主题切换事件
+if (typeof addThemeSwitchBroadcastListener === 'function') {
+    addThemeSwitchBroadcastListener(function (theme) {
+        console.log('Theme changed to:', theme);
+        updateButtonsTheme();
+    });
+}
+
+// 提供全局函数，供动态加载内容时调用
+window.initCodeBlockCopyButtons = initCodeBlockCopyButtons;
