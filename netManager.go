@@ -6,7 +6,9 @@ import (
 	"LiteBlog/utils/plugins"
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,8 +16,10 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -132,6 +136,15 @@ func InitNetManager(config *ServerConfig) error {
 		}
 	}
 	httpServer.Handler = http.HandlerFunc(httpHandler)
+	// ensure upload directory exists
+	if err := os.MkdirAll("upload", 0755); err != nil {
+		return fmt.Errorf("failed to create upload directory: %w", err)
+	}
+	// init file manager
+	ctxFileManager := context.Background()
+	if err := utils.InitFileManager(ctxFileManager); err != nil {
+		return fmt.Errorf("failed to initialize file manager: %w", err)
+	}
 	// start auto render
 	go autoRender(context.Background())
 	go autoCleanLoginTokens(context.Background())
@@ -146,256 +159,331 @@ func InitNetManager(config *ServerConfig) error {
 }
 
 func httpHandler(w http.ResponseWriter, r *http.Request) {
-	response_start_time := time.Now()
-	// traceID := generateTraceID()
-	traceID := ""
-	IP := getRequestIP(r)
-	traceIDCookie, err := r.Cookie("traceID")
-	if err == nil {
-		traceID = traceIDCookie.Value
+	// 初始化请求上下文
+	ctx := initRequestContext(w, r)
+	defer ctx.logRequest()
+
+	// 1. 插件钩子检查（最高优先级）
+	if Config.PluginCfg.Enabled && handlePluginHook(ctx) {
+		return
 	}
-	if traceIDCookie == nil || traceIDCookie.Value == "" {
-		traceID = generateTraceID()
+
+	// 2. 安全检查
+	if !performSecurityChecks(ctx) {
+		return
+	}
+
+	// 3. 路径预处理
+	preprocessPath(r)
+
+	// 4. 设置额外的响应头
+	setExtraHeaders(w)
+
+	// 5. 路由分发 - 按优先级顺序
+	if handleRoute(ctx) {
+		return
+	}
+
+	// 6. 默认：静态文件服务
+	handleStaticFile(ctx)
+}
+
+// requestContext 请求上下文
+type requestContext struct {
+	w              http.ResponseWriter
+	r              *http.Request
+	startTime      time.Time
+	traceID        string
+	ip             string
+	cached         bool
+	proxyWriter    *utils.ProxyResponseWriter
+	originalWriter http.ResponseWriter
+}
+
+// initRequestContext 初始化请求上下文
+func initRequestContext(w http.ResponseWriter, r *http.Request) *requestContext {
+	ctx := &requestContext{
+		w:              w,
+		r:              r,
+		startTime:      time.Now(),
+		ip:             getRequestIP(r),
+		originalWriter: w,
+	}
+
+	// 处理 traceID
+	traceIDCookie, err := r.Cookie("traceID")
+	if err == nil && traceIDCookie.Value != "" {
+		ctx.traceID = traceIDCookie.Value
+	} else {
+		ctx.traceID = generateTraceID()
 		http.SetCookie(w, &http.Cookie{
 			Name:    "traceID",
-			Value:   traceID,
+			Value:   ctx.traceID,
 			Path:    "/",
 			Expires: time.Now().Add(time.Hour * 24), // 1 day
 		})
 	}
-	cached := false
-	var pw *utils.ProxyResponseWriter
+
+	// 设置 sniffer 代理
 	if Config.SnifferCfg.Enabled {
-		// proxy response writer
-		pw = snifferManager.ProxyResponseWriter(w, r)
-		w = pw
+		ctx.proxyWriter = snifferManager.ProxyResponseWriter(w, r)
+		ctx.w = ctx.proxyWriter
 	}
-	defer func() {
-		response_end_time := time.Now()
-		response_time := response_end_time.Sub(response_start_time)
-		if pw == nil {
-			utils.Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, UA: '%s', %s %s, %s, disk_cached=%t", IP, traceID, r.Header.Get("User-Agent"), r.Method, r.URL.Path, response_time, cached))
-		} else {
-			utils.Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, UA: '%s', %s %s %d, %s, disk_cached=%t", IP, traceID, r.Header.Get("User-Agent"), r.Method, r.URL.Path, pw.StatusCode(), response_time, cached))
-		}
 
-	}()
+	return ctx
+}
 
-	if Config.PluginCfg.Enabled {
-		// check plugin hook request
-		o, ok := RequestHookRadixTree.Get([]byte(r.URL.Path))
-		if ok {
-			f := string(o.([]byte))
-			headersBytes, _ := json.Marshal(r.Header)
-			args := []*plugins.Arg{
-				{
-					Name: "path",
-					Type: "string",
-					Data: r.URL.Path,
-				},
-				{
-					Name: "method",
-					Type: "string",
-					Data: r.Method,
-				},
-				{
-					Name: "headers",
-					Type: "json",
-					Data: string(headersBytes),
-				},
-				{
-					Name: "ip",
-					Type: "string",
-					Data: IP,
-				},
-				{
-					Name: "traceID",
-					Type: "string",
-					Data: traceID,
-				},
+// logRequest 记录请求日志
+func (ctx *requestContext) logRequest() {
+	responseTime := time.Since(ctx.startTime)
+	if ctx.proxyWriter == nil {
+		utils.Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, UA: '%s', %s %s, %s, disk_cached=%t",
+			ctx.ip, ctx.traceID, ctx.r.Header.Get("User-Agent"), ctx.r.Method, ctx.r.URL.Path, responseTime, ctx.cached))
+	} else {
+		utils.Log(1, fmt.Sprintf("HTTP request from %s, traceID: %s, UA: '%s', %s %s %d, %s, disk_cached=%t",
+			ctx.ip, ctx.traceID, ctx.r.Header.Get("User-Agent"), ctx.r.Method, ctx.r.URL.Path,
+			ctx.proxyWriter.StatusCode(), responseTime, ctx.cached))
+	}
+}
+
+// handlePluginHook 处理插件钩子
+func handlePluginHook(ctx *requestContext) bool {
+	o, ok := RequestHookRadixTree.Get([]byte(ctx.r.URL.Path))
+	if !ok {
+		return false
+	}
+
+	f := string(o.([]byte))
+	headersBytes, _ := json.Marshal(ctx.r.Header)
+	args := []*plugins.Arg{
+		{Name: "path", Type: "string", Data: ctx.r.URL.Path},
+		{Name: "method", Type: "string", Data: ctx.r.Method},
+		{Name: "headers", Type: "json", Data: string(headersBytes)},
+		{Name: "ip", Type: "string", Data: ctx.ip},
+		{Name: "traceID", Type: "string", Data: ctx.traceID},
+	}
+
+	result, err := pluginManager.CallPluginMethod(f, args)
+	if err != nil {
+		utils.Log(3, fmt.Sprintf("Failed to call plugin method %s, %s", f, err))
+		RequestHookRadixTree, _, _ = RequestHookRadixTree.Delete([]byte(ctx.r.URL.Path))
+		return false
+	}
+
+	// 解析插件响应
+	var statusCode int = 200
+	var body []byte
+	for _, arg := range result {
+		switch arg.Name {
+		case "statusCode":
+			statusCode = getInt_safe(arg.Data)
+			if statusCode == 0 {
+				utils.Log(3, fmt.Sprintf("Failed to parse plugin status code, %s", getString_safe(arg.Data)))
+				statusCode = 500
 			}
-			result, err := pluginManager.CallPluginMethod(f, args)
-			if err != nil {
-				utils.Log(3, fmt.Sprintf("Failed to call plugin method %s, %s", f, err))
-				// remove plugin hook request
-				RequestHookRadixTree, _, _ = RequestHookRadixTree.Delete([]byte(r.URL.Path))
-			} else {
-				var statusCode int = 200
-				var body []byte
-				for _, arg := range result {
-					switch arg.Name {
-					case "statusCode":
-						statusCode = getInt_safe(arg.Data)
-						if statusCode == 0 {
-							utils.Log(3, fmt.Sprintf("Failed to parse plugin status code, %s", getString_safe(arg.Data)))
-							statusCode = 500
-						}
-					case "body":
-						body = getBytes_safe(arg.Data)
-					case "header":
-						headers := make(map[string]string)
-						err := json.Unmarshal(getBytes_safe(arg.Data), &headers)
-						if err != nil {
-							utils.Log(3, fmt.Sprintf("Failed to parse plugin header, %s", err))
-						} else {
-							for k, v := range headers {
-								w.Header().Add(k, v)
-							}
-						}
-					}
+		case "body":
+			body = getBytes_safe(arg.Data)
+		case "header":
+			headers := make(map[string]string)
+			if err := json.Unmarshal(getBytes_safe(arg.Data), &headers); err == nil {
+				for k, v := range headers {
+					ctx.w.Header().Add(k, v)
 				}
-				w.WriteHeader(statusCode)
-				w.Write(body)
-				return
+			} else {
+				utils.Log(3, fmt.Sprintf("Failed to parse plugin header, %s", err))
 			}
 		}
 	}
 
-	firewallAction, blockReason := fireWall.MatchRule(IP, r)
+	ctx.w.WriteHeader(statusCode)
+	ctx.w.Write(body)
+	return true
+}
+
+// performSecurityChecks 执行安全检查
+func performSecurityChecks(ctx *requestContext) bool {
+	// 防火墙检查
+	firewallAction, blockReason := fireWall.MatchRule(ctx.ip, ctx.r)
 	if firewallAction == 1 {
-		serveError(w, http.StatusForbidden, blockReason)
-		return
+		serveError(ctx.w, http.StatusForbidden, blockReason)
+		return false
 	}
-	if pathTraversalRegex.MatchString(r.URL.Path) { // path traversal
-		serveError(w, http.StatusForbidden, "path traversal")
-		// add to block list
+
+	// 路径遍历检查
+	if pathTraversalRegex.MatchString(ctx.r.URL.Path) {
+		serveError(ctx.w, http.StatusForbidden, "path traversal")
 		fireWall.AddRule(&firewall.Rule{
-			Name:    "auto_blocked_by_path_traversal-IP-" + IP,
+			Name:    "auto_blocked_by_path_traversal-IP-" + ctx.ip,
 			Action:  1,
-			Rule:    IP,
+			Rule:    ctx.ip,
 			Type:    "ipaddr",
-			Timeout: time.Now().Add(time.Hour).Unix(), // block for 1 hour
+			Timeout: time.Now().Add(time.Hour).Unix(),
 			Reason:  "path traversal",
 		})
-		return
-	}
-	if strings.HasSuffix(r.URL.Path, "/") { // redirect to index.html
-		// http.Redirect(w, r, r.URL.Path+"index.html", http.StatusMovedPermanently)
-		r.URL.Path = r.URL.Path + "index.html"
-		// return
+		return false
 	}
 
-	// set extra headers
+	return true
+}
+
+// preprocessPath 预处理路径
+func preprocessPath(r *http.Request) {
+	// 目录路径自动添加 index.html
+	if strings.HasSuffix(r.URL.Path, "/") {
+		r.URL.Path = r.URL.Path + "index.html"
+	}
+}
+
+// setExtraHeaders 设置额外的响应头
+func setExtraHeaders(w http.ResponseWriter) {
 	for k, v := range Config.ServerCfg.ExtraHeaders {
 		w.Header().Set(k, v)
 	}
+}
 
-	// check public api
-	if strings.HasPrefix(r.URL.Path, "/api/v1/") { // public api
-		servePublicAPI(w, r)
-		return
+// handleRoute 路由分发处理
+func handleRoute(ctx *requestContext) bool {
+	// 路由表 - 按优先级顺序检查
+	routes := []struct {
+		prefix  string
+		enabled bool
+		handler func(*requestContext)
+	}{
+		{"/api/v1/", true, handlePublicAPI},
+		{"/" + Config.AccessCfg.BackendPath + "/", Config.AccessCfg.EnableBackend, handleBackendAPI},
+		{"/upload/", true, handleUploadedFile},
+		{"/articles/", true, handleArticle},
 	}
 
-	// check backend url
-	if Config.AccessCfg.EnableBackend {
-		backendPrefix := "/" + Config.AccessCfg.BackendPath + "/"
-		if strings.HasPrefix(r.URL.Path, backendPrefix) { // backend url
-			serveBackend(w, r)
-			return
+	for _, route := range routes {
+		if route.enabled && strings.HasPrefix(ctx.r.URL.Path, route.prefix) {
+			route.handler(ctx)
+			return true
 		}
 	}
 
-	// check if article file
-	if strings.HasPrefix(r.URL.Path, "/articles/") { // article file
-		if Config.CacheCfg.UseDisk {
-			// check cache
-			f, err := cacheManager.GetCacheItem(r.URL.Path)
-			if f != nil && err == nil { // hit cache
-				cached = true
-				w.Header().Set("X-LiteBlog-Disk-Cache", "hit")
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				io.Copy(w, f)
-				f.Close()
-				return
-			}
-		}
-		// get article file
-		articleIDHTML := r.URL.Path[len("/articles/"):]
-		filebin := renderarticle(articleIDHTML)
-		if len(filebin) == 0 {
-			serveError(w, http.StatusNotFound, "Article not found")
-			return
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(filebin)
-		// add to cache(using deliverManager to avoid extra delay)
-		if Config.CacheCfg.UseDisk {
-			deliverManager.AddTask(func() {
-				err = cacheManager.AddCacheItem(r.URL.Path, bytes.NewReader(filebin), Config.CacheCfg.ExpireTime)
-				if err != nil {
-					utils.Log(1, fmt.Sprintf("Failed to add cache item for %s, %s", r.URL.Path, err))
-				}
-			})
-		}
-		return
-	}
-	// render file
-	file_ext := path.Ext(r.URL.Path)
-	renderList := []string{".js", ".css", ".html", ".xml"}
-	// check if file is renderable
-	if file_ext == "" || !strings.Contains(strings.Join(renderList, "|"), file_ext) { // not render file
-		// directly serve file
-		file, err := os.OpenFile("public"+r.URL.Path, os.O_RDONLY, 0) // check file exist
-		if err != nil {
-			serveError(w, http.StatusNotFound, "File not found")
-			return
-		}
-		// content_type := GetContentType(r.URL.Path)
-		// w.Header().Set("Content-Type", content_type)
-		// defer file.Close()
+	return false
+}
 
-		// set cache control
-		// w.Header().Set("Cache-Control", "max-age=31536000, public") // 1 year cache
-		http.ServeContent(w, r, r.URL.Path, time.Now(), file) // directly serve file
-		file.Close()
-		// io.Copy(w, file)
-		return
-	}
+// handlePublicAPI 处理公共 API
+func handlePublicAPI(ctx *requestContext) {
+	servePublicAPI(ctx.w, ctx.r)
+}
 
+// handleBackendAPI 处理后端 API
+func handleBackendAPI(ctx *requestContext) {
+	serveBackend(ctx.w, ctx.r)
+}
+
+// handleUploadedFile 处理上传文件访问
+func handleUploadedFile(ctx *requestContext) {
+	serveUploadedFile(ctx.w, ctx.r)
+}
+
+// handleArticle 处理文章访问
+func handleArticle(ctx *requestContext) {
+	// 检查缓存
 	if Config.CacheCfg.UseDisk {
-		// check cache
-		f, err := cacheManager.GetCacheItem(r.URL.Path)
-		if f != nil && err == nil { // hit cache
-			cached = true
-			w.Header().Set("X-LiteBlog-Disk-Cache", "hit")
-			// content_type := GetContentType(r.URL.Path)
-			// w.Header().Set("Content-Type", content_type)
-			http.ServeContent(w, r, r.URL.Path, time.Now(), f) // directly serve file
-			// io.Copy(w, f)
+		if f, err := cacheManager.GetCacheItem(ctx.r.URL.Path); f != nil && err == nil {
+			ctx.cached = true
+			ctx.w.Header().Set("X-LiteBlog-Disk-Cache", "hit")
+			ctx.w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			io.Copy(ctx.w, f)
 			f.Close()
 			return
 		}
 	}
 
-	// open file to render
-	file, err := os.OpenFile("public"+r.URL.Path, os.O_RDONLY, 0) // check file exist
+	// 渲染文章
+	articleIDHTML := ctx.r.URL.Path[len("/articles/"):]
+	filebin := renderarticle(articleIDHTML)
+	if len(filebin) == 0 {
+		serveError(ctx.w, http.StatusNotFound, "Article not found")
+		return
+	}
+
+	ctx.w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	ctx.w.Write(filebin)
+
+	// 异步添加到缓存
+	if Config.CacheCfg.UseDisk {
+		deliverManager.AddTask(func() {
+			if err := cacheManager.AddCacheItem(ctx.r.URL.Path, bytes.NewReader(filebin), Config.CacheCfg.ExpireTime); err != nil {
+				utils.Log(1, fmt.Sprintf("Failed to add cache item for %s, %s", ctx.r.URL.Path, err))
+			}
+		})
+	}
+}
+
+// handleStaticFile 处理静态文件
+func handleStaticFile(ctx *requestContext) {
+	fileExt := path.Ext(ctx.r.URL.Path)
+	renderExtensions := []string{".js", ".css", ".html", ".xml"}
+	needRender := fileExt != "" && slices.Contains(renderExtensions, fileExt)
+
+	// 非渲染文件直接服务
+	if !needRender {
+		serveStaticFileDirect(ctx)
+		return
+	}
+
+	// 检查缓存
+	if Config.CacheCfg.UseDisk {
+		if f, err := cacheManager.GetCacheItem(ctx.r.URL.Path); f != nil && err == nil {
+			ctx.cached = true
+			ctx.w.Header().Set("X-LiteBlog-Disk-Cache", "hit")
+			http.ServeContent(ctx.w, ctx.r, ctx.r.URL.Path, time.Now(), f)
+			f.Close()
+			return
+		}
+	}
+
+	// 读取并渲染文件
+	serveRenderedFile(ctx)
+}
+
+// serveStaticFileDirect 直接服务静态文件（不渲染）
+func serveStaticFileDirect(ctx *requestContext) {
+	file, err := os.Open("public" + ctx.r.URL.Path)
 	if err != nil {
-		serveError(w, http.StatusNotFound, "File not found")
+		serveError(ctx.w, http.StatusNotFound, "File not found")
 		return
 	}
 	defer file.Close()
 
-	// render template
-	fileBin, err := io.ReadAll(file)
+	http.ServeContent(ctx.w, ctx.r, ctx.r.URL.Path, time.Now(), file)
+}
+
+// serveRenderedFile 服务需要渲染的文件
+func serveRenderedFile(ctx *requestContext) {
+	file, err := os.Open("public" + ctx.r.URL.Path)
 	if err != nil {
-		serveError(w, http.StatusInternalServerError, "Failed to read file")
+		serveError(ctx.w, http.StatusNotFound, "File not found")
 		return
 	}
+	defer file.Close()
+
+	// 读取并渲染
+	fileBin, err := io.ReadAll(file)
+	if err != nil {
+		serveError(ctx.w, http.StatusInternalServerError, "Failed to read file")
+		return
+	}
+
 	fileBin = RenderTemplate(fileBin, nil)
-	content_type := GetContentType(r.URL.Path)
-	w.Header().Set("Content-Type", content_type)
-	w.Header().Set("Content-Length", fmt.Sprint(len(fileBin)))
-	w.Write(fileBin)
-	// add to cache(using deliverManager to avoid extra delay)
+	contentType := GetContentType(ctx.r.URL.Path)
+	ctx.w.Header().Set("Content-Type", contentType)
+	ctx.w.Header().Set("Content-Length", fmt.Sprint(len(fileBin)))
+	ctx.w.Write(fileBin)
+
+	// 异步添加到缓存
 	if Config.CacheCfg.UseDisk {
 		deliverManager.AddTask(func() {
-			err = cacheManager.AddCacheItem(r.URL.Path, bytes.NewReader(fileBin), Config.CacheCfg.ExpireTime)
-			if err != nil {
-				utils.Log(1, fmt.Sprintf("Failed to add cache item for %s, %s", r.URL.Path, err))
+			if err := cacheManager.AddCacheItem(ctx.r.URL.Path, bytes.NewReader(fileBin), Config.CacheCfg.ExpireTime); err != nil {
+				utils.Log(1, fmt.Sprintf("Failed to add cache item for %s, %s", ctx.r.URL.Path, err))
 			}
 		})
 	}
-
 }
 
 // authMiddleware 鉴权中间件：验证请求方法和token
@@ -432,6 +520,32 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		// 恢复请求体供后续handler使用
 		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+		// 调用下一个handler
+		next(w, r)
+	}
+}
+
+// authMiddlewareMultipart 鉴权中间件（用于multipart/form-data请求）：验证请求方法和token
+func authMiddlewareMultipart(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
+			return
+		}
+
+		// 从 form data 中获取 token
+		token := r.FormValue("token")
+		if token == "" {
+			serveError(w, http.StatusBadRequest, "Token is required")
+			return
+		}
+
+		// 验证token
+		if !checkToken(token) {
+			serveError(w, http.StatusForbidden, "Invalid token")
+			return
+		}
 
 		// 调用下一个handler
 		next(w, r)
@@ -485,6 +599,9 @@ func serveBackend(w http.ResponseWriter, r *http.Request) {
 		return
 	case "/edit_custom_settings":
 		authMiddleware(backendHandler_edit_custom_settings)(w, r)
+		return
+	case "/upload_file":
+		authMiddlewareMultipart(backendHandler_upload_file)(w, r)
 		return
 	case "/login":
 		backendHandler_login(w, r)
@@ -1604,4 +1721,167 @@ func public_api_get_sniffer_info(w http.ResponseWriter, r *http.Request) {
 		serveError(w, http.StatusInternalServerError, "Failed to encode response")
 		return
 	}
+}
+
+// backendHandler_upload_file 处理文件上传
+func backendHandler_upload_file(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// 限制上传文件大小为32MB
+	r.Body = http.MaxBytesReader(w, r.Body, 32<<20)
+
+	// 解析multipart form
+	err := r.ParseMultipartForm(32 << 20) // 32MB
+	if err != nil {
+		serveError(w, http.StatusBadRequest, "Failed to parse multipart form")
+		return
+	}
+
+	// 获取有效期参数
+	expiryDaysStr := r.FormValue("expiry_days")
+	if expiryDaysStr == "" {
+		expiryDaysStr = "7" // 默认7天
+	}
+
+	// 获取上传的文件
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		serveError(w, http.StatusBadRequest, "Failed to get file from form")
+		return
+	}
+	defer file.Close()
+
+	// 获取原始文件名和扩展名
+	originalFilename := header.Filename
+	fileExt := filepath.Ext(originalFilename)
+
+	// 生成哈希文件名: hash(filename + timestamp)
+	timestamp := time.Now().Format("20060102150405")
+	hashInput := originalFilename + timestamp
+	hash := sha256.Sum256([]byte(hashInput))
+	hashFilename := hex.EncodeToString(hash[:]) + fileExt
+
+	// 检查+创建目标目录
+	destDir := "upload"
+	if _, err := os.Stat(destDir); os.IsNotExist(err) {
+		err := os.MkdirAll(destDir, 0755)
+		if err != nil {
+			utils.Log(3, fmt.Sprintf("Failed to create upload directory: %s", err))
+			serveError(w, http.StatusInternalServerError, "Failed to create directory")
+			return
+		}
+	}
+	// 创建目标文件
+	destPath := filepath.Join(destDir, hashFilename)
+	destFile, err := os.OpenFile(destPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		utils.Log(3, fmt.Sprintf("Failed to create upload file: %s", err))
+		serveError(w, http.StatusInternalServerError, "Failed to create file")
+		return
+	}
+	defer destFile.Close()
+
+	// 复制文件内容
+	written, err := io.Copy(destFile, file)
+	if err != nil {
+		utils.Log(3, fmt.Sprintf("Failed to write upload file: %s", err))
+		serveError(w, http.StatusInternalServerError, "Failed to write file")
+		return
+	}
+
+	// 计算过期时间
+	var expiryTime int64 = 0 // 0 表示永不过期
+	if expiryDaysStr != "never" {
+		if days, err := strconv.ParseInt(expiryDaysStr, 10, 64); err == nil && days > 0 {
+			expiryTime = time.Now().Add(time.Duration(days) * 24 * time.Hour).Unix()
+		}
+	}
+
+	// 创建文件元数据
+	metadata := utils.FileMetadata{
+		Filename:     hashFilename,
+		OriginalName: originalFilename,
+		Size:         written,
+		UploadTime:   time.Now().Unix(),
+		ExpiryTime:   expiryTime,
+		Hash:         hex.EncodeToString(hash[:]),
+	}
+
+	// 保存元数据
+	if err := utils.SaveFileMetadata(hashFilename, metadata); err != nil {
+		utils.Log(3, fmt.Sprintf("Failed to save metadata for %s: %s", hashFilename, err))
+		// 不影响上传，继续
+	}
+
+	utils.Log(1, fmt.Sprintf("File uploaded: %s -> %s (%d bytes, expiry: %s)", originalFilename, hashFilename, written, expiryDaysStr))
+
+	// 返回响应
+	type UploadResponse struct {
+		Filename     string `json:"filename"`
+		OriginalName string `json:"original_name"`
+		Size         int64  `json:"size"`
+		URL          string `json:"url"`
+		Hash         string `json:"hash"`
+		ExpiryTime   int64  `json:"expiry_time"`
+	}
+
+	response := UploadResponse{
+		Filename:     hashFilename,
+		OriginalName: originalFilename,
+		Size:         written,
+		URL:          "/upload/" + hashFilename,
+		Hash:         hex.EncodeToString(hash[:]),
+		ExpiryTime:   expiryTime,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	jsonEncoder := json.NewEncoder(w)
+	err = jsonEncoder.Encode(response)
+	if err != nil {
+		utils.Log(3, fmt.Sprintf("Failed to encode upload response: %s", err))
+	}
+}
+
+// serveUploadedFile 处理上传文件的公开访问
+func serveUploadedFile(w http.ResponseWriter, r *http.Request) {
+	// 提取文件名
+	filename := r.URL.Path[len("/upload/"):]
+
+	// 安全检查：防止路径遍历
+	if strings.Contains(filename, "..") || strings.Contains(filename, "/") || strings.Contains(filename, "\\") {
+		serveError(w, http.StatusForbidden, "Invalid filename")
+		return
+	}
+
+	// 构建文件路径
+	filePath := filepath.Join("upload", filename)
+
+	// 检查文件是否存在
+	fileInfo, err := os.Stat(filePath)
+	if err != nil || fileInfo.IsDir() {
+		serveError(w, http.StatusNotFound, "File not found")
+		return
+	}
+
+	// 打开文件
+	file, err := os.Open(filePath)
+	if err != nil {
+		serveError(w, http.StatusInternalServerError, "Failed to open file")
+		return
+	}
+	defer file.Close()
+
+	// 设置内容类型
+	contentType := GetContentType(filename)
+	w.Header().Set("Content-Type", contentType)
+
+	// 设置缓存控制
+	w.Header().Set("Cache-Control", "public, max-age=31536000") // 1 year
+
+	// 提供文件内容
+	http.ServeContent(w, r, filename, fileInfo.ModTime(), file)
 }
