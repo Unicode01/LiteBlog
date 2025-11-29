@@ -11,6 +11,95 @@
     border-bottom: 1px solid #e0e0e0;
 }
 
+/* 代码块容器 */
+.article-content pre,
+.comment-content pre {
+    position: relative;
+    margin: 1.5rem 0;
+    border-radius: 8px;
+    overflow: auto;
+}
+
+/* 代码块复制按钮 - 只显示图标 */
+.code-block-copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+    opacity: 0;
+    transition: all 0.2s ease-in-out;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    padding: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4a5568;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    user-select: none;
+    width: 32px;
+    height: 32px;
+}
+
+.code-block-copy-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #2d3748;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.code-block-copy-btn:active {
+    transform: scale(0.95);
+}
+
+/* 复制成功状态 - 亮色模式使用浅灰 */
+.code-block-copy-btn.copied {
+    background: rgba(226, 232, 240, 0.95);
+    border-color: rgba(203, 213, 225, 0.5);
+    color: #475569;
+}
+
+/* 当鼠标悬停在代码块上时显示按钮 */
+.article-content pre:hover .code-block-copy-btn,
+.comment-content pre:hover .code-block-copy-btn {
+    opacity: 1;
+}
+
+/* 复制按钮图标 */
+.code-block-copy-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+    flex-shrink: 0;
+}
+
+/* 隐藏按钮文字（如果有） */
+.code-block-copy-btn .copy-btn-text {
+    display: none;
+}
+
+/* 暗色模式下的样式 */
+.code-block-copy-btn.dark-theme {
+    background: rgba(45, 55, 72, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+
+.code-block-copy-btn.dark-theme:hover {
+    background: rgba(55, 65, 81, 1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #f7fafc;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.code-block-copy-btn.dark-theme.copied {
+    background: rgba(71, 85, 105, 0.95);
+    border-color: rgba(100, 116, 139, 0.5);
+    color: #cbd5e1;
+}
+
 /* 文章标题 */
 .article-title {
     /* text-align: center; */
@@ -1157,5 +1246,65 @@ input.email-subscribe-button[type="checkbox"] {
     .note-input-dialog {
         min-width: 90%;
         max-width: 90%;
+    }
+}
+
+/* 滚动到顶部按钮 */
+.scroll-to-top-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 48px;
+    height: 48px;
+    background: var(--base-white);
+    border: 1px solid var(--base-gray-200);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    z-index: 998;
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.8);
+}
+
+.scroll-to-top-btn.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+}
+
+.scroll-to-top-btn:hover {
+    background: var(--base-gray-100);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: scale(1.05);
+}
+
+.scroll-to-top-btn:active {
+    transform: scale(0.95);
+}
+
+.scroll-to-top-btn svg {
+    width: 24px;
+    height: 24px;
+    color: var(--base-black);
+    transition: color 0.2s ease;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+    .scroll-to-top-btn {
+        bottom: 20px;
+        right: 20px;
+        width: 44px;
+        height: 44px;
+    }
+
+    .scroll-to-top-btn svg {
+        width: 22px;
+        height: 22px;
     }
 }
