@@ -112,6 +112,26 @@ type NotifyConfig struct {
 
 type PluginConfig struct {
 	Enabled bool `json:"enabled"`
+	// gRPC 插件加载器配置
+	GRPCConfig struct {
+		Enabled         bool   `json:"enabled"`
+		ListenerAddress string `json:"listener_address"`
+		CommandTimeout  int    `json:"command_timeout"` // 命令超时时间（秒）
+		AccessKey       string `json:"access_key"`      // 访问密钥，为空则不验证
+	} `json:"grpc_config"`
+	// JavaScript 插件加载器配置
+	JSConfig struct {
+		Enabled   bool   `json:"enabled"`
+		PluginDir string `json:"plugin_dir"` // JS 插件目录
+		InitDelay int    `json:"init_delay"` // 初始化延迟（秒）
+	} `json:"js_config"`
+	// 路由监听器配置
+	RouteListenerConfig struct {
+		MaxRequestBodySize  int64 `json:"max_request_body_size"`  // 最大请求体大小（字节），0 表示不限制，默认 10MB
+		MaxResponseBodySize int64 `json:"max_response_body_size"` // 最大响应体大小（字节），0 表示不限制，默认 10MB
+		CaptureRequestBody  bool  `json:"capture_request_body"`   // 是否捕获请求体，默认 true
+		CaptureResponseBody bool  `json:"capture_response_body"`  // 是否捕获响应体，默认 true
+	} `json:"route_listener_config"`
 }
 
 type SnifferConfig struct {

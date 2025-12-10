@@ -940,11 +940,12 @@ function SaveArticleAsHTML() {
         .article-info { color: #666; font-size: 0.9em; margin-top: 0.5em; }
         img { max-width: 100%; height: auto; display: block; margin: 1.5em auto; border-radius: 6px; }
         code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
-        pre { background: #f4f4f4; padding: 1em; border-radius: 6px; overflow-x: auto; }
+        pre { background: #f4f4f4; padding: 1em; border-radius: 6px; overflow-x: auto; position: relative; }
         blockquote { border-left: 4px solid #ddd; margin: 1.5em 0; padding: 0.5em 1em; background: #f9f9f9; }
         table { width: 100%; border-collapse: collapse; margin: 1.5em 0; }
         th, td { padding: 0.75em; border: 1px solid #ddd; text-align: left; }
         th { background: #f4f4f4; font-weight: 600; }
+        .code-block-copy-btn {display: none;}
     </style>
 </head>
 <body>
@@ -1392,7 +1393,7 @@ function InitScrollToTopButton() {
     // 监听滚动事件，控制按钮显示/隐藏
     window.addEventListener('scroll', function () {
         const scrollTop = window.scrollY || document.documentElement.scrollTop;
-        
+
         // 滚动超过300px时显示按钮
         if (scrollTop > 300) {
             scrollToTopBtn.classList.add('visible');

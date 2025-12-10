@@ -26,12 +26,15 @@ var (
 type LoaderTypeJS struct {
 	Loader
 	LastError                           error
-	jsvmMap                             sync.Map // map[pluginID string]*goja.Runtime
+	PluginDir                           string        // 插件目录，默认 "plugins"
+	InitDelay                           time.Duration // 初始化延迟，默认 2 秒
+	jsvmMap                             sync.Map      // map[pluginID string]*goja.Runtime
 	ctx                                 context.Context
 	cancle                              context.CancelFunc
 	publicMethods                       sync.Map // map[string]func([]*Arg) ([]*Arg, error)
 	pluginMethods                       sync.Map // map[string]struct{vm *goja.Runtime, method goja.Callable}
 	registerPluginMethodsManagerHandler func(map[string]func([]*Arg) ([]*Arg, error))
+	unregisterMethodsHandler            func([]string) // 注销方法时的回调
 }
 
 func (loader *LoaderTypeJS) Init() error {
@@ -39,12 +42,20 @@ func (loader *LoaderTypeJS) Init() error {
 	loader.jsvmMap = sync.Map{}
 	loader.publicMethods = sync.Map{}
 	loader.pluginMethods = sync.Map{}
+
+	// 设置默认值
+	if loader.PluginDir == "" {
+		loader.PluginDir = "plugins"
+	}
+	if loader.InitDelay == 0 {
+		loader.InitDelay = 2 * time.Second
+	}
 	return nil
 }
 
 func (loader *LoaderTypeJS) Load() error {
 	go func() {
-		time.Sleep(2 * time.Second)
+		time.Sleep(loader.InitDelay)
 		loader.LoadAllPlugins()
 	}()
 	return nil
@@ -65,6 +76,7 @@ func (loader *LoaderTypeJS) SetPluginMethodHandler(handler func(map[string]func(
 }
 
 func (loader *LoaderTypeJS) SetUnregisterMethodsHandler(handler func([]string)) error {
+	loader.unregisterMethodsHandler = handler
 	return nil
 }
 
@@ -76,10 +88,81 @@ func (loader *LoaderTypeJS) UnregisterMethods(methods []string) error {
 }
 
 func (loader *LoaderTypeJS) Unload() error {
+	// 取消 context
+	if loader.cancle != nil {
+		loader.cancle()
+	}
+
+	// 收集所有插件方法名用于通知管理器
+	methodNames := make([]string, 0)
+	loader.pluginMethods.Range(func(key, value interface{}) bool {
+		methodNames = append(methodNames, key.(string))
+		return true
+	})
+
+	// 通知管理器注销这些方法
+	if loader.unregisterMethodsHandler != nil && len(methodNames) > 0 {
+		loader.unregisterMethodsHandler(methodNames)
+	}
+
+	// 清理所有 JS 虚拟机
+	loader.jsvmMap.Range(func(key, value interface{}) bool {
+		loader.jsvmMap.Delete(key)
+		return true
+	})
+
+	// 清理方法映射
+	loader.pluginMethods.Clear()
+	loader.publicMethods.Clear()
+
+	utils.Log(1, "JavaScript plugin loader unloaded successfully")
 	return nil
 }
 
-func (Loader *LoaderTypeJS) UnloadPlugin(pluginID string) error {
+func (loader *LoaderTypeJS) UnloadPlugin(pluginID string) error {
+	// 检查插件是否存在
+	vmA, ok := loader.jsvmMap.Load(pluginID)
+	if !ok {
+		return fmt.Errorf("plugin %s not found", pluginID)
+	}
+
+	// 尝试调用插件的 onUnload 函数（如果存在）
+	if vm, ok := vmA.(*goja.Runtime); ok {
+		if onUnload := vm.Get("onUnload"); onUnload != nil && !goja.IsUndefined(onUnload) {
+			if callable, ok := goja.AssertFunction(onUnload); ok {
+				callable(goja.Undefined())
+			}
+		}
+	}
+
+	// 收集该插件注册的方法
+	methodsToRemove := make([]string, 0)
+	loader.pluginMethods.Range(func(key, value interface{}) bool {
+		methodInfo := value.(struct {
+			vm     *goja.Runtime
+			method goja.Callable
+		})
+		// 检查方法是否属于该插件的 VM
+		if vmA == methodInfo.vm {
+			methodsToRemove = append(methodsToRemove, key.(string))
+		}
+		return true
+	})
+
+	// 删除插件方法
+	for _, methodName := range methodsToRemove {
+		loader.pluginMethods.Delete(methodName)
+	}
+
+	// 通知管理器注销这些方法
+	if loader.unregisterMethodsHandler != nil && len(methodsToRemove) > 0 {
+		loader.unregisterMethodsHandler(methodsToRemove)
+	}
+
+	// 删除 VM
+	loader.jsvmMap.Delete(pluginID)
+
+	utils.Log(1, fmt.Sprintf("Plugin %s unloaded successfully", pluginID))
 	return nil
 }
 
@@ -96,9 +179,9 @@ func (loader *LoaderTypeJS) SetID(id string) {
 }
 
 func (loader *LoaderTypeJS) LoadAllPlugins() error {
-	files, err := os.ReadDir("plugins")
+	files, err := os.ReadDir(loader.PluginDir)
 	if err != nil {
-		utils.Log(3, fmt.Sprintf("load plugins failed: %s", err.Error()))
+		utils.Log(3, fmt.Sprintf("load plugins from %s failed: %s", loader.PluginDir, err.Error()))
 		return err
 	}
 	for _, file := range files {
@@ -111,11 +194,15 @@ func (loader *LoaderTypeJS) LoadAllPlugins() error {
 }
 
 func (loader *LoaderTypeJS) LoadPlugin(pluginName string) error {
-	pluginPath := path.Join("plugins", pluginName+".js")
+	pluginPath := path.Join(loader.PluginDir, pluginName+".js")
 	// create new runtime
 	vm := goja.New()
 	// random id
 	pluginId := loader.NewPluginID()
+
+	// 保存 VM 到映射中
+	loader.jsvmMap.Store(pluginId, vm)
+
 	// set env
 	vm.Set("loaderVersion", version)
 	vm.Set("pluginId", pluginId)
@@ -128,29 +215,36 @@ func (loader *LoaderTypeJS) LoadPlugin(pluginName string) error {
 		vm.Set(key.(string), value)
 		return true
 	})
+
+	// 捕获当前 VM 用于闭包
+	currentVM := vm
+	currentPluginName := pluginName
+
 	vm.Set("registerMethods", func(methods []string) {
 		// store plugin methods
 		methodMap := make(map[string]func([]*Arg) ([]*Arg, error))
 		for _, methodName := range methods {
-			tmpf, ok := goja.AssertFunction(vm.Get(methodName))
+			currentMethodName := methodName // 捕获变量
+			tmpf, ok := goja.AssertFunction(currentVM.Get(currentMethodName))
 			if !ok {
-				utils.Log(3, fmt.Sprintf("Plugin %s: method %s not found", pluginName, methodName))
+				utils.Log(3, fmt.Sprintf("Plugin %s: method %s not found", currentPluginName, currentMethodName))
 				return
 			}
-			loader.pluginMethods.Store(methodName, struct {
+			loader.pluginMethods.Store(currentMethodName, struct {
 				vm     *goja.Runtime
 				method goja.Callable
 			}{
-				vm:     vm,
+				vm:     currentVM,
 				method: tmpf,
 			})
-			methodMap[methodName] = func(args []*Arg) ([]*Arg, error) {
-				return loader.pluginMethodProxy(methodName, args)
+			methodMap[currentMethodName] = func(args []*Arg) ([]*Arg, error) {
+				return loader.pluginMethodProxy(currentMethodName, args)
 			}
 		}
 		// call plugin method handler
 		loader.registerPluginMethodsHandler(methodMap)
 	})
+
 	vm.Set("getPublicMethods", func() []string {
 		var methods []string
 		loader.publicMethods.Range(func(key, value interface{}) bool {
@@ -159,23 +253,30 @@ func (loader *LoaderTypeJS) LoadPlugin(pluginName string) error {
 		})
 		return methods
 	})
+
 	// load init.js
 	_, err := vm.RunString(InitJSCode)
 	if err != nil {
+		loader.jsvmMap.Delete(pluginId) // 加载失败时清理
 		utils.Log(3, fmt.Sprintf("init.js load failed: %s", err.Error()))
 		return err
 	}
+
 	// load plugin
 	pluginJS, err := os.ReadFile(pluginPath)
 	if err != nil {
+		loader.jsvmMap.Delete(pluginId) // 加载失败时清理
 		utils.Log(3, fmt.Sprintf("Plugin %s: load failed: %s", pluginName, err.Error()))
 		return err
 	}
 	_, err = vm.RunString(string(pluginJS))
 	if err != nil {
+		loader.jsvmMap.Delete(pluginId) // 加载失败时清理
 		utils.Log(3, fmt.Sprintf("Plugin %s: load failed: %s", pluginName, err.Error()))
 		return err
 	}
+
+	utils.Log(1, fmt.Sprintf("Plugin %s loaded successfully with ID %s", pluginName, pluginId))
 	return nil
 }
 
@@ -217,8 +318,8 @@ func (loader *LoaderTypeJS) pluginMethodProxy(method string, args []*Arg) (rt []
 	for i, r := range rtb.Export().([]interface{}) {
 		rA := r.(map[string]interface{})
 		rt[i] = &Arg{
-			Name: getString_safe(rA["Name"]),
-			Type: getString_safe(rA["Type"]),
+			Name: utils.GetStringSafe(rA["Name"]),
+			Type: utils.GetStringSafe(rA["Type"]),
 			Data: rA["Data"],
 		}
 	}
@@ -235,37 +336,4 @@ func (loader *LoaderTypeJS) NewPluginID() string {
 	return id
 }
 
-func getString_safe(data any) string {
-	switch v := data.(type) {
-	case string:
-		return v
-	case []uint8:
-		return string(v)
-	default:
-		return fmt.Sprintf("%v", data)
-	}
-}
-
-func getBytes_safe(data any) []byte {
-	switch v := data.(type) {
-	case string:
-		return []byte(v)
-	case []uint8:
-		return v
-	default:
-		return fmt.Appendf(nil, "%v", data)
-	}
-}
-
-func getInt_safe(data any) int {
-	switch v := data.(type) {
-	case int:
-		return v
-	case int32:
-		return int(v)
-	case int64:
-		return int(v)
-	default:
-		return 0
-	}
-}
+// 类型转换工具函数已移至 utils 包: utils.GetStringSafe, utils.GetBytesSafe, utils.GetIntSafe

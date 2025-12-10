@@ -8,7 +8,9 @@ import (
 	"errors"
 	"net"
 	"sync"
+	"time"
 
+	"LiteBlog/utils"
 	grpcloader "LiteBlog/utils/plugins/gRPCLoader"
 
 	"google.golang.org/grpc"
@@ -48,7 +50,9 @@ type LoaderType interface {
 // support load from gRPC
 type LoaderTypeGRPC struct {
 	Loader
-	ListenerAddress  string // loader listener address e.g. 127.0.0.1:8080 [::]:8080 , better not use public ip address
+	ListenerAddress  string        // loader listener address e.g. 127.0.0.1:8080 [::]:8080 , better not use public ip address
+	CommandTimeout   time.Duration // 命令超时时间，0 表示使用默认值
+	AccessKey        string        // 访问密钥，为空则不验证
 	grpcServer       *grpc.Server
 	grpcLoaderServer *grpcloader.GRPCPluginLoader
 	ctx              context.Context
@@ -65,6 +69,17 @@ func (ltgrpc *LoaderTypeGRPC) Init() error {
 	ltgrpc.grpcServer = s
 	ltgrpc.grpcLoaderServer = &grpcloader.GRPCPluginLoader{}
 	ltgrpc.grpcLoaderServer.Init()
+
+	// 设置命令超时时间（如果配置了）
+	if ltgrpc.CommandTimeout > 0 {
+		ltgrpc.grpcLoaderServer.SetCommandTimeout(ltgrpc.CommandTimeout)
+	}
+
+	// 设置访问密钥（如果配置了）
+	if ltgrpc.AccessKey != "" {
+		ltgrpc.grpcLoaderServer.SetAccessKey(ltgrpc.AccessKey)
+	}
+
 	grpcloader.RegisterPluginServiceServer(s, ltgrpc.grpcLoaderServer)
 	ltgrpc.grpcLoaderServer.SetMethodHandler(ltgrpc.CallMethod)
 	ltgrpc.ctx, ltgrpc.cancle = context.WithCancel(context.Background())
@@ -114,7 +129,7 @@ func (ltgrpc *LoaderTypeGRPC) SetPluginMethodHandler(handler func(map[string]fun
 					inArgs[i] = &grpcloader.Arg{
 						Name: arg.Name,
 						Type: arg.Type,
-						Arg:  getBytes_safe(arg.Data), // Data -> Arg
+						Arg:  utils.GetBytesSafe(arg.Data), // Data -> Arg
 					}
 				}
 
@@ -181,7 +196,7 @@ func (ltgrpc *LoaderTypeGRPC) CallMethod(method string, args []*grpcloader.Arg) 
 		rtArgs = append(rtArgs, &grpcloader.Arg{
 			Name: arg.Name,
 			Type: arg.Type,
-			Arg:  getBytes_safe(arg.Data),
+			Arg:  utils.GetBytesSafe(arg.Data),
 		})
 	}
 	return rtArgs, err
@@ -193,7 +208,7 @@ func (ltgrpc *LoaderTypeGRPC) CallPluginMethod(method string, args []*Arg) ([]*A
 		inArgs = append(inArgs, &grpcloader.Arg{
 			Name: arg.Name,
 			Type: arg.Type,
-			Arg:  getBytes_safe(arg.Data),
+			Arg:  utils.GetBytesSafe(arg.Data),
 		})
 	}
 	returnArgs, err := ltgrpc.grpcLoaderServer.CallClientMethod(method, inArgs)
@@ -213,7 +228,8 @@ func (ltgrpc *LoaderTypeGRPC) CallPluginMethod(method string, args []*Arg) ([]*A
 }
 
 func (ltgrpc *LoaderTypeGRPC) Unload() error {
-	for _, id := range ltgrpc.grpcLoaderServer.LoadedIds {
+	// 获取所有已加载的插件ID并卸载
+	for _, id := range ltgrpc.grpcLoaderServer.GetLoadedPluginIDs() {
 		ltgrpc.UnloadPlugin(id)
 	}
 	if ltgrpc.grpcServer != nil {

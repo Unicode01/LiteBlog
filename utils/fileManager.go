@@ -54,8 +54,11 @@ func SaveFileMetadata(filename string, metadata FileMetadata) error {
 	fileMetadataMutex.Lock()
 	defer fileMetadataMutex.Unlock()
 
-	// 保存到缓存
-	fileMetadataCache[filename] = metadata
+	// 只有非永久文件才保存到内存缓存，减小内存占用
+	// ExpiryTime == 0 表示永久保存，这类文件不需要缓存在内存中
+	if metadata.ExpiryTime != 0 {
+		fileMetadataCache[filename] = metadata
+	}
 
 	// 检测 metadata 目录是否存在
 	metadataDir := filepath.Join("upload", ".metadata")
@@ -84,11 +87,30 @@ func SaveFileMetadata(filename string, metadata FileMetadata) error {
 
 // GetFileMetadata 获取文件元数据
 func GetFileMetadata(filename string) (FileMetadata, bool) {
+	// 先从内存缓存中查找
 	fileMetadataMutex.RLock()
-	defer fileMetadataMutex.RUnlock()
-
 	metadata, exists := fileMetadataCache[filename]
-	return metadata, exists
+	fileMetadataMutex.RUnlock()
+
+	if exists {
+		return metadata, true
+	}
+
+	// 如果内存中没有，尝试从磁盘读取（可能是永久文件）
+	metadataPath := filepath.Join("upload", ".metadata", filename+".json")
+	file, err := os.Open(metadataPath)
+	if err != nil {
+		return FileMetadata{}, false
+	}
+	defer file.Close()
+
+	var diskMetadata FileMetadata
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&diskMetadata); err != nil {
+		return FileMetadata{}, false
+	}
+
+	return diskMetadata, true
 }
 
 // deleteFileMetadata 删除文件元数据
@@ -125,6 +147,7 @@ func loadAllMetadata() error {
 	fileMetadataMutex.Lock()
 	defer fileMetadataMutex.Unlock()
 
+	loadedCount := 0
 	for _, entry := range entries {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
 			continue
@@ -146,10 +169,15 @@ func loadAllMetadata() error {
 		}
 		file.Close()
 
-		fileMetadataCache[metadata.Filename] = metadata
+		// 只加载非永久文件到内存缓存，减小内存占用
+		// 永久文件（ExpiryTime == 0）只保存在磁盘，需要时再读取
+		if metadata.ExpiryTime != 0 {
+			fileMetadataCache[metadata.Filename] = metadata
+			loadedCount++
+		}
 	}
 
-	Log(1, fmt.Sprintf("Loaded %d file metadata entries", len(fileMetadataCache)))
+	Log(1, fmt.Sprintf("Loaded %d temporary file metadata entries to memory (permanent files stored on disk only)", loadedCount))
 	return nil
 }
 
@@ -219,16 +247,45 @@ func DeleteUploadedFile(filename string) error {
 
 // GetUploadStats 获取上传文件统计信息
 func GetUploadStats() map[string]interface{} {
-	fileMetadataMutex.RLock()
-	defer fileMetadataMutex.RUnlock()
-
 	totalSize := int64(0)
-	totalFiles := len(fileMetadataCache)
+	totalFiles := 0
 	permanentFiles := 0
 	expiredFiles := 0
 	currentTime := time.Now().Unix()
 
-	for _, metadata := range fileMetadataCache {
+	// 从磁盘读取所有元数据文件进行统计
+	metadataDir := filepath.Join("upload", ".metadata")
+	entries, err := os.ReadDir(metadataDir)
+	if err != nil {
+		Log(2, fmt.Sprintf("Failed to read metadata directory for stats: %s", err))
+		return map[string]interface{}{
+			"total_files":     0,
+			"total_size":      0,
+			"permanent_files": 0,
+			"expired_files":   0,
+		}
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+
+		metadataPath := filepath.Join(metadataDir, entry.Name())
+		file, err := os.Open(metadataPath)
+		if err != nil {
+			continue
+		}
+
+		var metadata FileMetadata
+		decoder := json.NewDecoder(file)
+		if err := decoder.Decode(&metadata); err != nil {
+			file.Close()
+			continue
+		}
+		file.Close()
+
+		totalFiles++
 		totalSize += metadata.Size
 		if metadata.ExpiryTime == 0 {
 			permanentFiles++
