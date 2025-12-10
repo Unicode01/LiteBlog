@@ -59,7 +59,7 @@ func TestGRPCPlugin(t *testing.T) {
 		}
 	}()
 	// get and register methods
-	m, err := client.GetRegisteredMethods(ctx, &grpcloader.RegisterMethods{
+	m, err := client.RegisterPluginMethods(ctx, &grpcloader.RegisterMethodsRequest{
 		Methods: []*grpcloader.MethodDef{
 			{
 				Name: "test2",

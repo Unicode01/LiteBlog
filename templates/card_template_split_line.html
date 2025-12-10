@@ -39,10 +39,12 @@
         }
     </style>
     <div id="top-class" class="top-class">
-        <div>{{card_title}}</div>
-        <button id="stack-button" onclick="
-        stackCard(document.querySelector('#card-container[card-id='+'\''+'{{id}}' +'\''+']'), null);
-        ">≡</button>
+        <div class="split-line-title"></div>
+        <button id="stack-button" class="stack-button">≡</button>
     </div>
     <div id="bottom-line" class="bottom-line" style="height:20px;width:90%;box-shadow: 1px 1px 1px #888888;"></div>
+    <div class="card-info-container" style="display: none;"
+        data-card-id="{{id}}"
+        data-card-title="{{card_title}}"></div>
+    <script src="/js/card_split_line.js"></script>
 </div>

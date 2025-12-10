@@ -4,17 +4,16 @@ if (!window._card_template_blogger_info_loaded) {
     window.addEventListener('DOMContentLoaded', function () {
         init_card_blogger_info();
     });
-
 }
 
 function getBloggerInfo(container) {
     const info_container = container.querySelector('.blogger-info-container');
-    const blogger_name = info_container.getAttribute('data-blogger-name');
-    const blogger_avatar = info_container.getAttribute('data-blogger-avatar');
-    const blogger_bio = info_container.getAttribute('data-blogger-bio');
-    const blogger_contact_info = info_container.getAttribute('data-blogger-contact-info');
-    // console.log(blogger_name, blogger_avatar, blogger_bio, blogger_contact_info);
-    // tackle the contact info
+    const blogger_name = info_container.dataset.bloggerName || '';
+    const blogger_avatar = info_container.dataset.bloggerAvatar || '';
+    const blogger_bio = info_container.dataset.bloggerBio || '';
+    const blogger_contact_info = info_container.dataset.bloggerContactInfo || '';
+
+    // parse contact info
     // structure: [type](link)|[type](link)|...
     function parseLinkData(input) {
         if (!input) return [];
@@ -33,8 +32,8 @@ function getBloggerInfo(container) {
             return null;
         }).filter(item => item !== null);
     }
+
     const contact_info = parseLinkData(blogger_contact_info);
-    console.log(contact_info);
     return {
         name: blogger_name,
         avatar: blogger_avatar,
@@ -56,9 +55,31 @@ function init_card_blogger_info() {
         "email": "/img/email-icon.svg",
         "steam": "/img/steam-logo.svg",
     }
+
     all_blogger_info_containers.forEach(function (blogger_info_container) {
         const blogger_info = getBloggerInfo(blogger_info_container);
-        const blogger_info_container_inner = blogger_info_container.querySelector('.blogger-info-container');
+
+        // avatar is pre-rendered in HTML template, no need to set here
+
+        // render name
+        const nameContainer = blogger_info_container.querySelector('.card-blogger-name');
+        if (nameContainer) {
+            // insert name text before bio div
+            const bioDiv = nameContainer.querySelector('.card-blogger-bio');
+            if (bioDiv) {
+                // create text node for name
+                const nameText = document.createTextNode(blogger_info.name);
+                nameContainer.insertBefore(nameText, bioDiv);
+            }
+        }
+
+        // render bio
+        const bioContainer = blogger_info_container.querySelector('.card-blogger-bio');
+        if (bioContainer) {
+            bioContainer.textContent = blogger_info.bio;
+        }
+
+        // render contact info
         const blogger_contact_container = blogger_info_container.querySelector('.card-blogger-contacter');
         blogger_info.contact_info.forEach(function (contact) {
             const icon = type2icon[contact.type] || "/img/link-icon.svg";
@@ -71,12 +92,15 @@ function init_card_blogger_info() {
             icon_container.alt = contact.type;
             link_container.appendChild(icon_container);
             blogger_contact_container.appendChild(link_container);
-            // if need to invert style, add theme switch listener, set inverting style
-            if (contact.type === 'github' || contact.type === 'telegram' || contact.type === 'bilibili' || contact.type === 'youtube' || contact.type === 'facebook' || contact.type === 'instagram' || contact.type === 'email' || contact.type === 'steam') {
+
+            // handle theme-based icon inversion
+            if (contact.type === 'github' || contact.type === 'telegram' || contact.type === 'bilibili' ||
+                contact.type === 'youtube' || contact.type === 'facebook' || contact.type === 'instagram' ||
+                contact.type === 'email' || contact.type === 'steam') {
                 if (GetTheme() === 'dark') {
                     link_container.style.filter = 'invert(100%)';
                 }
-                addThemeSwitchBroadcastListener(function(theme){
+                addThemeSwitchBroadcastListener(function (theme) {
                     if (theme === 'dark') {
                         link_container.style.filter = 'invert(100%)';
                     } else {
@@ -87,7 +111,7 @@ function init_card_blogger_info() {
                 if (GetTheme() === 'light') {
                     link_container.style.filter = 'invert(100%)';
                 }
-                addThemeSwitchBroadcastListener(function(theme){
+                addThemeSwitchBroadcastListener(function (theme) {
                     if (theme === 'dark') {
                         link_container.style.filter = 'none';
                     } else {
@@ -95,10 +119,12 @@ function init_card_blogger_info() {
                     }
                 })
             }
-            
         });
 
         // done, remove the info container
-        blogger_info_container_inner.remove()
+        const blogger_info_container_inner = blogger_info_container.querySelector('.blogger-info-container');
+        if (blogger_info_container_inner) {
+            blogger_info_container_inner.remove();
+        }
     });
 }
