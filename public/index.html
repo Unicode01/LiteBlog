@@ -6,7 +6,7 @@
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <link rel="stylesheet" type="text/css" href="/css/style.css">
     </link>
-    <link rel="stylesheet" type="text/css" href="/css/customizestyle.css">
+    <link rel="stylesheet" type="text/css" href="{{global:CustomStyle}}">
     </link>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -48,15 +48,19 @@
             <div id="function-bar"
                 class="function-bar display-flex align-items-center justify-content-center height-30px padding-10px">
 
-                <a href="#switch-theme" id="switch-theme-button" class="switch-theme-button button padding-10px width-30px height-30px user-select-none">
-                    <img src="/img/switchTheme.svg" class="switch-theme-icon img width-30px height-30px" alt="switch-theme">
+                <a href="#switch-theme" id="switch-theme-button"
+                    class="switch-theme-button button padding-10px width-30px height-30px user-select-none">
+                    <img src="/img/switchTheme.svg" class="switch-theme-icon img width-30px height-30px"
+                        alt="switch-theme">
                 </a>
 
-                <a href="#search" id="search-button" class="search-button button padding-10px width-30px height-30px user-select-none">
+                <a href="#search" id="search-button"
+                    class="search-button button padding-10px width-30px height-30px user-select-none">
                     <img src="/img/search.svg" class="search-icon img width-30px height-30px" alt="search">
                 </a>
 
-                <a href="/feed/rss.xml" id="rss-button" class="rss-button button padding-10px width-30px height-30px user-select-none">
+                <a href="/feed/rss.xml" id="rss-button"
+                    class="rss-button button padding-10px width-30px height-30px user-select-none">
                     <img src="/img/rss.webp" class="rss-icon img width-30px height-30px" alt="rss feed">
                 </a>
 
@@ -65,7 +69,8 @@
                     <img src="/img/history.webp" class="history-icon img width-30px height-30px" alt="hisotry">
                 </a>
 
-                <a href="#editmode" id="edit-button" class="edit-button button padding-10px width-30px height-30px user-select-none">
+                <a href="#editmode" id="edit-button"
+                    class="edit-button button padding-10px width-30px height-30px user-select-none">
                     <img src="/img/editmode.webp" class="edit-icon img width-30px height-30px" alt="editmode">
                 </a>
 
@@ -84,7 +89,7 @@
     </div>
 
     <script src="/js/app.js"></script>
-    <script src="/js/inject.js"></script>
+    <script src="{{global:CustomScript}}"></script>
     <script src="/js/editmode.js"></script>
     <script src="/js/tags.js"></script>
 </body>

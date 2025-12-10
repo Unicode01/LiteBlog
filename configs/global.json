@@ -6,6 +6,8 @@
     "RSSLinkHead": "https://example.com",
     "SiteMapLinkHead": "https://example.com",
     "TopBarTitle": "LiteBlog",
+    "CustomScript": "/js/inject.js",
+    "CustomStyle": "/css/customizestyle.css",
     "app_name": "LiteBlog",
     "blog_language_code": "en",
     "card_max_height": "300",

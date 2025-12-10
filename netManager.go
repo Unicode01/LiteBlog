@@ -4,6 +4,7 @@ import (
 	utils "LiteBlog/utils"
 	"LiteBlog/utils/firewall"
 	"LiteBlog/utils/plugins"
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -19,9 +20,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	radix "github.com/hashicorp/go-immutable-radix"
@@ -47,8 +50,502 @@ var (
 		genOn   time.Time
 	}) // key: generatedToken, value: struct{}
 
-	RequestHookRadixTree = radix.New() // hook map for request, when
+	RequestHookRadixTree = radix.New() // hook map for request (精确匹配)
+
+	// 参数化路由钩子列表，支持 :param 和 *wildcard
+	parameterizedHooks        = make([]*ParameterizedHook, 0)
+	parameterizedHooksIndex   = make(map[int][]*ParameterizedHook) // 长度索引：key=段数, value=该段数的钩子列表
+	parameterizedHooksLock    sync.RWMutex
+	parameterizedHooksVersion uint64 // 版本号，用于检测变化
+
+	// 路由监听列表（仅观察，不拦截）
+	routeListeners        = make([]*RouteListener, 0)
+	routeListenersMap     = make(map[string][]*RouteListener) // key: pattern, value: 监听器列表
+	routeListenersIndex   = make(map[int][]*RouteListener)    // 长度索引：key=段数, value=该段数的监听器列表
+	routeListenersLock    sync.RWMutex
+	routeListenersVersion uint64 // 使用原子操作的版本号，用于快照机制
+
+	// 路径匹配缓存（LRU缓存）
+	hookMatchCache     *utils.LRUCache // 缓存 path -> (*ParameterizedHook, map[string]string)
+	listenerMatchCache *utils.LRUCache // 缓存 path -> []*listenerMatch
 )
+
+// ParameterizedHook 参数化路由钩子
+type ParameterizedHook struct {
+	Pattern     string   // 原始模式，如 /api/users/:id
+	Callback    string   // 回调方法名
+	Segments    []string // 分段后的路径
+	ParamIdx    []int    // 参数位置索引（:param）
+	WildcardIdx int      // 通配符位置索引（*wildcard），-1 表示无通配符
+}
+
+// RouteListener 路由监听（仅观测，不修改响应）
+type RouteListener struct {
+	Pattern    string
+	Callback   string
+	Hook       *ParameterizedHook
+	Phase      listenPhase
+	Priority   int    // 优先级，数值越大优先级越高，默认 0
+	paramsJSON []byte // 缓存序列化后的参数，减少重复序列化
+}
+
+type listenerMatch struct {
+	listener   *RouteListener
+	params     map[string]string
+	paramsJSON []byte // 预序列化的参数，避免重复序列化
+}
+
+type listenPhase uint8
+
+const (
+	listenPhaseRequest listenPhase = 1 << iota
+	listenPhaseResponse
+)
+
+func (p listenPhase) String() string {
+	switch p {
+	case listenPhaseRequest:
+		return "request"
+	case listenPhaseResponse:
+		return "response"
+	case listenPhaseRequest | listenPhaseResponse:
+		return "both"
+	default:
+		return "unknown"
+	}
+}
+
+func parseListenPhase(v string) listenPhase {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "request":
+		return listenPhaseRequest
+	case "response":
+		return listenPhaseResponse
+	case "both", "":
+		return listenPhaseRequest | listenPhaseResponse
+	default:
+		return listenPhaseRequest | listenPhaseResponse
+	}
+}
+
+// splitPathSegments 统一的路径分段逻辑，避免重复分割带来的开销
+func splitPathSegments(path string) []string {
+	path = strings.TrimPrefix(path, "/")
+	return strings.Split(path, "/")
+}
+
+// parseRoutePattern 解析路由模式
+func parseRoutePattern(pattern string) *ParameterizedHook {
+	hook := &ParameterizedHook{
+		Pattern:     pattern,
+		Segments:    make([]string, 0),
+		ParamIdx:    make([]int, 0),
+		WildcardIdx: -1,
+	}
+
+	// 去掉开头的 /
+	pattern = strings.TrimPrefix(pattern, "/")
+
+	segments := strings.Split(pattern, "/")
+	for i, seg := range segments {
+		hook.Segments = append(hook.Segments, seg)
+		if strings.HasPrefix(seg, ":") {
+			hook.ParamIdx = append(hook.ParamIdx, i)
+		} else if strings.HasPrefix(seg, "*") {
+			hook.WildcardIdx = i
+			break // 通配符后面的都忽略
+		}
+	}
+
+	return hook
+}
+
+// matchRouteSegments 在已分段的路径上匹配，减少每次匹配时的字符串分割
+func (h *ParameterizedHook) matchRouteSegments(pathSegments []string) (bool, map[string]string) {
+	params := make(map[string]string)
+
+	// 如果有通配符，路径段数可以 >= 模式段数
+	// 否则必须相等
+	if h.WildcardIdx >= 0 {
+		if len(pathSegments) < h.WildcardIdx {
+			return false, nil
+		}
+	} else {
+		if len(pathSegments) != len(h.Segments) {
+			return false, nil
+		}
+	}
+
+	for i, seg := range h.Segments {
+		if i >= len(pathSegments) {
+			return false, nil
+		}
+
+		if strings.HasPrefix(seg, ":") {
+			// 参数段，提取参数值
+			paramName := seg[1:]
+			params[paramName] = pathSegments[i]
+		} else if strings.HasPrefix(seg, "*") {
+			// 通配符段，匹配剩余所有路径
+			paramName := seg[1:]
+			if paramName == "" {
+				paramName = "wildcard"
+			}
+			params[paramName] = strings.Join(pathSegments[i:], "/")
+			return true, params
+		} else {
+			// 精确匹配段
+			if seg != pathSegments[i] {
+				return false, nil
+			}
+		}
+	}
+
+	return true, params
+}
+
+// isParameterizedRoute 检查是否为参数化路由
+func isParameterizedRoute(pattern string) bool {
+	return strings.Contains(pattern, ":") || strings.Contains(pattern, "*")
+}
+
+// AddParameterizedHook 添加参数化路由钩子
+func AddParameterizedHook(pattern, callback string) {
+	parameterizedHooksLock.Lock()
+	defer parameterizedHooksLock.Unlock()
+
+	hook := parseRoutePattern(pattern)
+	hook.Callback = callback
+	parameterizedHooks = append(parameterizedHooks, hook)
+
+	// 更新长度索引
+	segmentCount := len(hook.Segments)
+	if hook.WildcardIdx >= 0 {
+		// 通配符路由，索引键为通配符位置（最小段数）
+		segmentCount = hook.WildcardIdx
+	}
+	parameterizedHooksIndex[segmentCount] = append(parameterizedHooksIndex[segmentCount], hook)
+
+	// 增加版本号并清空缓存
+	atomic.AddUint64(&parameterizedHooksVersion, 1)
+	if hookMatchCache != nil {
+		hookMatchCache.Clear()
+	}
+}
+
+// RemoveParameterizedHook 移除参数化路由钩子
+func RemoveParameterizedHook(pattern string) {
+	parameterizedHooksLock.Lock()
+	defer parameterizedHooksLock.Unlock()
+
+	for i, hook := range parameterizedHooks {
+		if hook.Pattern == pattern {
+			// 从主列表删除
+			parameterizedHooks = append(parameterizedHooks[:i], parameterizedHooks[i+1:]...)
+
+			// 从索引中删除
+			segmentCount := len(hook.Segments)
+			if hook.WildcardIdx >= 0 {
+				segmentCount = hook.WildcardIdx
+			}
+			if hooks, exists := parameterizedHooksIndex[segmentCount]; exists {
+				dst := hooks[:0]
+				for _, h := range hooks {
+					if h.Pattern != pattern {
+						dst = append(dst, h)
+					}
+				}
+				if len(dst) == 0 {
+					delete(parameterizedHooksIndex, segmentCount)
+				} else {
+					parameterizedHooksIndex[segmentCount] = dst
+				}
+			}
+
+			// 增加版本号并清空缓存
+			atomic.AddUint64(&parameterizedHooksVersion, 1)
+			if hookMatchCache != nil {
+				hookMatchCache.Clear()
+			}
+			return
+		}
+	}
+}
+
+// registerRouteListener 添加路由监听（仅观测，不拦截）
+func registerRouteListener(pattern, callback string, phase listenPhase) {
+	registerRouteListenerWithPriority(pattern, callback, phase, 0)
+}
+
+// registerRouteListenerWithPriority 添加带优先级的路由监听
+func registerRouteListenerWithPriority(pattern, callback string, phase listenPhase, priority int) {
+	routeListenersLock.Lock()
+	defer routeListenersLock.Unlock()
+
+	listener := &RouteListener{
+		Pattern:  pattern,
+		Callback: callback,
+		Hook:     parseRoutePattern(pattern),
+		Phase:    phase,
+		Priority: priority,
+	}
+
+	// 添加到切片
+	routeListeners = append(routeListeners, listener)
+
+	// 添加到 map 以加速查找和删除
+	routeListenersMap[pattern] = append(routeListenersMap[pattern], listener)
+
+	// 添加到长度索引
+	segmentCount := len(listener.Hook.Segments)
+	if listener.Hook.WildcardIdx >= 0 {
+		segmentCount = listener.Hook.WildcardIdx
+	}
+	routeListenersIndex[segmentCount] = append(routeListenersIndex[segmentCount], listener)
+
+	// 按优先级排序（优先级高的在前）
+	sort.Slice(routeListeners, func(i, j int) bool {
+		return routeListeners[i].Priority > routeListeners[j].Priority
+	})
+	listeners := routeListenersMap[pattern]
+	sort.Slice(listeners, func(i, j int) bool {
+		return listeners[i].Priority > listeners[j].Priority
+	})
+	// 索引中的监听器也需要排序
+	indexListeners := routeListenersIndex[segmentCount]
+	sort.Slice(indexListeners, func(i, j int) bool {
+		return indexListeners[i].Priority > indexListeners[j].Priority
+	})
+
+	// 增加版本号并清空缓存
+	atomic.AddUint64(&routeListenersVersion, 1)
+	if listenerMatchCache != nil {
+		listenerMatchCache.Clear()
+	}
+}
+
+// removeRouteListener 删除路由监听
+func removeRouteListener(pattern, callback string) {
+	routeListenersLock.Lock()
+	defer routeListenersLock.Unlock()
+
+	// 先找到要删除的监听器以获取段数（用于更新索引）
+	var removedSegmentCounts []int
+	for _, l := range routeListeners {
+		if l.Pattern == pattern && (callback == "" || l.Callback == callback) {
+			segmentCount := len(l.Hook.Segments)
+			if l.Hook.WildcardIdx >= 0 {
+				segmentCount = l.Hook.WildcardIdx
+			}
+			removedSegmentCounts = append(removedSegmentCounts, segmentCount)
+		}
+	}
+
+	// 从 map 中删除
+	if listeners, exists := routeListenersMap[pattern]; exists {
+		if callback == "" {
+			// 删除整个 pattern 的所有监听器
+			delete(routeListenersMap, pattern)
+		} else {
+			// 删除特定 callback 的监听器
+			dst := listeners[:0]
+			for _, l := range listeners {
+				if l.Callback != callback {
+					dst = append(dst, l)
+				}
+			}
+			if len(dst) == 0 {
+				delete(routeListenersMap, pattern)
+			} else {
+				routeListenersMap[pattern] = dst
+			}
+		}
+	}
+
+	// 从切片中删除
+	dst := routeListeners[:0]
+	for _, l := range routeListeners {
+		if l.Pattern == pattern && (callback == "" || l.Callback == callback) {
+			continue
+		}
+		dst = append(dst, l)
+	}
+	routeListeners = dst
+
+	// 从索引中删除
+	for _, segmentCount := range removedSegmentCounts {
+		if indexListeners, exists := routeListenersIndex[segmentCount]; exists {
+			dst := indexListeners[:0]
+			for _, l := range indexListeners {
+				if l.Pattern == pattern && (callback == "" || l.Callback == callback) {
+					continue
+				}
+				dst = append(dst, l)
+			}
+			if len(dst) == 0 {
+				delete(routeListenersIndex, segmentCount)
+			} else {
+				routeListenersIndex[segmentCount] = dst
+			}
+		}
+	}
+
+	// 增加版本号并清空缓存
+	atomic.AddUint64(&routeListenersVersion, 1)
+	if listenerMatchCache != nil {
+		listenerMatchCache.Clear()
+	}
+}
+
+// matchParameterizedHook 匹配参数化路由钩子（带缓存和索引优化）
+func matchParameterizedHook(path string) (*ParameterizedHook, map[string]string) {
+	// 1. 尝试从缓存获取
+	if hookMatchCache != nil {
+		if cached := hookMatchCache.Get(path); cached != nil {
+			result := cached.(hookMatchResult)
+			return result.hook, result.params
+		}
+	}
+
+	// 2. 快速路径：检查是否有钩子
+	if len(parameterizedHooks) == 0 {
+		return nil, nil
+	}
+
+	parameterizedHooksLock.RLock()
+	defer parameterizedHooksLock.RUnlock()
+
+	// 3. 仅做一次分段，避免在每个钩子上重复 Split 带来的开销
+	pathSegments := splitPathSegments(path)
+	segLen := len(pathSegments)
+
+	// 4. 使用长度索引加速匹配（先精确匹配，再通配符匹配）
+	// 精确匹配：段数相同的钩子
+	if hooks, exists := parameterizedHooksIndex[segLen]; exists {
+		for _, hook := range hooks {
+			if hook.WildcardIdx >= 0 {
+				continue // 跳过通配符钩子
+			}
+			if matched, params := hook.matchRouteSegments(pathSegments); matched {
+				// 缓存结果
+				if hookMatchCache != nil {
+					hookMatchCache.Set(path, hookMatchResult{hook, params})
+				}
+				return hook, params
+			}
+		}
+	}
+
+	// 通配符匹配：段数 <= 路径段数的钩子
+	for indexSegCount, hooks := range parameterizedHooksIndex {
+		if indexSegCount > segLen {
+			continue // 通配符位置超过路径段数，跳过
+		}
+		for _, hook := range hooks {
+			if hook.WildcardIdx < 0 {
+				continue // 已在精确匹配中处理
+			}
+			if matched, params := hook.matchRouteSegments(pathSegments); matched {
+				// 缓存结果
+				if hookMatchCache != nil {
+					hookMatchCache.Set(path, hookMatchResult{hook, params})
+				}
+				return hook, params
+			}
+		}
+	}
+
+	// 5. 未匹配，缓存空结果
+	if hookMatchCache != nil {
+		hookMatchCache.Set(path, hookMatchResult{nil, nil})
+	}
+	return nil, nil
+}
+
+// hookMatchResult 缓存结构
+type hookMatchResult struct {
+	hook   *ParameterizedHook
+	params map[string]string
+}
+
+// matchRouteListeners 匹配路由监听列表（使用缓存、索引和快照机制）
+func matchRouteListeners(path string) []*listenerMatch {
+	// 1. 尝试从缓存获取
+	if listenerMatchCache != nil {
+		if cached := listenerMatchCache.Get(path); cached != nil {
+			return cached.([]*listenerMatch)
+		}
+	}
+
+	// 2. 快速路径：检查是否有监听器
+	if len(routeListeners) == 0 {
+		return nil
+	}
+
+	// 3. 快照机制：快速复制索引，然后释放锁
+	routeListenersLock.RLock()
+	indexCopy := make(map[int][]*RouteListener)
+	for k, v := range routeListenersIndex {
+		indexCopy[k] = v
+	}
+	routeListenersLock.RUnlock()
+
+	// 4. 在锁外进行匹配操作
+	pathSegments := splitPathSegments(path)
+	segLen := len(pathSegments)
+	matches := make([]*listenerMatch, 0)
+
+	// 5. 使用长度索引优化匹配（精确匹配 + 通配符匹配）
+	// 精确匹配
+	if listeners, exists := indexCopy[segLen]; exists {
+		for _, listener := range listeners {
+			if listener.Hook.WildcardIdx >= 0 {
+				continue // 跳过通配符监听器
+			}
+			if matched, params := listener.Hook.matchRouteSegments(pathSegments); matched {
+				var paramsJSON []byte
+				if len(params) > 0 {
+					paramsJSON, _ = json.Marshal(params)
+				}
+				matches = append(matches, &listenerMatch{
+					listener:   listener,
+					params:     params,
+					paramsJSON: paramsJSON,
+				})
+			}
+		}
+	}
+
+	// 通配符匹配
+	for indexSegCount, listeners := range indexCopy {
+		if indexSegCount > segLen {
+			continue
+		}
+		for _, listener := range listeners {
+			if listener.Hook.WildcardIdx < 0 {
+				continue // 已在精确匹配中处理
+			}
+			if matched, params := listener.Hook.matchRouteSegments(pathSegments); matched {
+				var paramsJSON []byte
+				if len(params) > 0 {
+					paramsJSON, _ = json.Marshal(params)
+				}
+				matches = append(matches, &listenerMatch{
+					listener:   listener,
+					params:     params,
+					paramsJSON: paramsJSON,
+				})
+			}
+		}
+	}
+
+	// 6. 缓存结果
+	if listenerMatchCache != nil {
+		listenerMatchCache.Set(path, matches)
+	}
+
+	return matches
+}
 
 // Init the network manager
 // init net proxy
@@ -64,6 +561,11 @@ func InitNetManager(config *ServerConfig) error {
 	}
 	// build deliver manager
 	deliverManager = utils.NewDeliverManager(Config.DeliverCfg.Buffer, Config.DeliverCfg.Threads, context.Background())
+
+	// 初始化路径匹配缓存（LRU，容量1000，热点路径加速）
+	hookMatchCache = utils.NewLRUCache(1000)
+	listenerMatchCache = utils.NewLRUCache(1000)
+
 	// build notification manager
 	if Config.NotifyCfg.Enabled {
 		switch Config.NotifyCfg.Type {
@@ -163,6 +665,15 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := initRequestContext(w, r)
 	defer ctx.logRequest()
 
+	// 预先匹配并准备路由监听（仅观测，不拦截）
+	setupRouteListeners(ctx)
+	if len(ctx.listeners) > 0 {
+		// 响应阶段的监听必须在请求结束后执行
+		defer dispatchRouteListeners(ctx, listenPhaseResponse)
+		// 请求阶段立即触发
+		dispatchRouteListeners(ctx, listenPhaseRequest)
+	}
+
 	// 1. 插件钩子检查（最高优先级）
 	if Config.PluginCfg.Enabled && handlePluginHook(ctx) {
 		return
@@ -198,6 +709,9 @@ type requestContext struct {
 	cached         bool
 	proxyWriter    *utils.ProxyResponseWriter
 	originalWriter http.ResponseWriter
+	listeners      []*listenerMatch
+	requestBody    []byte
+	listenWriter   *listenResponseWriter
 }
 
 // initRequestContext 初始化请求上下文
@@ -233,6 +747,219 @@ func initRequestContext(w http.ResponseWriter, r *http.Request) *requestContext 
 	return ctx
 }
 
+// setupRouteListeners 根据路由匹配监听器，准备请求/响应捕获
+func setupRouteListeners(ctx *requestContext) {
+	if !Config.PluginCfg.Enabled {
+		return
+	}
+
+	matches := matchRouteListeners(ctx.r.URL.Path)
+	if len(matches) == 0 {
+		return
+	}
+
+	// 检查是否需要捕获请求体
+	captureRequestBody := Config.PluginCfg.RouteListenerConfig.CaptureRequestBody
+	maxRequestBodySize := Config.PluginCfg.RouteListenerConfig.MaxRequestBodySize
+	if maxRequestBodySize == 0 {
+		maxRequestBodySize = 10 * 1024 * 1024 // 默认 10MB
+	}
+
+	// 按需捕获请求体
+	if captureRequestBody {
+		// 使用 LimitReader 限制读取大小，防止内存溢出
+		limitedReader := io.LimitReader(ctx.r.Body, maxRequestBodySize+1) // +1 用于检测是否超限
+		bodyBytes, err := io.ReadAll(limitedReader)
+		ctx.r.Body.Close()
+
+		if err == nil && int64(len(bodyBytes)) <= maxRequestBodySize {
+			// 只有在没有超过限制时才缓存
+			ctx.r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			ctx.requestBody = bodyBytes
+		} else {
+			// 超过限制或读取错误，不缓存请求体
+			ctx.r.Body = io.NopCloser(bytes.NewReader(nil))
+			if err != nil {
+				utils.Log(2, fmt.Sprintf("Failed to read request body: %v", err))
+			} else {
+				utils.Log(2, fmt.Sprintf("Request body too large (>%d bytes), skipped capture", maxRequestBodySize))
+			}
+		}
+	} else {
+		// 不捕获请求体时，仍需关闭原 Body
+		ctx.r.Body = io.NopCloser(bytes.NewReader(nil))
+	}
+
+	// 检查是否需要捕获响应体
+	captureResponseBody := Config.PluginCfg.RouteListenerConfig.CaptureResponseBody
+	maxResponseBodySize := Config.PluginCfg.RouteListenerConfig.MaxResponseBodySize
+	if maxResponseBodySize == 0 {
+		maxResponseBodySize = 10 * 1024 * 1024 // 默认 10MB
+	}
+
+	// 包装响应写入器以捕获响应信息
+	lrw := newListenResponseWriter(ctx.w, captureResponseBody, maxResponseBodySize)
+	ctx.listenWriter = lrw
+	ctx.w = lrw
+
+	ctx.listeners = matches
+}
+
+// listenResponseWriter 用于捕获响应头/体/状态码
+type listenResponseWriter struct {
+	http.ResponseWriter
+	statusCode     int
+	body           bytes.Buffer
+	captureBody    bool  // 是否捕获响应体
+	maxBodySize    int64 // 最大响应体大小
+	bodySize       int64 // 已写入的响应体大小
+	bodySizeExceed bool  // 响应体是否超过限制
+}
+
+func newListenResponseWriter(w http.ResponseWriter, captureBody bool, maxBodySize int64) *listenResponseWriter {
+	return &listenResponseWriter{
+		ResponseWriter: w,
+		statusCode:     http.StatusOK,
+		captureBody:    captureBody,
+		maxBodySize:    maxBodySize,
+	}
+}
+
+func (lrw *listenResponseWriter) Header() http.Header {
+	return lrw.ResponseWriter.Header()
+}
+
+func (lrw *listenResponseWriter) WriteHeader(statusCode int) {
+	lrw.statusCode = statusCode
+	lrw.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (lrw *listenResponseWriter) Write(b []byte) (int, error) {
+	if lrw.statusCode == 0 {
+		lrw.statusCode = http.StatusOK
+	}
+
+	// 只在需要捕获且未超限时写入缓冲区
+	if lrw.captureBody && !lrw.bodySizeExceed {
+		newSize := lrw.bodySize + int64(len(b))
+		if newSize <= lrw.maxBodySize {
+			lrw.body.Write(b)
+			lrw.bodySize = newSize
+		} else {
+			// 超过限制，记录标记并清空已缓存的内容以释放内存
+			lrw.bodySizeExceed = true
+			lrw.body.Reset()
+			utils.Log(2, fmt.Sprintf("Response body exceeded limit (%d bytes), stopped capturing", lrw.maxBodySize))
+		}
+	}
+
+	return lrw.ResponseWriter.Write(b)
+}
+
+func (lrw *listenResponseWriter) StatusCode() int {
+	if lrw.statusCode == 0 {
+		return http.StatusOK
+	}
+	return lrw.statusCode
+}
+
+func (lrw *listenResponseWriter) BodyBytes() []byte {
+	if lrw.bodySizeExceed {
+		return nil // 超过限制时返回 nil
+	}
+	return lrw.body.Bytes()
+}
+
+func (lrw *listenResponseWriter) HeaderClone() map[string][]string {
+	dst := make(map[string][]string)
+	for k, v := range lrw.Header() {
+		cp := make([]string, len(v))
+		copy(cp, v)
+		dst[k] = cp
+	}
+	return dst
+}
+
+// Hijack 透传
+func (lrw *listenResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if h, ok := lrw.ResponseWriter.(http.Hijacker); ok {
+		return h.Hijack()
+	}
+	return nil, nil, fmt.Errorf("hijacker not supported")
+}
+
+// Flush 透传
+func (lrw *listenResponseWriter) Flush() {
+	if f, ok := lrw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+// Push 透传
+func (lrw *listenResponseWriter) Push(target string, opts *http.PushOptions) error {
+	if p, ok := lrw.ResponseWriter.(http.Pusher); ok {
+		return p.Push(target, opts)
+	}
+	return http.ErrNotSupported
+}
+
+// dispatchRouteListeners 触发监听回调（优化：减少重复序列化）
+func dispatchRouteListeners(ctx *requestContext, phase listenPhase) {
+	if len(ctx.listeners) == 0 {
+		return
+	}
+
+	// 预序列化通用数据，避免在循环中重复序列化
+	headersBytes, _ := json.Marshal(ctx.r.Header)
+	phaseStr := phase.String()
+
+	var respHeadersBytes []byte
+	var respBody []byte
+	statusCode := 0
+
+	if phase&listenPhaseResponse != 0 && ctx.listenWriter != nil {
+		statusCode = ctx.listenWriter.StatusCode()
+		respHeadersBytes, _ = json.Marshal(ctx.listenWriter.HeaderClone())
+		respBody = ctx.listenWriter.BodyBytes()
+	}
+
+	for _, match := range ctx.listeners {
+		if match.listener.Phase&phase == 0 {
+			continue
+		}
+
+		args := []*plugins.Arg{
+			{Name: "path", Type: "string", Data: ctx.r.URL.Path},
+			{Name: "method", Type: "string", Data: ctx.r.Method},
+			{Name: "headers", Type: "json", Data: string(headersBytes)},
+			{Name: "body", Type: "[]byte", Data: ctx.requestBody},
+			{Name: "traceID", Type: "string", Data: ctx.traceID},
+			{Name: "phase", Type: "string", Data: phaseStr},
+		}
+
+		// 使用预序列化的参数，避免重复序列化
+		if len(match.paramsJSON) > 0 {
+			args = append(args, &plugins.Arg{
+				Name: "params",
+				Type: "json",
+				Data: string(match.paramsJSON),
+			})
+		}
+
+		if phase&listenPhaseResponse != 0 {
+			args = append(args,
+				&plugins.Arg{Name: "statusCode", Type: "int", Data: statusCode},
+				&plugins.Arg{Name: "responseHeaders", Type: "json", Data: string(respHeadersBytes)},
+				&plugins.Arg{Name: "responseBody", Type: "[]byte", Data: respBody},
+			)
+		}
+
+		if _, err := pluginManager.CallPluginMethod(match.listener.Callback, args); err != nil {
+			utils.Log(3, fmt.Sprintf("Failed to call listener %s for %s: %v", match.listener.Callback, ctx.r.URL.Path, err))
+		}
+	}
+}
+
 // logRequest 记录请求日志
 func (ctx *requestContext) logRequest() {
 	responseTime := time.Since(ctx.startTime)
@@ -248,12 +975,23 @@ func (ctx *requestContext) logRequest() {
 
 // handlePluginHook 处理插件钩子
 func handlePluginHook(ctx *requestContext) bool {
+	var callbackName string
+	var routeParams map[string]string
+
+	// 1. 先尝试精确匹配
 	o, ok := RequestHookRadixTree.Get([]byte(ctx.r.URL.Path))
-	if !ok {
-		return false
+	if ok {
+		callbackName = string(o.([]byte))
+	} else {
+		// 2. 再尝试参数化路由匹配
+		hook, params := matchParameterizedHook(ctx.r.URL.Path)
+		if hook == nil {
+			return false
+		}
+		callbackName = hook.Callback
+		routeParams = params
 	}
 
-	f := string(o.([]byte))
 	headersBytes, _ := json.Marshal(ctx.r.Header)
 	args := []*plugins.Arg{
 		{Name: "path", Type: "string", Data: ctx.r.URL.Path},
@@ -263,10 +1001,23 @@ func handlePluginHook(ctx *requestContext) bool {
 		{Name: "traceID", Type: "string", Data: ctx.traceID},
 	}
 
-	result, err := pluginManager.CallPluginMethod(f, args)
+	// 添加路由参数
+	if len(routeParams) > 0 {
+		paramsBytes, _ := json.Marshal(routeParams)
+		args = append(args, &plugins.Arg{
+			Name: "params",
+			Type: "json",
+			Data: string(paramsBytes),
+		})
+	}
+
+	result, err := pluginManager.CallPluginMethod(callbackName, args)
 	if err != nil {
-		utils.Log(3, fmt.Sprintf("Failed to call plugin method %s, %s", f, err))
-		RequestHookRadixTree, _, _ = RequestHookRadixTree.Delete([]byte(ctx.r.URL.Path))
+		utils.Log(3, fmt.Sprintf("Failed to call plugin method %s, %s", callbackName, err))
+		// 仅对精确匹配的路由进行删除
+		if routeParams == nil {
+			RequestHookRadixTree, _, _ = RequestHookRadixTree.Delete([]byte(ctx.r.URL.Path))
+		}
 		return false
 	}
 
@@ -276,16 +1027,16 @@ func handlePluginHook(ctx *requestContext) bool {
 	for _, arg := range result {
 		switch arg.Name {
 		case "statusCode":
-			statusCode = getInt_safe(arg.Data)
+			statusCode = utils.GetIntSafe(arg.Data)
 			if statusCode == 0 {
-				utils.Log(3, fmt.Sprintf("Failed to parse plugin status code, %s", getString_safe(arg.Data)))
+				utils.Log(3, fmt.Sprintf("Failed to parse plugin status code, %s", utils.GetStringSafe(arg.Data)))
 				statusCode = 500
 			}
 		case "body":
-			body = getBytes_safe(arg.Data)
+			body = utils.GetBytesSafe(arg.Data)
 		case "header":
 			headers := make(map[string]string)
-			if err := json.Unmarshal(getBytes_safe(arg.Data), &headers); err == nil {
+			if err := json.Unmarshal(utils.GetBytesSafe(arg.Data), &headers); err == nil {
 				for k, v := range headers {
 					ctx.w.Header().Add(k, v)
 				}
@@ -1362,14 +2113,28 @@ func backendHandler_get_custom_settings(w http.ResponseWriter, r *http.Request) 
 	Output["global_settings"] = NewMap
 	// set custom settings
 	// set custom script field
-	script, err := os.ReadFile("public/js/inject.js")
+	GlobalMapLocker.RLock()
+	scriptPathByte, ok := GlobalMap["CustomScript"]
+	GlobalMapLocker.RUnlock()
+	if !ok || scriptPathByte == nil {
+		scriptPathByte = []byte("public/js/inject.js")
+	}
+	scriptPath := string(scriptPathByte)
+	script, err := os.ReadFile(scriptPath)
 	if err == nil {
 		Output["custom_script"] = string(script)
 	} else {
 		Output["custom_script"] = ""
 	}
 	// set custom style field
-	style, err := os.ReadFile("public/css/customizestyle.css")
+	GlobalMapLocker.RLock()
+	stylePathByte, ok := GlobalMap["CustomStyle"]
+	GlobalMapLocker.RUnlock()
+	if !ok || stylePathByte == nil {
+		stylePathByte = []byte("public/css/customizestyle.css")
+	}
+	stylePath := string(stylePathByte)
+	style, err := os.ReadFile(stylePath)
 	if err == nil {
 		Output["custom_style"] = string(style)
 	} else {
@@ -1425,13 +2190,27 @@ func backendHandler_edit_custom_settings(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	// update custom script
-	err = os.WriteFile("public/js/inject.js", []byte(req.CustomSettings.CustomScript), 0644)
+	GlobalMapLocker.RLock()
+	scriptPathByte, ok := GlobalMap["CustomScript"]
+	GlobalMapLocker.RUnlock()
+	if !ok || scriptPathByte == nil {
+		scriptPathByte = []byte("public/js/inject.js")
+	}
+	scriptPath := string(scriptPathByte)
+	err = os.WriteFile(scriptPath, []byte(req.CustomSettings.CustomScript), 0644)
 	if err != nil {
 		serveError(w, http.StatusInternalServerError, "Failed to write custom script")
 		return
 	}
 	// update custom style
-	err = os.WriteFile("public/css/customizestyle.css", []byte(req.CustomSettings.CustomStyle), 0644)
+	GlobalMapLocker.RLock()
+	stylePathByte, ok := GlobalMap["CustomStyle"]
+	GlobalMapLocker.RUnlock()
+	if !ok || stylePathByte == nil {
+		stylePathByte = []byte("public/css/customizestyle.css")
+	}
+	stylePath := string(stylePathByte)
+	err = os.WriteFile(stylePath, []byte(req.CustomSettings.CustomStyle), 0644)
 	if err != nil {
 		serveError(w, http.StatusInternalServerError, "Failed to write custom style")
 		return
@@ -1442,8 +2221,8 @@ func backendHandler_edit_custom_settings(w http.ResponseWriter, r *http.Request)
 	// clear the cache
 	deliverManager.AddTask(func() {
 		if Config.CacheCfg.UseDisk {
-			cacheManager.DelCacheItem("/css/customizestyle.css")
-			cacheManager.DelCacheItem("/js/inject.js")
+			cacheManager.DelCacheItem(stylePath)
+			cacheManager.DelCacheItem(scriptPath)
 		}
 	})
 }

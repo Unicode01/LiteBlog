@@ -699,14 +699,12 @@ async function copyText(text) {
     }
 }
 
-let abortController = null;
-function InsertDarkCss(callback) {
-    if (abortController) {
-        abortController.abort();
+let currentThemeXHR = null;
+function InsertDarkCss(callback, progressCallback) {
+    // 取消之前的请求
+    if (currentThemeXHR) {
+        currentThemeXHR.abort();
     }
-
-    abortController = new AbortController();
-    const signal = abortController.signal;
 
     function loadStyleString(css) {
         var style = document.createElement("style");
@@ -721,17 +719,39 @@ function InsertDarkCss(callback) {
         head.appendChild(style);
     }
 
-    fetch('/css/dark.css', { signal })
-        .then(response => response.text())
-        .then(css => {
+    const xhr = new XMLHttpRequest();
+    currentThemeXHR = xhr;
+
+    xhr.onprogress = function (e) {
+        if (e.lengthComputable && progressCallback) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            progressCallback(percent);
+        }
+    };
+
+    xhr.onload = function () {
+        if (xhr.status >= 200 && xhr.status < 300) {
+            const css = xhr.responseText;
             loadStyleString(css);
-            // save to local storage
             localStorage.setItem("dark-theme-css", css);
-            callback();
-        })
-        .catch(error => {
-            console.log(error);
-        });
+            callback(true);
+        } else {
+            callback(false, 'Load failed: ' + xhr.status);
+        }
+        currentThemeXHR = null;
+    };
+
+    xhr.onerror = function () {
+        callback(false, 'Network error');
+        currentThemeXHR = null;
+    };
+
+    xhr.onabort = function () {
+        currentThemeXHR = null;
+    };
+
+    xhr.open('GET', '/css/dark.css', true);
+    xhr.send();
 }
 
 function RemoveDarkCss() {
@@ -741,12 +761,12 @@ function RemoveDarkCss() {
     });
 }
 
-function SetTheme(Theme) {
+function SetTheme(Theme, progressNotify) {
     localStorage.setItem('theme', Theme);
     if (Theme == "dark") {
         // set dark theme
         // InsertDark Css
-        InsertDarkCss(function () {
+        InsertDarkCss(function (success, errorMsg) {
             console.log("dark theme loaded");
             if (IsDarkCSSPreloaded()) {
                 // remove preloaded style
@@ -759,6 +779,20 @@ function SetTheme(Theme) {
             switchThemeListeners.forEach(function (listener) {
                 listener(Theme);
             });
+            // 更新进度通知
+            if (progressNotify) {
+                if (success) {
+                    progressNotify.complete("Dark theme enabled", 2000, "success");
+                } else {
+                    progressNotify.complete("Failed to load theme: " + errorMsg, 3000, "error");
+                }
+            }
+        }, function (percent) {
+            // 进度回调
+            if (progressNotify) {
+                progressNotify.setProgress(percent);
+                progressNotify.setMessage("Loading Dark Theme: " + percent + "%");
+            }
         });
 
     } else {
@@ -795,11 +829,9 @@ function themeSwitchClick(e) {
     const current_theme = GetTheme();
     console.log("current theme:" + current_theme);
     if (current_theme == "light") {
-        window.Notify.add("Loading Dark Theme...", {
-            type: "info",
-            timeout: 2000,
-        });
-        SetTheme("dark");
+        // 创建进度通知
+        const themeLoader = window.Notify.progress("Loading Dark Theme...", { type: "info" });
+        SetTheme("dark", themeLoader);
     } else {
         console.log("set light theme");
         SetTheme("light");
@@ -1156,6 +1188,154 @@ class Notify {
                 this.remove(notify.id);
             }
         });
+    }
+
+    /**
+     * 创建可控的进度通知
+     * @param {string} message - 初始消息
+     * @param {object} options - 配置选项
+     * @returns {object} 控制器对象，包含 setProgress, setMessage, complete, close 方法
+     * 
+     * @example
+     * const uploader = window.Notify.progress("Uploading...", { type: "info" });
+     * uploader.setProgress(50);  // 设置进度为 50%
+     * uploader.setMessage("Uploading: 50%");  // 更新消息
+     * uploader.complete("Upload complete!", 3000);  // 完成，3秒后消失
+     * uploader.close();  // 手动关闭
+     */
+    progress(message, options = {}) {
+        const self = this;
+        const progressOptions = Object.assign({}, {
+            type: 'info',
+            timeout: 0,  // 默认不自动关闭
+            keepAlive: true,
+            onClick: null,  // 进度条默认点击不关闭
+        }, options);
+
+        // 创建通知
+        const id = this.add(message, progressOptions);
+        const node = this.notiContainer.querySelector('[notify-id="' + id + '"]');
+
+        // 设置为手动控制进度条模式
+        if (node) {
+            node.style.setProperty("--notify-duration", "0ms");
+            node.style.setProperty("--progress-scale", "0");
+            node.classList.add("notify-progress-manual");
+        }
+
+        // 返回控制器
+        return {
+            id: id,
+            node: node,
+
+            /**
+             * 设置进度 (0-100)
+             * @param {number} percent - 进度百分比
+             */
+            setProgress: function (percent) {
+                if (!node || !self.notifyList[id]) return;
+                const scale = Math.max(0, Math.min(100, percent)) / 100;
+                // 从右向左填充进度条
+                node.style.setProperty("--progress-transform-origin", "left");
+                node.style.transition = "none";
+                node.offsetHeight; // force reflow
+                node.style.setProperty("--progress-scale", scale.toString());
+            },
+
+            /**
+             * 更新消息文本
+             * @param {string} newMessage - 新消息
+             */
+            setMessage: function (newMessage) {
+                if (!node || !self.notifyList[id]) return;
+                const msgDom = node.querySelector(".notify-message");
+                if (msgDom) {
+                    msgDom.textContent = newMessage;
+                }
+            },
+
+            /**
+             * 更新类型和图标
+             * @param {string} type - 类型: success, warning, error, info
+             */
+            setType: function (type) {
+                if (!node || !self.notifyList[id]) return;
+                // 移除旧类型
+                node.classList.remove("success", "warning", "error", "info");
+                node.classList.add(type);
+                // 更新图标
+                const iconMap = {
+                    success: "/img/notify-success.svg",
+                    warning: "/img/notify-warning.svg",
+                    error: "/img/notify-error.svg",
+                    info: "/img/notify-info.svg"
+                };
+                const iconDom = node.querySelector(".notify-icon img");
+                if (iconDom && iconMap[type]) {
+                    iconDom.src = iconMap[type];
+                }
+            },
+
+            /**
+             * 完成操作，更新消息并开始 timeout 倒计时
+             * @param {string} completeMessage - 完成消息
+             * @param {number} timeout - 超时时间（毫秒），默认 3000
+             * @param {string} type - 完成后的类型，默认 "success"
+             * @param {string} shrinkMode - 收缩模式: "left", "center", "right"，默认使用全局配置
+             */
+            complete: function (completeMessage, timeout = 3000, type = "success", shrinkMode = null) {
+                if (!node || !self.notifyList[id]) return;
+
+                // 更新消息
+                this.setMessage(completeMessage);
+                // 更新类型
+                this.setType(type);
+
+                // 重新激活点击关闭事件
+                if (self.notifyList[id]) {
+                    self.notifyList[id].options.onClick = function (notify, event) {
+                        self.remove(notify.id);
+                    };
+                }
+
+                // 获取收缩模式（默认使用全局配置）
+                const mode = shrinkMode || self.Settings.progressMode || "center";
+
+                // 重新开始进度条动画（从满到空）
+                if (timeout > 0) {
+                    // 先禁用动画，设置初始状态
+                    node.style.setProperty("--notify-duration", "0ms");
+                    node.style.setProperty("--progress-transform-origin", mode);
+                    node.style.setProperty("--progress-scale", "1");
+                    node.offsetHeight; // force reflow
+
+                    // 启用动画，开始收缩
+                    node.style.setProperty("--notify-duration", timeout + "ms");
+                    node.offsetHeight; // force reflow
+                    node.style.setProperty("--progress-scale", "0");
+
+                    // 设置 timeout 后移除
+                    setTimeout(() => {
+                        self.remove(id);
+                    }, timeout);
+                }
+            },
+
+            /**
+             * 手动关闭通知
+             */
+            close: function () {
+                self.remove(id);
+            },
+
+            /**
+             * 检查通知是否仍然存在
+             * @returns {boolean}
+             */
+            isActive: function () {
+                return self.notifyList[id] && self.notifyList[id].status === "showing";
+            }
+        };
     }
 
     remove(id) {

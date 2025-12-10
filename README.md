@@ -122,8 +122,34 @@ e.g.
 }
 ```
 #### plugins_config
-This is the plugins configuration.
-- `enabled`: This is a boolean value to enable or disable the plugins.
+Plugin system configuration for gRPC and JavaScript plugins.
+- `enabled`: Toggle the whole plugin system.
+- `grpc_config`: Enable external plugins via gRPC and set listener address, timeout, and access key.
+- `js_config`: Enable built-in JavaScript plugins and set plugin directory and initialization delay.
+- `route_listener_config`: Control request/response capture size and whether bodies are recorded for plugin listeners.
+Example:
+``` json
+"plugins_config": {
+    "enabled": true,
+    "grpc_config": {
+        "enabled": true,
+        "listener_address": "127.0.0.1:1080",
+        "command_timeout": 30,
+        "access_key": "your_access_key"
+    },
+    "js_config": {
+        "enabled": true,
+        "plugin_dir": "plugins",
+        "init_delay": 2
+    },
+    "route_listener_config": {
+        "max_request_body_size": 10485760,
+        "max_response_body_size": 10485760,
+        "capture_request_body": true,
+        "capture_response_body": true
+    }
+}
+```
 #### sniffer_config
 This is the sniffer configuration. It will sniff the request and response.
 - `enabled`: This is a boolean value to enable or disable the sniffer.
@@ -131,12 +157,25 @@ This is the sniffer configuration. It will sniff the request and response.
 #### render_config
 This is the render configuration. It configures the render engine.
 - `render`: A map to point out which need to be rendered.
-- `min_render_interval`: The minimum seconds between render opration.
-- `max_render_interval`: The maximum seconds between render opration.
+- `min_render_interval`: The minimum seconds between render operation.
+- `max_render_interval`: The maximum seconds between render operation.
+- `render.rss_feed`: Whether to render RSS feed.
+- `render.site_map`: Whether to render sitemap.
+Example:
+``` json
+"render_config": {
+    "render": {
+        "rss_feed": true,
+        "site_map": true
+    },
+    "min_render_interval": 300,
+    "max_render_interval": 30000
+}
+```
 #### configs/global.json
-This configs are used to customize the front-end.
+This files are used to customize the front-end.
 #### configs/articles/*.json
-This files are the articles data. Include the article title, content, comments, etc.
+These files are the articles data. Include the article title, content, comments, etc.
 #### configs/cards.json
 This file contains the cards data. It will impact the home page layout, rss feed layout, etc.
 #### configs/firewall.json

@@ -8,7 +8,7 @@
             "key_file": "private.key"
         },
         "url_origin": "http://localhost",
-        "//":"extra_headers is used to add extra headers to the response, like X-Powered-By",
+        "//": "extra_headers is used to add extra headers to the response, like X-Powered-By",
         "extra_headers": {
             "X-Powered-By": "LiteBlog"
         }
@@ -79,7 +79,10 @@
             "username": "your_username",
             "password": "your_password",
             "from_addr": "your_email",
-            "to_addrs": ["receiver1_email", "receiver2_email"]
+            "to_addrs": [
+                "receiver1_email",
+                "receiver2_email"
+            ]
         },
         "telegrambot_config": {
             "token": "yourbot_token",
@@ -87,9 +90,28 @@
         }
     },
     "plugins_config": {
-        "enabled": true
+        "//": "Plugin system configuration. grpc_config for external plugins via gRPC, js_config for JavaScript plugins.",
+        "enabled": true,
+        "grpc_config": {
+            "enabled": true,
+            "listener_address": "127.0.0.1:1080",
+            "command_timeout": 30,
+            "access_key": "your_access_key"
+        },
+        "js_config": {
+            "enabled": true,
+            "plugin_dir": "plugins",
+            "init_delay": 2
+        },
+        "route_listener_config": {
+            "//": "Route listener configuration. Controls request/response body capture for plugin listeners.",
+            "max_request_body_size": 10485760,
+            "max_response_body_size": 10485760,
+            "capture_request_body": true,
+            "capture_response_body": true
+        }
     },
-    "sniffer_config":{
+    "sniffer_config": {
         "enabled": true,
         "public_provider": "/sniffer",
         "//": "which url to provide info, default is /sniffer, means you can use /api/v1/sniffer?path=/index.html to show the index page sniffer info"
