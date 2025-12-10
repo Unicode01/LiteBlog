@@ -17,6 +17,7 @@ var (
 	gPRC_Plugin_Interface_Version = "0.0.1"
 
 	ErrPermissionDenied  = status.Error(codes.PermissionDenied, "permission denied")
+	ErrInvalidAccessKey  = status.Error(codes.Unauthenticated, "invalid access key")
 	ErrIdExists          = status.Error(codes.AlreadyExists, "id already exists")
 	ErrMethodNotFound    = status.Error(codes.NotFound, "method not found")
 	ErrBidStreamNotFound = status.Error(codes.NotFound, "bidstream not found")
@@ -24,6 +25,7 @@ var (
 	ErrMissingMetadata   = status.Error(codes.InvalidArgument, "missing metadata")
 	ErrIdNotFound        = status.Error(codes.NotFound, "id not found")
 	ErrMethodRepeated    = status.Error(codes.AlreadyExists, "method repeated")
+	ErrMissingAccessKey  = status.Error(codes.Unauthenticated, "missing access key")
 )
 
 type GRPCPluginLoader struct {
@@ -33,8 +35,8 @@ type GRPCPluginLoader struct {
 	status                   int      // 0: not started, 1: started, 2: stopped
 	ctx                      context.Context
 	cancle                   context.CancelFunc
-	LoadedIds                []string
-	idChangeLocker           sync.Mutex
+	loadedIds                sync.Map                                              // map[string]bool // 使用 sync.Map 替代切片，保证并发安全
+	idChangeLocker           sync.Mutex                                            // 保留用于初始化时的顺序控制
 	id2bidStream             sync.Map                                              // map[string]grpc.BidiStreamingServer[Command, Command]
 	id2methods               sync.Map                                              // map[string][]string // key is plugin id, value is a list of method names
 	commandQueueChannel      sync.Map                                              // map[string]chan []*Arg // command queue for each bidstream, key is command id
@@ -42,24 +44,47 @@ type GRPCPluginLoader struct {
 	methodHandler            func(string, []*Arg) ([]*Arg, error)                  // server method handler
 	unregisterMethodsHandler func([]string)                                        // unregister methods handler, used to call unregister methods when plugin is unloaded
 	pluginMethodhandler      func(map[string]func(string, []*Arg) ([]*Arg, error)) // plugin method handler
+	commandTimeout           time.Duration                                         // 命令超时时间
+	accessKey                string                                                // 访问密钥，为空则不验证
 }
 
 // gRPC function
 func (gpl *GRPCPluginLoader) Initialize(ctx context.Context, e *Empty) (*InitializeResponse, error) {
+	// 验证 access key（如果配置了）
+	if gpl.accessKey != "" {
+		if err := gpl.verifyAccessKey(ctx); err != nil {
+			return nil, err
+		}
+	}
+
 	gpl.idChangeLocker.Lock()
 	defer gpl.idChangeLocker.Unlock()
 	id := generateVerifyCode(8)                // generate plugin id
-	gpl.LoadedIds = append(gpl.LoadedIds, id)  // add plugin id to loaded ids
+	gpl.loadedIds.Store(id, true)              // add plugin id to loaded ids (并发安全)
 	gpl.Id2QueueChannel.Store(id, &sync.Map{}) // add command queue channel to Id2QueueChannel
 	resp := &InitializeResponse{Id: id, Version: gPRC_Plugin_Interface_Version}
 
 	return resp, nil
 }
 
+// verifyAccessKey 验证访问密钥
+func (gpl *GRPCPluginLoader) verifyAccessKey(ctx context.Context) error {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return ErrMissingAccessKey
+	}
+	keys := md.Get("access-key")
+	if len(keys) == 0 {
+		return ErrMissingAccessKey
+	}
+	if keys[0] != gpl.accessKey {
+		return ErrInvalidAccessKey
+	}
+	return nil
+}
+
 // gRPC function, Unload plugin
 func (gpl *GRPCPluginLoader) UnLoad(ctx context.Context, v *Verify) (*Error, error) {
-	gpl.idChangeLocker.Lock()
-	defer gpl.idChangeLocker.Unlock()
 	sid := v.Id
 	id, err := getIdFromContext(ctx)
 	if err != nil {
@@ -68,92 +93,94 @@ func (gpl *GRPCPluginLoader) UnLoad(ctx context.Context, v *Verify) (*Error, err
 	if id != sid {
 		return nil, ErrPermissionDenied
 	}
-	for i, loadedId := range gpl.LoadedIds {
-		if loadedId == id {
-			// unregister plugin methods
-			methodsA, ok := gpl.id2methods.Load(loadedId)
-			if !ok {
-				return nil, ErrIdNotFound
-			}
-			methods := methodsA.([]string)
-			for _, method := range methods {
-				gpl.pluginMethods.Delete(method) // delete plugin method
-			}
-			gpl.unregisterMethodsHandler(methods) // broadcast to loader, call unregister methods handler
-			// delete bidstream
-			_, ok = gpl.id2bidStream.Load(loadedId) // get bidstream
-			if ok {
-				gpl.id2bidStream.Delete(loadedId) // delete bidstream
-			}
-			// delete command queue channel
-			if qmapA, ok := gpl.Id2QueueChannel.Load(id); ok {
-				qmap, ok := qmapA.(*sync.Map) // get command queue channel map, map[commandId]chan []*Arg
-				if !ok {
-					return nil, ErrIdNotFound
-				}
-				qmap.Range(func(key, value any) bool {
-					commId := key.(string)
-					gpl.commandQueueChannel.Delete(commId)
-					ch := value.(chan []*Arg)
-					if ch != nil {
-						close(ch)
-					}
-					qmap.Delete(commId)
-					return true
-				})
-				gpl.Id2QueueChannel.Delete(id) // delete command queue channel
-			}
 
-			gpl.LoadedIds = append(gpl.LoadedIds[:i], gpl.LoadedIds[i+1:]...) // remove plugin id from loaded ids
-			// remove plugin methods
-			gpl.id2methods.Delete(loadedId)
-			break
+	// 检查插件是否存在
+	if _, ok := gpl.loadedIds.Load(id); !ok {
+		return nil, ErrIdNotFound
+	}
+
+	// unregister plugin methods
+	if methodsA, ok := gpl.id2methods.Load(id); ok {
+		methods := methodsA.([]string)
+		for _, method := range methods {
+			gpl.pluginMethods.Delete(method) // delete plugin method
+		}
+		if gpl.unregisterMethodsHandler != nil {
+			gpl.unregisterMethodsHandler(methods) // broadcast to loader, call unregister methods handler
 		}
 	}
+
+	// delete bidstream
+	gpl.id2bidStream.Delete(id)
+
+	// delete command queue channel
+	if qmapA, ok := gpl.Id2QueueChannel.Load(id); ok {
+		if qmap, ok := qmapA.(*sync.Map); ok {
+			qmap.Range(func(key, value any) bool {
+				commId := key.(string)
+				gpl.commandQueueChannel.Delete(commId)
+				if ch, ok := value.(chan []*Arg); ok && ch != nil {
+					close(ch)
+				}
+				return true
+			})
+		}
+		gpl.Id2QueueChannel.Delete(id)
+	}
+
+	// remove from loaded ids (并发安全)
+	gpl.loadedIds.Delete(id)
+	// remove plugin methods mapping
+	gpl.id2methods.Delete(id)
+
 	return nil, nil
 }
 
-// gRPC function
-func (gpl *GRPCPluginLoader) GetRegisteredMethods(ctx context.Context, pluginMethods *RegisterMethods) (*RegisterMethods, error) {
+// gRPC function - 插件注册其方法，服务器返回可用的公共方法列表
+func (gpl *GRPCPluginLoader) RegisterPluginMethods(ctx context.Context, req *RegisterMethodsRequest) (*AvailableMethodsResponse, error) {
 	id, err := getIdFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	rm := make([]*MethodDef, 0, LengthOfMap(&gpl.availableMethods))
+	// 收集服务器可用的公共方法
+	availableMethods := make([]*MethodDef, 0, LengthOfMap(&gpl.availableMethods))
 	gpl.availableMethods.Range(func(key, value any) bool {
-		rm = append(rm, value.(*MethodDef))
+		availableMethods = append(availableMethods, value.(*MethodDef))
 		return true
 	})
+	// 注册插件方法
 	pluginMethodMap := make(map[string]func(string, []*Arg) ([]*Arg, error))
-	for _, method := range pluginMethods.Methods { // record plugin methods
-		// check if method has been registered
+	for _, method := range req.Methods {
+		// 检查方法是否已被注册
 		if _, ok := gpl.pluginMethods.Load(method.Name); ok {
 			return nil, ErrMethodRepeated
 		}
 		listA, _ := gpl.id2methods.LoadOrStore(id, []string{})
 		list := listA.([]string)
-		gpl.id2methods.Store(id, append(list, method.Name)) // record method names
+		gpl.id2methods.Store(id, append(list, method.Name))
 		gpl.pluginMethods.Store(method.Name, &struct {
 			*MethodDef
 			ID string
 		}{method, id})
-		pluginMethodMap[method.Name] = func(s string, a []*Arg) ([]*Arg, error) {
-			args := []*Arg{}
-			for _, arg := range a {
-				args = append(args, &Arg{
+		// 捕获当前方法名
+		currentMethodName := method.Name
+		pluginMethodMap[currentMethodName] = func(s string, a []*Arg) ([]*Arg, error) {
+			args := make([]*Arg, len(a))
+			for i, arg := range a {
+				args[i] = &Arg{
 					Type: arg.Type,
 					Arg:  arg.Arg,
 					Name: arg.Name,
-				})
+				}
 			}
-			return gpl.CallClientMethod(method.Name, args)
+			return gpl.CallClientMethod(currentMethodName, args)
 		}
 	}
 	if gpl.pluginMethodhandler != nil {
 		gpl.pluginMethodhandler(pluginMethodMap)
 	}
 
-	return &RegisterMethods{Methods: rm}, nil
+	return &AvailableMethodsResponse{Methods: availableMethods}, nil
 }
 
 // gRPC function
@@ -227,6 +254,13 @@ func (gpl *GRPCPluginLoader) CallClientMethod(method string, args []*Arg) ([]*Ar
 	}
 	mchan := v.(*sync.Map)
 	mchan.Store(commId, newchan) // add command queue channel to Id2QueueChannel
+
+	// cleanup helper
+	cleanup := func() {
+		gpl.commandQueueChannel.Delete(commId)
+		mchan.Delete(commId)
+	}
+
 	// send command
 	cmd := &Command{
 		Command:   method,
@@ -234,20 +268,28 @@ func (gpl *GRPCPluginLoader) CallClientMethod(method string, args []*Arg) ([]*Ar
 		CommandId: commId,
 	}
 	if err := bidstream.Send(cmd); err != nil {
+		cleanup()
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	// wait for response
-	select {
-	case retargs := <-newchan:
-		gpl.commandQueueChannel.Delete(commId) // delete command queue channel
-		mchan.Delete(commId)                   // delete command queue channel
-		return retargs, nil
-	case <-ctx.Done(): // connection closed
-		gpl.commandQueueChannel.Delete(commId) // delete command queue channel
-		mchan.Delete(commId)                   // delete command queue channel
-		return nil, nil
+
+	// 获取超时时间，默认 30 秒
+	timeout := gpl.commandTimeout
+	if timeout == 0 {
+		timeout = 30 * time.Second
 	}
 
+	// wait for response with timeout
+	select {
+	case retargs := <-newchan:
+		cleanup()
+		return retargs, nil
+	case <-time.After(timeout): // 超时机制
+		cleanup()
+		return nil, status.Error(codes.DeadlineExceeded, "plugin method call timeout")
+	case <-ctx.Done(): // connection closed
+		cleanup()
+		return nil, status.Error(codes.Canceled, "connection closed")
+	}
 }
 
 // original code
@@ -283,7 +325,28 @@ func (gpl *GRPCPluginLoader) Shutdown() error {
 func (gpl *GRPCPluginLoader) Init() error {
 	gpl.ctx, gpl.cancle = context.WithCancel(context.Background())
 	gpl.status = 1
+	gpl.commandTimeout = 30 * time.Second // 默认超时时间
 	return nil
+}
+
+// SetCommandTimeout 设置命令超时时间
+func (gpl *GRPCPluginLoader) SetCommandTimeout(timeout time.Duration) {
+	gpl.commandTimeout = timeout
+}
+
+// SetAccessKey 设置访问密钥
+func (gpl *GRPCPluginLoader) SetAccessKey(key string) {
+	gpl.accessKey = key
+}
+
+// GetLoadedPluginIDs 获取已加载的插件ID列表
+func (gpl *GRPCPluginLoader) GetLoadedPluginIDs() []string {
+	ids := make([]string, 0)
+	gpl.loadedIds.Range(func(key, value any) bool {
+		ids = append(ids, key.(string))
+		return true
+	})
+	return ids
 }
 
 // original code

@@ -347,17 +347,18 @@ function showFileExpiryDialog() {
                 transform: translate(-50%, -50%);
                 background: #ffffff;
                 padding: 24px;
-                border-radius: 12px;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                border: 1px solid #e5e7eb;
                 min-width: 320px;
                 max-width: 400px;
                 transition: all 0.3s ease;
             }
             .file-expiry-content h3 {
                 margin: 0 0 20px 0;
-                font-size: 20px;
+                font-size: 18px;
                 font-weight: 600;
-                color: #2d3748;
+                color: #000000;
             }
             .expiry-option-group {
                 margin-bottom: 20px;
@@ -367,26 +368,26 @@ function showFileExpiryDialog() {
                 margin-bottom: 8px;
                 font-weight: 500;
                 font-size: 14px;
-                color: #4a5568;
+                color: #333333;
             }
             .expiry-select {
                 width: 100%;
                 padding: 10px 12px;
-                border: 1px solid #cbd5e0;
-                border-radius: 6px;
+                border: 1px solid #cccccc;
+                border-radius: 4px;
                 font-size: 14px;
                 background: #ffffff;
-                color: #2d3748;
+                color: #000000;
                 cursor: pointer;
                 transition: all 0.2s;
             }
             .expiry-select:hover {
-                border-color: #4299e1;
+                border-color: #666666;
             }
             .expiry-select:focus {
                 outline: none;
-                border-color: #4299e1;
-                box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+                border-color: #333333;
+                box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
             }
             .expiry-buttons {
                 display: flex;
@@ -395,29 +396,33 @@ function showFileExpiryDialog() {
             }
             .expiry-buttons button {
                 padding: 10px 20px;
-                border: none;
-                border-radius: 6px;
+                border: 1px solid #cccccc;
+                border-radius: 4px;
                 font-size: 14px;
                 font-weight: 500;
                 cursor: pointer;
                 transition: all 0.2s;
             }
             .btn-cancel {
-                background: #e2e8f0;
-                color: #4a5568;
+                background: #ffffff;
+                color: #333333;
+                border-color: #cccccc;
             }
             .btn-cancel:hover {
-                background: #cbd5e0;
+                background: #f5f5f5;
+                border-color: #999999;
             }
             .btn-cancel:active {
                 transform: scale(0.98);
             }
             .btn-confirm {
-                background: #4299e1;
-                color: white;
+                background: #000000;
+                color: #ffffff;
+                border-color: #000000;
             }
             .btn-confirm:hover {
-                background: #3182ce;
+                background: #333333;
+                border-color: #333333;
             }
             .btn-confirm:active {
                 transform: scale(0.98);
@@ -425,48 +430,53 @@ function showFileExpiryDialog() {
             
             /* 暗色模式 */
             .file-expiry-dialog.dark-theme .file-expiry-overlay {
-                background: rgba(0, 0, 0, 0.7);
+                background: rgba(0, 0, 0, 0.8);
             }
             .file-expiry-dialog.dark-theme .file-expiry-content {
-                background: #1a202c;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+                background: #1a1a1a;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+                border-color: #333333;
             }
             .file-expiry-dialog.dark-theme .file-expiry-content h3 {
-                color: #f7fafc;
+                color: #ffffff;
             }
             .file-expiry-dialog.dark-theme .expiry-option-group label {
-                color: #e2e8f0;
+                color: #cccccc;
             }
             .file-expiry-dialog.dark-theme .expiry-select {
-                background: #2d3748;
-                border-color: #4a5568;
-                color: #e2e8f0;
+                background: #2a2a2a;
+                border-color: #444444;
+                color: #ffffff;
             }
             .file-expiry-dialog.dark-theme .expiry-select:hover {
-                border-color: #4299e1;
-                background: #374151;
+                border-color: #666666;
+                background: #333333;
             }
             .file-expiry-dialog.dark-theme .expiry-select:focus {
-                border-color: #4299e1;
-                box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+                border-color: #888888;
+                box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
             }
             .file-expiry-dialog.dark-theme .expiry-select option {
-                background: #2d3748;
-                color: #e2e8f0;
+                background: #2a2a2a;
+                color: #ffffff;
             }
             .file-expiry-dialog.dark-theme .btn-cancel {
-                background: #374151;
-                color: #e2e8f0;
+                background: #2a2a2a;
+                color: #cccccc;
+                border-color: #444444;
             }
             .file-expiry-dialog.dark-theme .btn-cancel:hover {
-                background: #4b5563;
+                background: #333333;
+                border-color: #666666;
             }
             .file-expiry-dialog.dark-theme .btn-confirm {
-                background: #3b82f6;
-                color: white;
+                background: #ffffff;
+                color: #000000;
+                border-color: #ffffff;
             }
             .file-expiry-dialog.dark-theme .btn-confirm:hover {
-                background: #2563eb;
+                background: #cccccc;
+                border-color: #cccccc;
             }
         `;
         document.head.appendChild(style);
@@ -500,7 +510,7 @@ function showFileExpiryDialog() {
 }
 
 // 处理文件上传
-async function handleFileUpload(event, expiryDays = '7') {
+function handleFileUpload(event, expiryDays = '7') {
     const file = event.target.files[0];
     if (!file) {
         return;
@@ -527,87 +537,106 @@ async function handleFileUpload(event, expiryDays = '7') {
     const formData = new FormData();
     formData.append('token', token);
     formData.append('file', file);
-    formData.append('expiry_days', expiryDays); // 添加有效期参数
+    formData.append('expiry_days', expiryDays);
 
-    // 显示上传进度提示
+    // 创建进度通知
     const expiryText = expiryDays === 'never' ? 'permanent' : `${expiryDays} days`;
-    window.Notify.add(`Uploading file (expiry: ${expiryText})...`, { type: "info" });
+    const uploader = window.Notify.progress(`Uploading: ${file.name}`, { type: "info" });
 
-    try {
-        const response = await fetch(uploadAPI, {
-            method: 'POST',
-            body: formData
-        });
+    // 使用 XMLHttpRequest 以获取上传进度
+    const xhr = new XMLHttpRequest();
 
-        if (!response.ok) {
-            throw new Error(`Upload failed: ${response.status}`);
+    // 上传进度事件
+    xhr.upload.onprogress = function (e) {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            uploader.setProgress(percent);
+            uploader.setMessage(`Uploading: ${percent}%`);
         }
+    };
 
-        const data = await response.json();
+    // 上传完成事件
+    xhr.onload = function () {
+        if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+                const data = JSON.parse(xhr.responseText);
 
-        // 上传成功，插入文件链接
-        const fileURL = data.url;
-        const fileName = data.original_name;
+                // 上传成功，插入文件链接
+                const fileURL = data.url;
+                const fileName = data.original_name;
 
-        // 生成完整的URL（包含域名）
-        const fullURL = window.location.origin + fileURL;
+                // 生成完整的URL（包含域名）
+                const fullURL = window.location.origin + fileURL;
 
-        // 根据文件类型插入不同的 Markdown 格式
-        let insertedText = '';
-        const fileExt = fileName.split('.').pop().toLowerCase();
-        const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+                // 根据文件类型插入不同的 Markdown 格式
+                let insertedText = '';
+                const fileExt = fileName.split('.').pop().toLowerCase();
+                const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
 
-        if (imageExts.includes(fileExt)) {
-            // 图片文件，使用 ![alt](url) 格式
-            insertedText = `![${fileName}](${fileURL})`;
+                if (imageExts.includes(fileExt)) {
+                    insertedText = `![${fileName}](${fileURL})`;
+                } else {
+                    insertedText = `[${fileName}](${fileURL})`;
+                }
+
+                // 插入到编辑器
+                const editor_content = document.querySelector('.markdown-textarea');
+                if (editor_content) {
+                    const selectionStart = editor_content.selectionStart;
+                    const selectionEnd = editor_content.selectionEnd;
+
+                    editor_content.value =
+                        editor_content.value.substring(0, selectionStart) +
+                        insertedText +
+                        editor_content.value.substring(selectionEnd);
+
+                    const newCursorPos = selectionStart + insertedText.length;
+                    editor_content.selectionStart = newCursorPos;
+                    editor_content.selectionEnd = newCursorPos;
+                    editor_content.focus();
+
+                    renderMarkdown();
+                    const articleDom = document.querySelector('.article-content');
+                    const outlineList = document.querySelector('.outline-list');
+                    generateOutline(articleDom, outlineList);
+                }
+
+                // 复制完整URL到剪贴板
+                navigator.clipboard.writeText(fullURL).then(() => {
+                    uploader.complete("Upload complete! URL copied to clipboard", 3000, "success");
+                }).catch(() => {
+                    copyText(fullURL);
+                    uploader.complete("Upload complete! URL inserted", 3000, "success");
+                });
+
+            } catch (parseError) {
+                console.error('Parse response failed:', parseError);
+                uploader.complete("Upload failed: Invalid response", 4000, "error");
+            }
         } else {
-            // 其他文件，使用 [text](url) 格式
-            insertedText = `[${fileName}](${fileURL})`;
+            uploader.complete(`Upload failed: ${xhr.status}`, 4000, "error");
         }
 
-        // 插入到编辑器
-        const editor_content = document.querySelector('.markdown-textarea');
-        if (editor_content) {
-            const selectionStart = editor_content.selectionStart;
-            const selectionEnd = editor_content.selectionEnd;
-
-            editor_content.value =
-                editor_content.value.substring(0, selectionStart) +
-                insertedText +
-                editor_content.value.substring(selectionEnd);
-
-            // 设置光标位置到插入内容之后
-            const newCursorPos = selectionStart + insertedText.length;
-            editor_content.selectionStart = newCursorPos;
-            editor_content.selectionEnd = newCursorPos;
-
-            // 触发焦点
-            editor_content.focus();
-
-            // 重新渲染
-            renderMarkdown();
-            const articleDom = document.querySelector('.article-content');
-            const outlineList = document.querySelector('.outline-list');
-            generateOutline(articleDom, outlineList);
-        }
-
-        // 复制完整URL到剪贴板
-        try {
-            await navigator.clipboard.writeText(fullURL);
-            window.Notify.add("File uploaded successfully! Full URL has been copied to clipboard", { type: "success" });
-        } catch (err) {
-            // 如果复制失败，使用备用方法
-            copyText(fullURL);
-            window.Notify.add("File uploaded successfully! URL has been inserted into the editor", { type: "success" });
-        }
-
-    } catch (error) {
-        console.error('File upload failed:', error);
-        window.Notify.add("File upload failed: " + error.message, { type: "error" });
-    } finally {
-        // 清空文件输入，允许重复上传同一文件
+        // 清空文件输入
         event.target.value = '';
-    }
+    };
+
+    // 上传错误事件
+    xhr.onerror = function () {
+        console.error('File upload failed');
+        uploader.complete("Upload failed: Network error", 4000, "error");
+        event.target.value = '';
+    };
+
+    // 上传中止事件
+    xhr.onabort = function () {
+        uploader.complete("Upload cancelled", 3000, "warning");
+        event.target.value = '';
+    };
+
+    // 发送请求
+    xhr.open('POST', uploadAPI, true);
+    xhr.send(formData);
 }
 
 AddMarkdownEditorListener();

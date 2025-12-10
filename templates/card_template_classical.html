@@ -1,10 +1,16 @@
-<div id="card-container" card-id="{{id}}" class="card-container card-classical display-flex flex-wrap flex-direction-column justify-content-space-between align-items-flex-start boarder-1px padding-10px radius-5px margin-20px" alt="{{card_title}}" style="order:{{order}}">
-    <link rel="stylesheet" href="/css/card_classical.css"/><a class="link" href="{{card_link}}">
+<div id="card-container" card-id="{{id}}"
+    class="card-container card-classical display-flex flex-wrap flex-direction-column justify-content-space-between align-items-flex-start boarder-1px padding-10px radius-5px margin-20px"
+    style="order:{{order}}">
+    <link rel="stylesheet" href="/css/card_classical.css" />
+    <a class="link card-link" href="">
         <div class="post-card radius-5px padding-10px">
-           <div class="post-card-header display-flex justify-content-space-between align-items-center height-50px">{{card_title}}</div>
-           <div class="card-description ">{{card_description}}</div>
+            <div class="post-card-header display-flex justify-content-space-between align-items-center height-50px">
+            </div>
+            <div class="card-description"></div>
         </div>
     </a>
-    <div class="card-tags display-flex padding-10px margin-left-auto">{{tags}}</div>
+    <div class="card-tags display-flex padding-10px margin-left-auto"></div>
+    <div class="card-info-container" style="display: none;" data-card-id="{{id}}" data-card-title="{{card_title}}"
+        data-card-link="{{card_link}}" data-card-description="{{card_description}}" data-card-tags="{{tags}}"></div>
     <script src="/js/card_classical.js"></script>
 </div>
