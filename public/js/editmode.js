@@ -654,7 +654,7 @@ function onImportButtonClick() {
     if (input === null) return;
     let jsonData = {};
     try {
-        decodedInput = JSON.parse(decodeURIComponent(atob(input)));
+        jsonData = JSON.parse(decodeURIComponent(atob(input)));
     } catch (error) {
         window.Notify.error("Invalid encoded data.");
         return;
