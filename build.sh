@@ -19,6 +19,7 @@ LiteBlog 构建脚本
 选项:
     platform <target>    指定单个编译目标平台（格式：os/arch，例如 linux/amd64）
     compress            启用静态文件（JS/CSS）压缩
+    legacy-css          转换嵌套 CSS 为标准 CSS（兼容老式浏览器）
     parallel            启用并行编译（加快构建速度）
     clean               仅清理输出目录
     help                显示此帮助信息
@@ -27,6 +28,8 @@ LiteBlog 构建脚本
     ./build.sh                           # 编译所有平台
     ./build.sh platform linux/amd64      # 仅编译 Linux AMD64
     ./build.sh compress                  # 编译所有平台并压缩静态文件
+    ./build.sh legacy-css                # 转换嵌套 CSS 为兼容格式
+    ./build.sh legacy-css compress       # 转换 CSS 并压缩静态文件
     ./build.sh parallel compress         # 并行编译所有平台并压缩静态文件
     ./build.sh clean                     # 清理输出目录
 
@@ -54,6 +57,7 @@ app_name="LiteBlog"
 
 # 配置选项
 compress_static="false"
+legacy_css="false"
 parallel_build="false"
 clean_only="false"
 
@@ -70,6 +74,10 @@ while [ $# -gt 0 ]; do
             ;;
         compress)
             compress_static="true"
+            shift
+            ;;
+        legacy-css)
+            legacy_css="true"
             shift
             ;;
         parallel)
@@ -139,6 +147,29 @@ check_tools() {
             echo -e "${YELLOW}  安装方法: npm install -g uglifycss${NC}"
         else
             echo -e "${GREEN}✓ uglifycss 已安装${NC}"
+        fi
+    fi
+    
+    # 如果需要转换嵌套 CSS，检查 postcss 工具
+    if [ "$legacy_css" == "true" ]; then
+        local postcss_ok=true
+        if ! command -v postcss &> /dev/null; then
+            echo -e "${YELLOW}警告：未找到 postcss，CSS 嵌套将不会被转换${NC}"
+            echo -e "${YELLOW}  安装方法: npm install -g postcss postcss-cli postcss-nested${NC}"
+            postcss_ok=false
+        else
+            echo -e "${GREEN}✓ postcss-cli 已安装${NC}"
+        fi
+        
+        # 检查 postcss-nested 插件
+        if [ "$postcss_ok" == "true" ]; then
+            if npm list -g postcss-nested >/dev/null 2>&1 || npm list postcss-nested >/dev/null 2>&1; then
+                echo -e "${GREEN}✓ postcss-nested 插件已安装${NC}"
+            else
+                echo -e "${YELLOW}警告：未找到 postcss-nested 插件${NC}"
+                echo -e "${YELLOW}  安装方法: npm install -g postcss-nested${NC}"
+                echo -e "${YELLOW}  或本地安装: npm install postcss-nested${NC}"
+            fi
         fi
     fi
     echo ""
@@ -225,6 +256,59 @@ build_platform() {
             echo -e "${BLUE}  - 已移除黑名单文件: $file${NC}"
         fi
     done
+
+    # 转换嵌套 CSS 为标准 CSS（在压缩前进行）
+    if [ "$legacy_css" == "true" ]; then
+        echo -e "${BLUE}[转换] 正在转换嵌套 CSS 为标准 CSS...${NC}"
+        
+        if command -v postcss &> /dev/null; then
+            local css_count=0
+            local failed_count=0
+            while IFS= read -r cssfile; do
+                [ -z "$cssfile" ] && continue
+                local tempfile="${cssfile}.unnest.tmp"
+                local error_log="${cssfile}.error.log"
+                
+                # 使用 postcss 转换嵌套 CSS，直接使用 --use 参数指定插件
+                # 不依赖配置文件，避免模块路径问题
+                if postcss "$cssfile" -o "$tempfile" --use postcss-nested --no-map 2>"$error_log"; then
+                    if [ -s "$tempfile" ]; then
+                        mv "$tempfile" "$cssfile"
+                        echo -e "${GREEN}  ✓ 已转换: $(basename "$cssfile")${NC}"
+                        css_count=$((css_count + 1))
+                        rm -f "$error_log"
+                    else
+                        rm -f "$tempfile"
+                        echo -e "${YELLOW}  ⚠ 转换后文件为空: $(basename "$cssfile")${NC}"
+                        failed_count=$((failed_count + 1))
+                        if [ -s "$error_log" ]; then
+                            echo -e "${YELLOW}     错误: $(cat "$error_log" | head -n 1)${NC}"
+                        fi
+                        rm -f "$error_log"
+                    fi
+                else
+                    rm -f "$tempfile"
+                    echo -e "${RED}  ✗ 转换失败: $(basename "$cssfile")${NC}"
+                    failed_count=$((failed_count + 1))
+                    if [ -s "$error_log" ]; then
+                        echo -e "${RED}     错误详情:${NC}"
+                        cat "$error_log" | head -n 3 | while read line; do
+                            echo -e "${RED}       $line${NC}"
+                        done
+                    fi
+                    rm -f "$error_log"
+                fi
+            done < <(find "$temp_dir/public" -type f -name "*.css" 2>/dev/null || true)
+            
+            if [ $failed_count -gt 0 ]; then
+                echo -e "${YELLOW}✓ CSS 转换完成: $css_count 个成功, $failed_count 个失败${NC}"
+            else
+                echo -e "${GREEN}✓ CSS 转换完成: $css_count 个文件${NC}"
+            fi
+        else
+            echo -e "${YELLOW}⚠ 跳过 CSS 转换（postcss 未安装）${NC}"
+        fi
+    fi
 
     # 压缩静态文件
     if [ "$compress_static" == "true" ]; then

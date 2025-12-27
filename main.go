@@ -11,7 +11,7 @@ import (
 
 var (
 	Config  AllConfig
-	Version = "v0.0.7"
+	Version = "v0.0.6"
 )
 
 func main() {
