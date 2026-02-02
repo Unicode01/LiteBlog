@@ -104,6 +104,7 @@ function GetArticleAPI(article_id, callback) {
     const result = GetAccessPathAndToken();
     if (!result) {
         console.log("Access path and token are required.");
+        callback(null);
         return false;
     }
     const { path, token } = result;
@@ -135,7 +136,7 @@ function GetArticleAPI(article_id, callback) {
         .catch(error => {
             console.log(error);
             window.Notify.error(error.message);
-            callback("");
+            callback(null);
         });
 }
 
@@ -285,9 +286,12 @@ function SaveArticle(implicitlySave = false) {
     // set extra flags
     extra_flags.article_description = article_description;
 
-    // check if in /addarticle.html
-    if (location.pathname === "/addarticle.html") {
-        // add article
+    // 通过 URL 参数判断是新建还是编辑模式
+    const urlParams = new URLSearchParams(window.location.search);
+    const articleId = urlParams.get('article_id');
+
+    if (!articleId) {
+        // 新建文章模式
         AddArticleAPI(editor_title, author_input, markdown_input, rendered_content, extra_flags, function (result) {
             if (result != "") {
                 console.log(result);
@@ -327,9 +331,9 @@ function SaveArticle(implicitlySave = false) {
                 });
             }
         });
-    } else if (location.pathname === "/editarticle.html") {
-        article_id = getQueryVariable("article_id");
-        // edit article
+    } else {
+        // 编辑文章模式
+        article_id = articleId;
         EditArticleAPI(article_id, editor_title, author_input, markdown_input, rendered_content, extra_flags, function (result) {
             if (implicitlySave) {
                 window.Notify.add("Article edited successfully!", { type: "success" });
@@ -364,7 +368,7 @@ function SaveArticle(implicitlySave = false) {
 }
 
 function getQueryVariable(variable) {
-    if (window.location.pathname === "/editarticle.html" || window.location.pathname === "/addarticles.html") {
+    if (window.location.pathname === "/article-editor.html") {
         var query = window.location.search.substring(1);
         var vars = query.split("&");
         for (var i = 0; i < vars.length; i++) {
@@ -687,7 +691,7 @@ function MouseMoveHandler(event) {
     }
 
     // 处理左侧工具箱 - 编辑页面不处理
-    const isEditPage = location.pathname === '/editarticle.html' || location.pathname === '/addarticle.html';
+    const isEditPage = location.pathname === '/article-editor.html';
     if (!isEditPage) {
         const toolboxContainer = document.querySelector('.toolbox-container');
         if (toolboxContainer && toolboxContainer.style.display !== 'none') {
@@ -882,7 +886,7 @@ function AddImgEventListener() {
 
 function InitToolbox() {
     // 检测当前页面 - 编辑页面不显示工具箱
-    const isEditPage = location.pathname === '/editarticle.html' || location.pathname === '/addarticle.html';
+    const isEditPage = location.pathname === '/article-editor.html';
     if (isEditPage) {
         console.log('Toolbox disabled on edit pages');
         return;
@@ -1439,7 +1443,7 @@ if (typeof window !== 'undefined') {
 
 function InitSidePanels() {
     // 检测当前页面
-    const isEditPage = location.pathname === '/editarticle.html' || location.pathname === '/addarticle.html';
+    const isEditPage = location.pathname === '/article-editor.html';
 
     // 初始化左侧工具箱 - 编辑页面不显示
     const toolboxContainer = document.querySelector('.toolbox-container');
@@ -1532,7 +1536,7 @@ let selectionCheckTimeout = null;
 
 function InitTextSelectionFeature() {
     // 仅在文章页面启用（非编辑页面）
-    const isEditPage = location.pathname === '/editarticle.html' || location.pathname === '/addarticle.html';
+    const isEditPage = location.pathname === '/article-editor.html';
     if (isEditPage) {
         console.log('Text selection feature disabled on edit pages');
         return;

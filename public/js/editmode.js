@@ -55,6 +55,7 @@ function EnterEditMode() {
                         card.removeEventListener('dragstart', dragstart_handler);
                         card.removeEventListener('dragover', dragover_handler);
                         card.removeEventListener('drop', drop_handler);
+                        card.removeEventListener('dragend', dragend_handler);
                     });
                     // check to remove add card input box
                     const card_input_box = document.querySelector('.card-input-box');
@@ -81,7 +82,7 @@ function EnterEditMode() {
     const cards = document.querySelectorAll('.card-container');
     cards.forEach((card) => {
         const cardID = card.getAttribute('card-id');
-        order = card.style.order;
+        const order = card.style.order;
         if (order != -1) { // not the Top up card
             // console.log("Card ID: " + cardID);
             originalIndex.set(cardID, card.style.order);
@@ -99,6 +100,7 @@ function EnterEditMode() {
         card.addEventListener('dragstart', dragstart_handler);
         card.addEventListener('dragover', dragover_handler);
         card.addEventListener('drop', drop_handler);
+        card.addEventListener('dragend', dragend_handler);
         card.draggable = true;
         card.classList.add('draggable');
     });
@@ -106,8 +108,11 @@ function EnterEditMode() {
 
 function dragstart_handler(event) {
     console.log("Drag start");
-    dragging_card = event.target;
-    dragging_card.classList.add('dragging');
+    // 向上查找最近的 .card-container，确保获取正确的卡片元素
+    dragging_card = event.target.closest('.card-container');
+    if (dragging_card) {
+        dragging_card.classList.add('dragging');
+    }
 }
 
 function dragover_handler(event) {
@@ -120,8 +125,18 @@ function drop_handler(event) {
     event.preventDefault();
     console.log("Drop");
     updateViewCardOrder(event);
-    dragging_card.classList.remove('dragging');
+    if (dragging_card) {
+        dragging_card.classList.remove('dragging');
+    }
     // const cardID = event.target.getAttribute('card-id');
+}
+
+function dragend_handler(event) {
+    console.log("Drag end");
+    // 确保拖动结束后清理样式，即使没有成功放置
+    if (dragging_card) {
+        dragging_card.classList.remove('dragging');
+    }
 }
 
 function updateViewCardOrder(event) {
@@ -129,7 +144,7 @@ function updateViewCardOrder(event) {
     // get cursor position
     const cursorPositionX = event.clientX + window.scrollX; // event.pageX
     const cursorPositionY = event.clientY + window.scrollY; // event.pageY
-    let localted_card = dragging_card;
+    let located_card = dragging_card;
     // check where cursor located
     for (let i = 0; i < draggable_cards.length; i++) {
         const card = draggable_cards[i];
@@ -139,14 +154,14 @@ function updateViewCardOrder(event) {
         const card_height = card.offsetHeight;
         if (card.style.order != -1 && card != dragging_card && (cursorPositionX >= card_positionX && cursorPositionX <= card_positionX + card_width && cursorPositionY >= card_positionY && cursorPositionY <= card_positionY + card_height)) {
             // cursor located in this card
-            localted_card = card;
+            located_card = card;
             break;
         }
     }
-    if (localted_card && (localted_card != dragging_card)) { // cursor located in a card
+    if (located_card && (located_card != dragging_card)) { // cursor located in a card
         // change dragged card order to the position of cursor
         const beforeOrder = parseInt(dragging_card.style.order, 10);
-        const afterOrder = parseInt(localted_card.style.order, 10);
+        const afterOrder = parseInt(located_card.style.order, 10);
         // calc offset order
         // offsetOrder used to adjust the order of cards after dragging
         const offsetOrder = afterOrder - beforeOrder;
@@ -943,7 +958,7 @@ function AddEditButtonListener() {
         editButtons.forEach(button => {
             button.addEventListener("click", function (event) {
                 event.preventDefault();
-                location.href = '/editarticle.html?article_id=' + location.pathname.split('/')[2];
+                location.href = '/article-editor.html?article_id=' + location.pathname.split('/')[2];
             });
         });
     } else if (location.pathname == "/index.html" || location.pathname == "/") {
@@ -954,7 +969,7 @@ function AddEditButtonListener() {
             });
         });
     }
-    if (location.pathname == "/editarticle.html" || location.pathname == "/addarticle.html") {
+    if (location.pathname == "/article-editor.html") {
         saveButtons.forEach(button => {
             button.addEventListener("click", function (event) {
                 event.preventDefault();
