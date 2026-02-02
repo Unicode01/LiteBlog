@@ -300,10 +300,19 @@ func (loader *LoaderTypeJS) pluginMethodProxy(method string, args []*Arg) (rt []
 	// adapt args
 	argarry := make([]interface{}, len(args))
 	for i, arg := range args {
+		// 优化：对于 json 类型，如果 Data 是 []byte，转换为 string
+		// 这样 JavaScript 端就不需要再做字节数组转换，提升性能
+		data := arg.Data
+		if arg.Type == "json" {
+			if bytes, ok := data.([]byte); ok {
+				data = string(bytes)
+			}
+		}
+
 		argarry[i] = map[string]any{
 			"Name": arg.Name,
 			"Type": arg.Type,
-			"Data": arg.Data,
+			"Data": data,
 		}
 	}
 	gojaArgsArray := methodFuncTyped.vm.NewArray(argarry...)

@@ -266,7 +266,7 @@ function addContextMenuListener() {
         }
     }, "Add Article", function (event) {
         event.preventDefault();
-        location.href = '/addarticle.html';
+        location.href = '/article-editor.html';
     });
     // add edit custom settings option
     addContextMenuItem(function (event) {
@@ -306,8 +306,8 @@ function addContextMenuListener() {
     });
     // add save article option
     addContextMenuItem(function (event) {
-        // check if in addarticle.html or editarticle.html
-        if (location.pathname == '/addarticle.html' || location.pathname == '/editarticle.html') {
+        // check if in article-editor.html
+        if (location.pathname == '/article-editor.html') {
             return true;
         }
     }, "Save Article", function (event) {
@@ -322,7 +322,7 @@ function addContextMenuListener() {
         }
     }, "Edit Article", function (event) {
         event.preventDefault();
-        location.href = '/editarticle.html?article_id=' + location.pathname.split('/')[2];
+        location.href = '/article-editor.html?article_id=' + location.pathname.split('/')[2];
     });
     // add delete article option
     addContextMenuItem(function (event) {

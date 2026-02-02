@@ -16,8 +16,21 @@
     --text-secondary: var(--base-gray-700);
     --text-muted: #6C757D;
 
-    --card-width: {{global:card_max_width}}px;
-    --card-height: {{global:card_max_height}}px;
+    --card-width: {
+            {
+            global: card_max_width
+        }
+    }
+
+    px;
+
+    --card-height: {
+            {
+            global: card_max_height
+        }
+    }
+
+    px;
 }
 
 /* 全局样式 */
@@ -56,6 +69,16 @@ body {
     font-weight: bold;
     color: var(--base-black);
     white-space: nowrap;
+}
+
+/* 顶部栏按钮样式重置 */
+.top-bar button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .content-container {
@@ -128,11 +151,15 @@ body {
 
 .draggable {
     cursor: move;
+    transition: transform 0.2s ease;
 }
 
 .dragging {
     opacity: .5;
-    transform: scale(0.9);
+    transform: scale(0.95);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    z-index: 100;
 }
 
 .custom-field-group {

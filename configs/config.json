@@ -18,7 +18,8 @@
         "enable_backend": true,
         "random_key": true,
         "backend_path": "yourbackendPath",
-        "access_token": "yourAccessToken"
+        "access_token": "yourAccessToken",
+        "read_only": false
     },
     "cache_config": {
         "//": "this used to cache the rendered pages, default is in memory,if use_disk is true, it will cache in disk and using.",
@@ -91,7 +92,7 @@
     },
     "plugins_config": {
         "//": "Plugin system configuration. grpc_config for external plugins via gRPC, js_config for JavaScript plugins.",
-        "enabled": true,
+        "enabled": false,
         "grpc_config": {
             "enabled": true,
             "listener_address": "127.0.0.1:1080",

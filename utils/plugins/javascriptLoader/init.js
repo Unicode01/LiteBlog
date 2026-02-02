@@ -29,7 +29,20 @@ function parseArgs(args) {
     args.forEach(element => {
         switch (element.Type) {
             case "json":
-                element.Data = JSON.parse(element.Data);
+                // JSON 类型的 Data 现在在 Go 端已转换为字符串，直接解析即可
+                try {
+                    if (typeof element.Data === 'string') {
+                        element.Data = JSON.parse(element.Data);
+                    } else if (typeof element.Data === 'object' && element.Data !== null) {
+                        // 已经是对象，不需要解析（向后兼容）
+                        element.Data = element.Data;
+                    } else {
+                        element.Data = JSON.parse(String(element.Data));
+                    }
+                } catch (e) {
+                    log(3, "JSON解析失败: " + element.Name);
+                    throw e;
+                }
                 break;
             case "int":
                 element.Data = parseInt(element.Data);

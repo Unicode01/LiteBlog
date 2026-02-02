@@ -53,6 +53,7 @@ type AccessConfig struct {
 	BackendPath   string `json:"backend_path"`
 	AccessToken   string `json:"access_token"`
 	RandomKey     bool   `json:"random_key"`
+	ReadOnly      bool   `json:"read_only"`
 }
 
 type CacheConfig struct {

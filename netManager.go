@@ -1402,6 +1402,12 @@ func backendHandler_edit_order(w http.ResponseWriter, r *http.Request) {
 	cardAPILocker.Lock()
 	defer cardAPILocker.Unlock()
 
+	// Check read-only mode
+	if Config.AccessCfg.ReadOnly {
+		serveError(w, http.StatusForbidden, "This is a read-only demo site, write operations are not allowed")
+		return
+	}
+
 	type orderrequest struct {
 		Changes []struct {
 			ID    string `json:"cardID"`
@@ -1477,6 +1483,12 @@ func backendHandler_delete_card(w http.ResponseWriter, r *http.Request) {
 	cardAPILocker.Lock()
 	defer cardAPILocker.Unlock()
 
+	// Check read-only mode
+	if Config.AccessCfg.ReadOnly {
+		serveError(w, http.StatusForbidden, "This is a read-only demo site, write operations are not allowed")
+		return
+	}
+
 	type cardrequest struct {
 		ID string `json:"cardID"`
 	}
@@ -1538,6 +1550,12 @@ func backendHandler_delete_card(w http.ResponseWriter, r *http.Request) {
 func backendHandler_add_card(w http.ResponseWriter, r *http.Request) {
 	cardAPILocker.Lock()
 	defer cardAPILocker.Unlock()
+
+	// Check read-only mode
+	if Config.AccessCfg.ReadOnly {
+		serveError(w, http.StatusForbidden, "This is a read-only demo site, write operations are not allowed")
+		return
+	}
 
 	type cardrequest struct {
 		CardJson map[string]string `json:"card"`
@@ -1689,6 +1707,12 @@ func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
 	cardAPILocker.Lock()
 	defer cardAPILocker.Unlock()
 
+	// Check read-only mode
+	if Config.AccessCfg.ReadOnly {
+		serveError(w, http.StatusForbidden, "This is a read-only demo site, write operations are not allowed")
+		return
+	}
+
 	type cardrequest struct {
 		CardJson map[string]string `json:"card"`
 	}
@@ -1757,6 +1781,12 @@ func backendHandler_edit_card(w http.ResponseWriter, r *http.Request) {
 func backendHandler_add_article(w http.ResponseWriter, r *http.Request) {
 	articleAPILocker.Lock()
 	defer articleAPILocker.Unlock()
+
+	// Check read-only mode
+	if Config.AccessCfg.ReadOnly {
+		serveError(w, http.StatusForbidden, "This is a read-only demo site, write operations are not allowed")
+		return
+	}
 
 	type articlerequest struct {
 		Article struct {
@@ -1859,6 +1889,12 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 	articleAPILocker.Lock()
 	defer articleAPILocker.Unlock()
 
+	// Check read-only mode
+	if Config.AccessCfg.ReadOnly {
+		serveError(w, http.StatusForbidden, "This is a read-only demo site, write operations are not allowed")
+		return
+	}
+
 	type articlerequest struct {
 		Article struct {
 			ID          string            `json:"article_id"`
@@ -1888,7 +1924,7 @@ func backendHandler_edit_article(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// update article
-	if isValidID(req.Article.ID) {
+	if !isValidID(req.Article.ID) {
 		serveError(w, http.StatusBadRequest, "Invalid article ID")
 		return
 	}
@@ -1941,6 +1977,12 @@ func backendHandler_delete_article(w http.ResponseWriter, r *http.Request) {
 	articleAPILocker.Lock()
 	defer articleAPILocker.Unlock()
 
+	// Check read-only mode
+	if Config.AccessCfg.ReadOnly {
+		serveError(w, http.StatusForbidden, "This is a read-only demo site, write operations are not allowed")
+		return
+	}
+
 	type articlerequest struct {
 		ID string `json:"article_id"`
 	}
@@ -1951,7 +1993,7 @@ func backendHandler_delete_article(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check if ID is valid
-	if isValidID(req.ID) {
+	if !isValidID(req.ID) {
 		serveError(w, http.StatusBadRequest, "Invalid article ID")
 		return
 	}
@@ -1987,7 +2029,7 @@ func backendHandler_get_article(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check if ID is valid
-	if isValidID(req.ID) {
+	if !isValidID(req.ID) {
 		serveError(w, http.StatusBadRequest, "Invalid article ID")
 		return
 	}
@@ -2030,6 +2072,12 @@ func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
 	articleAPILocker.Lock()
 	defer articleAPILocker.Unlock()
 
+	// Check read-only mode
+	if Config.AccessCfg.ReadOnly {
+		serveError(w, http.StatusForbidden, "This is a read-only demo site, write operations are not allowed")
+		return
+	}
+
 	type commentrequest struct {
 		ArticleID string `json:"article_id"`
 		CommentID string `json:"comment_id"`
@@ -2041,7 +2089,7 @@ func backendHandler_delete_comment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check if article ID is valid
-	if isValidID(req.ArticleID) {
+	if !isValidID(req.ArticleID) {
 		serveError(w, http.StatusBadRequest, "Invalid article ID")
 		return
 	}
@@ -2153,6 +2201,12 @@ func backendHandler_get_custom_settings(w http.ResponseWriter, r *http.Request) 
 func backendHandler_edit_custom_settings(w http.ResponseWriter, r *http.Request) {
 	settingsAPILocker.Lock()
 	defer settingsAPILocker.Unlock()
+
+	// Check read-only mode
+	if Config.AccessCfg.ReadOnly {
+		serveError(w, http.StatusForbidden, "This is a read-only demo site, write operations are not allowed")
+		return
+	}
 
 	type customsettingsrequest struct {
 		CustomSettings struct {
@@ -2279,6 +2333,13 @@ func backendHandler_login(w http.ResponseWriter, r *http.Request) {
 func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 	articleAPILocker.Lock()
 	defer articleAPILocker.Unlock()
+
+	// Check read-only mode
+	if Config.AccessCfg.ReadOnly {
+		serveError(w, http.StatusForbidden, "This is a read-only demo site, write operations are not allowed")
+		return
+	}
+
 	if !Config.CommentCfg.Enabled {
 		serveError(w, http.StatusForbidden, "Comment function is not enabled")
 		return
@@ -2323,7 +2384,7 @@ func public_api_add_comment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// check if article id is valid
-	if isValidID(req.Article_id) {
+	if !isValidID(req.Article_id) {
 		s := "Invalid article ID: " + req.Article_id
 		serveError(w, http.StatusBadRequest, s)
 		return
@@ -2504,6 +2565,12 @@ func public_api_get_sniffer_info(w http.ResponseWriter, r *http.Request) {
 
 // backendHandler_upload_file 处理文件上传
 func backendHandler_upload_file(w http.ResponseWriter, r *http.Request) {
+	// Check read-only mode
+	if Config.AccessCfg.ReadOnly {
+		serveError(w, http.StatusForbidden, "This is a read-only demo site, write operations are not allowed")
+		return
+	}
+
 	if r.Method != "POST" {
 		serveError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return

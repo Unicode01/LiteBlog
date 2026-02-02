@@ -17,10 +17,11 @@ function AddMarkdownEditorListener() {
             switch (event.key) {
                 case "s": // ctrl + s
                     event.preventDefault();
-                    if (location.pathname === "/addarticle.html") {
-                        window.Notify.add("Article saved to local.", { type: "success" })
-                    } else if (location.pathname === "/editarticle.html") {
-                        SaveArticle(true);
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.get('article_id')) {
+                        SaveArticle(true); // 编辑模式
+                    } else {
+                        window.Notify.add("Article saved to local.", { type: "success" }) // 新建模式
                     }
                     break;
             }
@@ -70,8 +71,9 @@ function renderMarkdown() {
     rendered_author.textContent = author_value;
     rendered_content.innerHTML = marked.parse(content_value);
     rendered_date.textContent = date_value;
-    // save to localstroage
-    if (location.pathname === "/addarticle.html") {
+    // save to localstroage (only in add mode, not edit mode)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.get('article_id')) {
         let localStoredArticle = {
             "title": title_value,
             "author": author_value,
@@ -86,7 +88,11 @@ function RenderLocalData() {
     const editor_title = document.querySelector('.title-input');
     const author_input = document.querySelector('.author-input');
     const editor_content = document.querySelector('.markdown-textarea');
-    if (location.pathname === "/addarticle.html") {
+    const urlParams = new URLSearchParams(window.location.search);
+    const articleId = urlParams.get('article_id');
+
+    if (!articleId) {
+        // 新建文章模式 - 从本地存储加载
         let localStoredArticle = JSON.parse(localStorage.getItem('localStoredArticle'));
         if (localStoredArticle) {
             storageTitle = localStoredArticle.title;
@@ -102,25 +108,52 @@ function RenderLocalData() {
                 generateOutline(articleDom, outlineList)
             }
         }
-    } else if (location.pathname === "/editarticle.html") {
-        article_id = getQueryVariable("article_id");
+    } else {
+        // 编辑文章模式 - 从 API 加载
+        article_id = articleId;
         console.log(article_id);
+
+        // 创建加载提示框
+        const articleLoader = window.Notify.progress("Loading article...", {
+            type: "info",
+            keepAlive: true
+        });
+
+        // 模拟加载进度（提升用户体验）
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            if (progress < 90) {
+                progress += Math.random() * 30;
+                if (progress > 90) progress = 90;
+                articleLoader.setProgress(progress);
+            }
+        }, 200);
+
         GetArticleAPI(article_id, function (data) {
+            // 清除进度模拟
+            clearInterval(progressInterval);
+
             if (data) {
-                storageTitle = data.title;
-                storageAuthor = data.author;
-                storageContent = data.content;
-                if (storageTitle || storageAuthor || storageContent) {
-                    editor_title.value = storageTitle;
-                    author_input.value = storageAuthor;
-                    editor_content.value = storageContent;
-                    renderMarkdown();
-                    const articleDom = document.querySelector('.article-content');
-                    const outlineList = document.querySelector('.outline-list');
-                    generateOutline(articleDom, outlineList)
-                }
+                // 设置进度到100%
+                articleLoader.setProgress(100);
+
+                storageTitle = data.title || '';
+                storageAuthor = data.author || '';
+                storageContent = data.content || '';
+
+                editor_title.value = storageTitle;
+                author_input.value = storageAuthor;
+                editor_content.value = storageContent;
+                renderMarkdown();
+                const articleDom = document.querySelector('.article-content');
+                const outlineList = document.querySelector('.outline-list');
+                generateOutline(articleDom, outlineList);
+
+                // 加载完成，显示成功提示（2秒后自动消失）
+                articleLoader.complete("Article loaded successfully!", 2000);
             } else {
-                window.Notify.add("Article not found or not logged in.", { type: "error" })
+                // 加载失败，更新进度条为失败状态并显示错误
+                articleLoader.complete("Failed to load article. Please login first.", 3000, "error");
             }
         })
     }
